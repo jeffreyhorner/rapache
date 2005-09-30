@@ -57,7 +57,7 @@ http://biostat.mc.vanderbilt.edu/twiki/bin/view/Main/RApacheProject
   for a little more detail. Add something similar to this to the apache
   config file:
 
-    LoadModule R_Module /path/to/mod_R.so
+    LoadModule R_module /path/to/mod_R.so
 
     <Location /URL>
        SetHandler r-handler

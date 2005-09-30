@@ -5,7 +5,7 @@
 	RApache directives are instructions on how to load and prepare
 	the R interpreter when the server is started.
 \preformatted{
-LoadModule R_Module /path/to/mod_R.so
+LoadModule R_module /path/to/mod_R.so
 
 <Location /URL>
 	SetHandler r-handler
