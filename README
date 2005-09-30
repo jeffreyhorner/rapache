@@ -102,7 +102,7 @@ http://biostat.mc.vanderbilt.edu/twiki/bin/view/Main/ApacheRproject
    Description:
 
    Package:       RApache
-   Version:       0.1-0
+   Version:       0.1-1
    Date:          2005-08-02
    Title:         An R interface to the Apache 2.0 web server
    Author:        Jeffrey Horner
@@ -132,5 +132,6 @@ http://biostat.mc.vanderbilt.edu/twiki/bin/view/Main/ApacheRproject
   Licensing
   ---------
 
-  Please see the file called LICENSE.
+  The R/Apache source code is licensed under the Apache License Version
+  2.0.  Please see the file called LICENSE.
 
