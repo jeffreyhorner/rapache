@@ -1,0 +1,18 @@
+#!/home/joe/perl/5.8.x/bin/perl
+# WARNING: this file is generated, do not edit
+# 01: /home/joe/perl/5.8.x/lib/site_perl/5.8.6/x86_64-linux-thread-multi/Apache/TestConfig.pm:923
+# 02: /home/joe/perl/5.8.x/lib/site_perl/5.8.6/x86_64-linux-thread-multi/Apache/TestConfig.pm:1013
+# 03: /home/joe/perl/5.8.x/lib/site_perl/5.8.6/x86_64-linux-thread-multi/Apache/TestSmoke.pm:778
+# 04: Makefile.PL:159
+
+BEGIN { eval { require blib && blib->import; } }
+
+use strict;
+use warnings FATAL => 'all';
+
+use lib qw(
+);
+
+
+use Apache::TestSmokePerl;
+Apache::TestSmokePerl->new(@ARGV)->run;

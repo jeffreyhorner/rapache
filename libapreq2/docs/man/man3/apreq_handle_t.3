@@ -1,0 +1,42 @@
+.TH "apreq_handle_t" 3 "4 May 2005" "Version 2.05-dev" "libapreq2" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+apreq_handle_t \- 
+.SH SYNOPSIS
+.br
+.PP
+\fC#include <apreq_module.h>\fP
+.PP
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "const struct \fBapreq_module_t\fP * \fBmodule\fP"
+.br
+.ti -1c
+.RI "\fBapr_pool_t\fP * \fBpool\fP"
+.br
+.ti -1c
+.RI "\fBapr_bucket_alloc_t\fP * \fBbucket_alloc\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+An apreq handle associated with a module. The structure may have variable size, because the module may append its own data structures after it. 
+.PP
+.SH "Field Documentation"
+.PP 
+.SS "\fBapr_bucket_alloc_t\fP* \fBapreq_handle_t::bucket_alloc\fP"
+.PP
+the allocator, which persists at least as long as the pool 
+.SS "const struct \fBapreq_module_t\fP* \fBapreq_handle_t::module\fP"
+.PP
+the apreq module which implements this handle 
+.SS "\fBapr_pool_t\fP* \fBapreq_handle_t::pool\fP"
+.PP
+the pool which defines the lifetime of the parsed data 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for libapreq2 from the source code.

@@ -1,0 +1,301 @@
+.TH "include/apreq_parser.h" 3 "4 May 2005" "Version 2.05-dev" "libapreq2" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+include/apreq_parser.h \- Request body parser API. 
+.SH SYNOPSIS
+.br
+.PP
+\fC#include 'apreq_param.h'\fP
+.br
+
+.SS "Defines"
+
+.in +1c
+.ti -1c
+.RI "#define \fBAPREQ_PARSER_ARGS\fP"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_HOOK_ARGS\fP"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_DECLARE_PARSER\fP(f)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_DECLARE_HOOK\fP(f)"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "typedef \fBapreq_hook_t\fP \fBapreq_hook_t\fP"
+.br
+.ti -1c
+.RI "typedef \fBapreq_parser_t\fP \fBapreq_parser_t\fP"
+.br
+.ti -1c
+.RI "typedef \fBapr_status_t\fP(* \fBapreq_parser_function_t\fP )(APREQ_PARSER_ARGS)"
+.br
+.ti -1c
+.RI "typedef \fBapr_status_t\fP(* \fBapreq_hook_function_t\fP )(APREQ_HOOK_ARGS)"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_parser_run\fP (struct \fBapreq_parser_t\fP *psr, \fBapr_table_t\fP *t, \fBapr_bucket_brigade\fP *bb)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_hook_run\fP (struct \fBapreq_hook_t\fP *h, \fBapreq_param_t\fP *param, \fBapr_bucket_brigade\fP *bb)"
+.br
+.ti -1c
+.RI "\fBAPREQ_DECLARE_PARSER\fP (apreq_parse_headers)"
+.br
+.ti -1c
+.RI "\fBAPREQ_DECLARE_PARSER\fP (apreq_parse_urlencoded)"
+.br
+.ti -1c
+.RI "\fBAPREQ_DECLARE_PARSER\fP (apreq_parse_multipart)"
+.br
+.ti -1c
+.RI "\fBAPREQ_DECLARE_PARSER\fP (apreq_parse_generic)"
+.br
+.ti -1c
+.RI "\fBAPREQ_DECLARE_HOOK\fP (apreq_hook_apr_xml_parser)"
+.br
+.ti -1c
+.RI "\fBapreq_parser_t\fP * \fBapreq_parser_make\fP (\fBapr_pool_t\fP *pool, \fBapr_bucket_alloc_t\fP *ba, const char *content_type, \fBapreq_parser_function_t\fP pfn, \fBapr_size_t\fP brigade_limit, const char *temp_dir, \fBapreq_hook_t\fP *hook, void *ctx)"
+.br
+.ti -1c
+.RI "\fBapreq_hook_t\fP * \fBapreq_hook_make\fP (\fBapr_pool_t\fP *pool, \fBapreq_hook_function_t\fP hook, \fBapreq_hook_t\fP *next, void *ctx)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_parser_add_hook\fP (\fBapreq_parser_t\fP *p, \fBapreq_hook_t\fP *h)"
+.br
+.ti -1c
+.RI "\fBapreq_parser_function_t\fP \fBapreq_parser\fP (const char *enctype)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_register_parser\fP (const char *enctype, \fBapreq_parser_function_t\fP pfn)"
+.br
+.ti -1c
+.RI "\fBAPREQ_DECLARE_HOOK\fP (apreq_hook_disable_uploads)"
+.br
+.ti -1c
+.RI "\fBAPREQ_DECLARE_HOOK\fP (apreq_hook_discard_brigade)"
+.br
+.ti -1c
+.RI "\fBAPREQ_DECLARE_HOOK\fP (apreq_hook_find_param)"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Request body parser API. 
+
+
+.SH "Define Documentation"
+.PP 
+.SS "#define APREQ_DECLARE_HOOK(f)"
+.PP
+\fBValue:\fP
+.PP
+.nf
+APREQ_DECLARE_NONSTD(apr_status_t) \
+                                (f) (APREQ_HOOK_ARGS)
+.fi
+Declares an API hook. 
+.SS "#define APREQ_DECLARE_PARSER(f)"
+.PP
+\fBValue:\fP
+.PP
+.nf
+APREQ_DECLARE_NONSTD(apr_status_t) \
+                                (f) (APREQ_PARSER_ARGS)
+.fi
+Declares a API parser. 
+.SS "#define APREQ_HOOK_ARGS"
+.PP
+\fBValue:\fP
+.PP
+.nf
+apreq_hook_t *hook,         \
+                           apreq_param_t *param,       \
+                           apr_bucket_brigade *bb
+.fi
+Hook arguments 
+.SS "#define APREQ_PARSER_ARGS"
+.PP
+\fBValue:\fP
+.PP
+.nf
+apreq_parser_t *parser,     \
+                           apr_table_t *t,             \
+                           apr_bucket_brigade *bb
+.fi
+Parser arguments. 
+.SH "Typedef Documentation"
+.PP 
+.SS "typedef \fBapr_status_t\fP(* \fBapreq_hook_function_t\fP)(APREQ_HOOK_ARGS)"
+.PP
+The callback function of a hook. See \fBapreq_hook_t\fP. 
+.SS "typedef struct \fBapreq_hook_t\fP \fBapreq_hook_t\fP"
+.PP
+A hook is called by the parser whenever data arrives in a file upload parameter of the request body. You may associate any number of hooks with a parser instance with \fBapreq_parser_add_hook()\fP. 
+.SS "typedef \fBapr_status_t\fP(* \fBapreq_parser_function_t\fP)(APREQ_PARSER_ARGS)"
+.PP
+The callback function implementing a request body parser. 
+.SS "typedef struct \fBapreq_parser_t\fP \fBapreq_parser_t\fP"
+.PP
+A request body parser instance. 
+.SH "Function Documentation"
+.PP 
+.SS "APREQ_DECLARE_HOOK (apreq_hook_find_param)"
+.PP
+Special purpose utility for locating a parameter during parsing. The hook's ctx shoud be initialized to a const char *, which is a pointer to the desired param name. The hook's ctx will be reassigned to the first param found.
+.PP
+\fBRemarks:\fP
+.RS 4
+When used, this should always be the first hook invoked, so add it manually as parser->hook instead of using apreq_parser_add_hook. 
+.RE
+.PP
+
+.SS "APREQ_DECLARE_HOOK (apreq_hook_discard_brigade)"
+.PP
+Calls apr_brigade_cleanup on the incoming brigade after passing the brigade to any subsequent hooks. 
+.SS "APREQ_DECLARE_HOOK (apreq_hook_disable_uploads)"
+.PP
+Returns APREQ_ERROR_GENERAL. Effectively disables mfd parser if a file-upload field is present. 
+.SS "APREQ_DECLARE_HOOK (apreq_hook_apr_xml_parser)"
+.PP
+apr_xml_parser hook. It will parse until EOS appears. The parsed document isn't available until parsing has completed successfully. The hook's ctx pointer may be cast as (\fBapr_xml_doc\fP **) to retrieve the parsed document. 
+.SS "APREQ_DECLARE_PARSER (apreq_parse_generic)"
+.PP
+Generic parser. No table entries will be added to the req->body table by this parser. The parser creates a dummy \fBapreq_param_t\fP to pass to any configured hooks. If no hooks are configured, the dummy param's bb slot will contain a copy of the request body. It can be retrieved by casting the parser's ctx pointer to (\fBapreq_param_t\fP **). 
+.SS "APREQ_DECLARE_PARSER (apreq_parse_multipart)"
+.PP
+RFC 2388 multipart/form-data (and XForms 1.0 multipart/related) parser. It will reject any buckets representing preamble and postamble text (this is normal behavior, not an error condition). See \fBapreq_parser_run()\fP for more info on rejected data. 
+.SS "APREQ_DECLARE_PARSER (apreq_parse_urlencoded)"
+.PP
+RFC 2396 application/x-www-form-urlencoded parser. 
+.SS "APREQ_DECLARE_PARSER (apreq_parse_headers)"
+.PP
+RFC 822 Header parser. It will reject all data after the first CRLF CRLF sequence (an empty line). See \fBapreq_parser_run()\fP for more info on rejected data. 
+.SS "\fBapreq_hook_t\fP* apreq_hook_make (\fBapr_pool_t\fP * pool, \fBapreq_hook_function_t\fP hook, \fBapreq_hook_t\fP * next, void * ctx)"
+.PP
+Construct a hook.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIpool\fP used to allocate the hook. 
+.br
+\fIhook\fP The hook function. 
+.br
+\fInext\fP List of other hooks for this hook to call on. 
+.br
+\fIctx\fP Hook's internal scratch pad. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+New hook. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_hook_run (struct \fBapreq_hook_t\fP * h, \fBapreq_param_t\fP * param, \fBapr_bucket_brigade\fP * bb)\fC [static]\fP"
+.PP
+Run the hook with the current parameter and the incoming bucket brigade. The hook may modify the brigade if necessary. Once all hooks have completed, the contents of the brigade will be added to the parameter's bb attribute. 
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS on success. All other values represent errors. 
+.RE
+.PP
+
+.SS "\fBapreq_parser_function_t\fP apreq_parser (const char * enctype)"
+.PP
+Fetch the default parser function associated with the given MIME type. 
+.PP
+\fBParameters:\fP
+.RS 4
+\fIenctype\fP The desired enctype (can also be a full 'Content-Type' header). 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+The parser function, or NULL if the enctype is unrecognized. 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_parser_add_hook (\fBapreq_parser_t\fP * p, \fBapreq_hook_t\fP * h)"
+.PP
+Add a new hook to the end of the parser's hook list.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIp\fP Parser. 
+.br
+\fIh\fP Hook to append. 
+.RE
+.PP
+
+.SS "\fBapreq_parser_t\fP* apreq_parser_make (\fBapr_pool_t\fP * pool, \fBapr_bucket_alloc_t\fP * ba, const char * content_type, \fBapreq_parser_function_t\fP pfn, \fBapr_size_t\fP brigade_limit, const char * temp_dir, \fBapreq_hook_t\fP * hook, void * ctx)"
+.PP
+Construct a parser.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIpool\fP Pool used to allocate the parser. 
+.br
+\fIba\fP bucket allocator used to create bucket brigades 
+.br
+\fIcontent_type\fP Content-type that this parser can deal with. 
+.br
+\fIpfn\fP The parser function. 
+.br
+\fIbrigade_limit\fP the maximum in-memory bytes a brigade may use 
+.br
+\fItemp_dir\fP the directory used by the parser for temporary files 
+.br
+\fIhook\fP Hooks to asssociate this parser with. 
+.br
+\fIctx\fP Parser's internal scratch pad. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+New parser. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_parser_run (struct \fBapreq_parser_t\fP * psr, \fBapr_table_t\fP * t, \fBapr_bucket_brigade\fP * bb)\fC [static]\fP"
+.PP
+Parse the incoming brigade into a table. Parsers normally consume all the buckets of the brigade during parsing. However parsers may leave 'rejected' data in the brigade, even during a successful parse, so callers may need to clean up the brigade themselves (in particular, rejected buckets should not be passed back to the parser again). 
+.PP
+\fBRemarks:\fP
+.RS 4
+bb == NULL is valid: the parser should return its public status: APR_INCOMPLETE, APR_SUCCESS, or an error code. 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_register_parser (const char * enctype, \fBapreq_parser_function_t\fP pfn)"
+.PP
+Register a new parsing function with a MIME enctype. Registered parsers are added to \fBapreq_parser()\fP's internal lookup table.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIenctype\fP The MIME type. 
+.br
+\fIpfn\fP The function to use during parsing. Setting parser == NULL will remove an existing parser.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or error. 
+.RE
+.PP
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for libapreq2 from the source code.

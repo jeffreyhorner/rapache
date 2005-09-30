@@ -1,0 +1,599 @@
+.TH "include/apreq_module.h" 3 "4 May 2005" "Version 2.05-dev" "libapreq2" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+include/apreq_module.h \- Module API. 
+.SH SYNOPSIS
+.br
+.PP
+\fC#include 'apreq_cookie.h'\fP
+.br
+\fC#include 'apreq_parser.h'\fP
+.br
+\fC#include 'apreq_error.h'\fP
+.br
+
+.SS "Defines"
+
+.in +1c
+.ti -1c
+.RI "#define \fBAPREQ_MODULE\fP(pre, mmn)"
+.br
+.ti -1c
+.RI "#define \fBapreq_cookie\fP(req, name)   apreq_jar_get(req, name)"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "typedef \fBapreq_handle_t\fP \fBapreq_handle_t\fP"
+.br
+.ti -1c
+.RI "typedef \fBapreq_module_t\fP \fBapreq_module_t\fP"
+.br
+.RI "\fIVtable describing the necessary environment functions. \fP"
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "static \fBAPR_INLINE\fP unsigned \fBapreq_module_status_is_error\fP (\fBapr_status_t\fP s)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_jar\fP (\fBapreq_handle_t\fP *req, const \fBapr_table_t\fP **t)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_args\fP (\fBapreq_handle_t\fP *req, const \fBapr_table_t\fP **t)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_body\fP (\fBapreq_handle_t\fP *req, const \fBapr_table_t\fP **t)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapreq_cookie_t\fP * \fBapreq_jar_get\fP (\fBapreq_handle_t\fP *req, const char *name)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapreq_param_t\fP * \fBapreq_args_get\fP (\fBapreq_handle_t\fP *req, const char *name)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapreq_param_t\fP * \fBapreq_body_get\fP (\fBapreq_handle_t\fP *req, const char *name)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_parser_get\fP (\fBapreq_handle_t\fP *req, const \fBapreq_parser_t\fP **parser)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_parser_set\fP (\fBapreq_handle_t\fP *req, \fBapreq_parser_t\fP *parser)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_hook_add\fP (\fBapreq_handle_t\fP *req, \fBapreq_hook_t\fP *hook)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_brigade_limit_set\fP (\fBapreq_handle_t\fP *req, \fBapr_size_t\fP bytes)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_brigade_limit_get\fP (\fBapreq_handle_t\fP *req, \fBapr_size_t\fP *bytes)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_read_limit_set\fP (\fBapreq_handle_t\fP *req, \fBapr_uint64_t\fP bytes)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_read_limit_get\fP (\fBapreq_handle_t\fP *req, \fBapr_uint64_t\fP *bytes)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_temp_dir_set\fP (\fBapreq_handle_t\fP *req, const char *path)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_temp_dir_get\fP (\fBapreq_handle_t\fP *req, const char **path)"
+.br
+.ti -1c
+.RI "\fBapreq_handle_t\fP * \fBapreq_handle_cgi\fP (\fBapr_pool_t\fP *pool)"
+.br
+.ti -1c
+.RI "\fBapreq_handle_t\fP * \fBapreq_handle_custom\fP (\fBapr_pool_t\fP *pool, const char *query_string, const char *cookie, \fBapreq_parser_t\fP *parser, \fBapr_uint64_t\fP read_limit, \fBapr_bucket_brigade\fP *in)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_cookie_bake\fP (const \fBapreq_cookie_t\fP *c, \fBapreq_handle_t\fP *req)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_cookie_bake2\fP (const \fBapreq_cookie_t\fP *c, \fBapreq_handle_t\fP *req)"
+.br
+.ti -1c
+.RI "unsigned \fBapreq_ua_cookie_version\fP (\fBapreq_handle_t\fP *req)"
+.br
+.ti -1c
+.RI "\fBapreq_param_t\fP * \fBapreq_param\fP (\fBapreq_handle_t\fP *req, const char *key)"
+.br
+.ti -1c
+.RI "\fBapr_table_t\fP * \fBapreq_params\fP (\fBapreq_handle_t\fP *req, \fBapr_pool_t\fP *p)"
+.br
+.ti -1c
+.RI "\fBapr_table_t\fP * \fBapreq_cookies\fP (\fBapreq_handle_t\fP *req, \fBapr_pool_t\fP *p)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_parse\fP (\fBapreq_handle_t\fP *req)"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Module API. 
+
+
+.SH "Define Documentation"
+.PP 
+.SS "#define apreq_cookie(req, name)   apreq_jar_get(req, name)"
+.PP
+Find the first cookie with the specified name. The match is case-insensitive.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP request handle. 
+.br
+\fIkey\fP desired cookie name
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+The first matching parameter (with args searched first) or NULL. 
+.RE
+.PP
+
+.SS "#define APREQ_MODULE(pre, mmn)"
+.PP
+\fBValue:\fP
+.PP
+.nf
+const apreq_module_t     \
+  pre##_module = { #pre, mmn,                           \
+  pre##_jar,        pre##_args,       pre##_body,       \
+  pre##_jar_get,    pre##_args_get,   pre##_body_get,   \
+  pre##_parser_get, pre##_parser_set, pre##_hook_add,   \
+  pre##_brigade_limit_get, pre##_brigade_limit_set,     \
+  pre##_read_limit_get,    pre##_read_limit_set,        \
+  pre##_temp_dir_get,      pre##_temp_dir_set,          \
+  }
+.fi
+Convenience macro for defining a module by mapping a function prefix to an associated \fBapreq_module_t\fP structure.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIpre\fP Prefix to define new environment. All attributes of the apreq_env_module_t struct are defined with this as their prefix. The generated struct is named by appending '_module' to the prefix. 
+.br
+\fImmn\fP Magic number (i.e. version number) of this environment. 
+.RE
+.PP
+
+.SH "Typedef Documentation"
+.PP 
+.SS "typedef struct \fBapreq_handle_t\fP  \fBapreq_handle_t\fP"
+.PP
+An apreq handle associated with a module. The structure may have variable size, because the module may append its own data structures after it. 
+.SH "Function Documentation"
+.PP 
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_args (\fBapreq_handle_t\fP * req, const \fBapr_table_t\fP ** t)\fC [static]\fP"
+.PP
+Expose the parsed 'query string' associated to this handle.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle 
+.br
+\fIt\fP The resulting table, which will either be NULL or a valid table object on return.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or a module-specific error status code. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapreq_param_t\fP* apreq_args_get (\fBapreq_handle_t\fP * req, const char * name)\fC [static]\fP"
+.PP
+Fetch the first query string param with the given name.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle 
+.br
+\fIname\fP Case-insensitive param name.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+First matching param, or NULL if none match. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_body (\fBapreq_handle_t\fP * req, const \fBapr_table_t\fP ** t)\fC [static]\fP"
+.PP
+Expose the parsed 'request body' associated to this handle.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle 
+.br
+\fIt\fP The resulting table, which will either be NULL or a valid table object on return.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or a module-specific error status code. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapreq_param_t\fP* apreq_body_get (\fBapreq_handle_t\fP * req, const char * name)\fC [static]\fP"
+.PP
+Fetch the first body param with the given name.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle 
+.br
+\fIname\fP Case-insensitive cookie name.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+First matching param, or NULL if none match. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_brigade_limit_get (\fBapreq_handle_t\fP * req, \fBapr_size_t\fP * bytes)\fC [static]\fP"
+.PP
+Get the active brigade limit.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The handle. 
+.br
+\fIbytes\fP Pointer to resulting (current) limit.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or a module-specific error, which may leave bytes undefined. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_brigade_limit_set (\fBapreq_handle_t\fP * req, \fBapr_size_t\fP bytes)\fC [static]\fP"
+.PP
+Set the active brigade limit.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The handle. 
+.br
+\fIbytes\fP New limit to use.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or module-specific error. 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_cookie_bake (const \fBapreq_cookie_t\fP * c, \fBapreq_handle_t\fP * req)"
+.PP
+Add the cookie to the outgoing 'Set-Cookie' headers.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIc\fP The cookie. 
+.br
+\fIreq\fP The request handle which set the outgoing header.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or error. 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_cookie_bake2 (const \fBapreq_cookie_t\fP * c, \fBapreq_handle_t\fP * req)"
+.PP
+Add the cookie to the outgoing 'Set-Cookie2' headers.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIc\fP cookie 
+.br
+\fIreq\fP request handle
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or error. 
+.RE
+.PP
+
+.SS "\fBapr_table_t\fP* apreq_cookies (\fBapreq_handle_t\fP * req, \fBapr_pool_t\fP * p)"
+.PP
+Returns a table containing all request cookies.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP the apreq request handle 
+.br
+\fIp\fP Allocates the returned table. 
+.RE
+.PP
+
+.SS "\fBapreq_handle_t\fP* apreq_handle_cgi (\fBapr_pool_t\fP * pool)"
+.PP
+Create an apreq handle which is suitable for a CGI program. It reads input from stdin and writes output to stdout.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIpool\fP Pool associated to this handle.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+New handle; can only be NULL if the pool allocation failed.
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+The handle gets cached in the pool's userdata, so subsequent calls will retrieve the original cached handle. 
+.RE
+.PP
+
+.SS "\fBapreq_handle_t\fP* apreq_handle_custom (\fBapr_pool_t\fP * pool, const char * query_string, const char * cookie, \fBapreq_parser_t\fP * parser, \fBapr_uint64_t\fP read_limit, \fBapr_bucket_brigade\fP * in)"
+.PP
+Create a custom apreq handle which knows only some static values. Useful if you want to test the parser code or if you have got data from a custom source (neither \fBApache\fP 2 nor CGI).
+.PP
+\fBParameters:\fP
+.RS 4
+\fIpool\fP allocates the parse data, 
+.br
+\fIquery_string\fP parsed into args table 
+.br
+\fIcookie\fP value of the request 'Cookie' header 
+.br
+\fIparser\fP parses the request body 
+.br
+\fIread_limit\fP maximum bytes to read from the body 
+.br
+\fIin\fP brigade containing the request body
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+new handle; can only be NULL if the pool allocation failed. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_hook_add (\fBapreq_handle_t\fP * req, \fBapreq_hook_t\fP * hook)\fC [static]\fP"
+.PP
+Add a parser hook for this request.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle 
+.br
+\fIhook\fP Hook to add.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or module-specific error. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_jar (\fBapreq_handle_t\fP * req, const \fBapr_table_t\fP ** t)\fC [static]\fP"
+.PP
+Expose the parsed 'cookie' header associated to this handle.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle 
+.br
+\fIt\fP The resulting table, which will either be NULL or a valid table object on return.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or a module-specific error status code. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapreq_cookie_t\fP* apreq_jar_get (\fBapreq_handle_t\fP * req, const char * name)\fC [static]\fP"
+.PP
+Fetch the first cookie with the given name.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle 
+.br
+\fIname\fP Case-insensitive cookie name.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+First matching cookie, or NULL if none match. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP unsigned apreq_module_status_is_error (\fBapr_status_t\fP s)\fC [static]\fP"
+.PP
+Defines the module-specific status codes which are commonly considered to be non-fatal.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIs\fP status code returned by an \fBapreq_module_t\fP method.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+1 if s is fatal, 0 otherwise. 
+.RE
+.PP
+
+.SS "\fBapreq_param_t\fP* apreq_param (\fBapreq_handle_t\fP * req, const char * key)"
+.PP
+Find the first query string parameter or body parameter with the specified name. The match is case-insensitive.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP request handle. 
+.br
+\fIkey\fP desired parameter name
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+The first matching parameter (with args searched first) or NULL. 
+.RE
+.PP
+
+.SS "\fBapr_table_t\fP* apreq_params (\fBapreq_handle_t\fP * req, \fBapr_pool_t\fP * p)"
+.PP
+Returns a table containing key-value pairs for the full request (args + body).
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP request handle 
+.br
+\fIp\fP allocates the returned table.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+table representing all available params; is never NULL. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_parse (\fBapreq_handle_t\fP * req)\fC [static]\fP"
+.PP
+Force a complete parse of everything.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS on an error-free parse of the request data. Any other status code indicates a potential problem somewhere. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_parser_get (\fBapreq_handle_t\fP * req, const \fBapreq_parser_t\fP ** parser)\fC [static]\fP"
+.PP
+Fetch the active body parser.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle 
+.br
+\fIparser\fP Points to the active parser on return.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or module-specific error. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_parser_set (\fBapreq_handle_t\fP * req, \fBapreq_parser_t\fP * parser)\fC [static]\fP"
+.PP
+Set the body parser for this request.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle 
+.br
+\fIparser\fP New parser to use.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or module-specific error. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_read_limit_get (\fBapreq_handle_t\fP * req, \fBapr_uint64_t\fP * bytes)\fC [static]\fP"
+.PP
+Get the active read limit.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The request handle. 
+.br
+\fIbytes\fP Pointer to resulting (current) limit.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or a module-specific error, which may leave bytes undefined. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_read_limit_set (\fBapreq_handle_t\fP * req, \fBapr_uint64_t\fP bytes)\fC [static]\fP"
+.PP
+Set the active read limit.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The handle. 
+.br
+\fIbytes\fP New limit to use.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or a module-specific error. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_temp_dir_get (\fBapreq_handle_t\fP * req, const char ** path)\fC [static]\fP"
+.PP
+Get the active temp directory.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The handle. 
+.br
+\fIpath\fP Resulting path to temp dir.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS implies path is valid, but may also be NULL. Any other return value is module-specific, and may leave path undefined. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_temp_dir_set (\fBapreq_handle_t\fP * req, const char * path)\fC [static]\fP"
+.PP
+Set the active temp directory.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP The handle. 
+.br
+\fIpath\fP New path to use; may be NULL.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS or a module-specific error . 
+.RE
+.PP
+
+.SS "unsigned apreq_ua_cookie_version (\fBapreq_handle_t\fP * req)"
+.PP
+Looks for the presence of a 'Cookie2' header to determine whether or not the current User-Agent responsible for this request supports rfc2965.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIreq\fP the apreq request handle
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+::APREQ_COOKIE_VERSION_RFC if rfc2965 is supported by the user-agent, ::APREQ_COOKIE_VERSION_NETSCAPE otherwise. 
+.RE
+.PP
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for libapreq2 from the source code.

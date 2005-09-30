@@ -1,0 +1,125 @@
+#test config derived from httpd-2.0/docs/conf/ssl-std.conf
+
+<IfModule @ssl_module@>
+    #base config that can be used by any SSL enabled VirtualHosts
+    AddType application/x-x509-ca-cert .crt
+    AddType application/x-pkcs7-crl    .crl
+
+    SSLSessionCache        none
+    #XXX: would be nice to test these
+    #SSLSessionCache        shm:@ServerRoot@/logs/ssl_scache(512000)
+    #SSLSessionCache        dbm:@ServerRoot@/logs/ssl_scache
+    #SSLSessionCacheTimeout  300
+
+    #SSLMutex  file:@ServerRoot@/logs/ssl_mutex
+
+    SSLRandomSeed startup builtin
+    SSLRandomSeed connect builtin
+    #SSLRandomSeed startup file:/dev/random  512
+    #SSLRandomSeed startup file:/dev/urandom 512
+    #SSLRandomSeed connect file:/dev/random  512
+    #SSLRandomSeed connect file:/dev/urandom 512
+
+    <IfModule mod_log_config.c>
+        LogFormat "%t %h %{SSL_PROTOCOL}x %{SSL_CIPHER}x \"%r\" %>s %b" ssl
+        CustomLog logs/ssl_request_log ssl
+    </IfModule>
+
+    SSLCipherSuite ALL:!ADH:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP:+eNULL
+
+    <IfDefine TEST_SSL_PASSPHRASE_EXEC>
+        SSLPassPhraseDialog  exec:@ServerRoot@/conf/ssl/httpd-passphrase.pl
+    </IfDefine>
+    #else the default is builtin
+    <IfDefine !TEST_SSL_PASSPHRASE_EXEC>
+        SSLPassPhraseDialog  builtin
+    </IfDefine>
+
+    <IfDefine TEST_SSL_DES3_KEY>
+        SSLCertificateFile @SSLCA@/asf/certs/server_des3.crt
+
+        SSLCertificateKeyFile @SSLCA@/asf/keys/server_des3.pem
+
+#        SSLCertificateFile @SSLCA@/asf/certs/server_des3_dsa.crt
+
+#        SSLCertificateKeyFile @SSLCA@/asf/keys/server_des3_dsa.pem
+    </IfDefine>
+    #else the default is an unencrypted key
+    <IfDefine !TEST_SSL_DES3_KEY>
+        SSLCertificateFile @SSLCA@/asf/certs/server.crt
+
+        SSLCertificateKeyFile @SSLCA@/asf/keys/server.pem
+
+#        SSLCertificateFile @SSLCA@/asf/certs/server_dsa.crt
+
+#        SSLCertificateKeyFile @SSLCA@/asf/keys/server_dsa.pem
+    </IfDefine>
+
+    #SSLCertificateChainFile @SSLCA@/asf/certs/cachain.crt
+
+    SSLCACertificateFile @SSLCA@/asf/certs/ca.crt
+
+    SSLCACertificatePath @ServerRoot@/conf/ssl
+
+    SSLCARevocationFile @SSLCA@/asf/crl/ca-bundle.crl
+
+    <VirtualHost @ssl_module_name@>
+        SSLEngine on
+
+        #t/ssl/verify.t
+        Alias /verify @DocumentRoot@
+
+        <Location /verify>
+            SSLVerifyClient require
+            SSLVerifyDepth  10
+        </Location>
+
+        #t/ssl/require.t
+        Alias /require/asf       @DocumentRoot@
+        Alias /require/snakeoil  @DocumentRoot@
+        Alias /ssl-fakebasicauth @DocumentRoot@
+        Alias /ssl-cgi           @DocumentRoot@/modules/cgi
+        Alias /require-ssl-cgi   @DocumentRoot@/modules/cgi
+
+        <Location /require/asf>
+            SSLVerifyClient require
+            SSLVerifyDepth  10
+            SSLRequire (%{SSL_CIPHER} !~ m/^(EXP|NULL)-/ \
+                        and %{SSL_CLIENT_S_DN_O} eq "ASF" \
+                        and %{SSL_CLIENT_S_DN_OU} in \
+                             {"httpd-test", "httpd", "modperl"} )
+        </Location>
+
+        <Location /require/snakeoil>
+            SSLVerifyClient require
+            SSLVerifyDepth  10
+            SSLRequire (%{SSL_CIPHER} !~ m/^(EXP|NULL)-/ \
+                        and %{SSL_CLIENT_S_DN_O} eq "Snake Oil, Ltd." \
+                        and %{SSL_CLIENT_S_DN_OU} in \
+                             {"Staff", "CA", "Dev"} )
+        </Location>
+
+        <Location /ssl-cgi>
+            SSLOptions +StdEnvVars
+        </Location>
+
+        <Location /require-ssl-cgi>
+            SSLOptions +StdEnvVars
+            SSLVerifyClient require
+            SSLVerifyDepth  10
+        </Location>
+
+        <IfModule @AUTH_MODULE@>
+            <Location /ssl-fakebasicauth>
+                SSLVerifyClient      require
+                SSLVerifyDepth       5
+                SSLOptions           +FakeBasicAuth
+                AuthName             "Snake Oil Authentication"
+                AuthType             Basic
+                AuthUserFile         @SSLCA@/asf/ssl.htpasswd
+                require              valid-user
+            </Location>
+        </IfModule>
+
+    </VirtualHost>
+</IfModule>

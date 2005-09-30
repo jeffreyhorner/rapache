@@ -1,0 +1,172 @@
+AC_INIT(mod_R,0.1,jeff.horner@vanderbilt.edu)
+AC_CONFIG_AUX_DIR([tools])
+# Automake initialization
+AM_INIT_AUTOMAKE(mod_R, 0.1)
+
+AC_PROG_CC
+AC_PROG_LIBTOOL
+
+# --with-apache2-apxs
+AC_DEFUN([APACHE_APXS],[
+
+    AC_ARG_WITH(
+            apache2-apxs,
+            [  --with-apache2-apxs=PATH     Path to apxs],
+            ,
+            [with_apache2_apxs="no"]
+    )
+
+    AC_MSG_CHECKING(for --with-apache2-apxs)
+
+    if test "$with_apache2_apxs" = "no"; then
+        echo
+        echo
+        echo "Specify the path to apxs, the Apache2 build tool."
+        echo
+        AC_MSG_ERROR( aborting! )
+    else
+        # make sure that httpd was built with prefork
+        HTTPD="`$with_apache2_apxs -q bindir`/`$with_apache2_apxs -q progname`"; export HTTPD
+	if ! test -x $HTTPD; then 
+            HTTPD="`$with_apache2_apxs -q sbindir`/`$with_apache2_apxs -q progname`"; export HTTPD
+	    if ! test -x $HTTPD; then
+                echo
+                echo
+		echo "I cannot find your httpd binary with $with_apache2_apxs."
+		echo "Are you sure that's the correct apxs you should be using?"
+		echo
+		AC_MSG_ERROR( aborting! )
+            fi
+        fi
+        if $HTTPD -l 2>/dev/null | grep 'prefork' >/dev/null; then
+            APXS=$with_apache2_apxs
+            AC_MSG_RESULT(apxs found!)
+        else
+            echo
+            echo
+            echo "Apache not built with prefork MPM module."
+            echo
+            echo "Since R is not threaded, mod_R must be built with an install of Apache"
+            echo "that doesn't utilize threads. Apache must be built with the prefork MPM module."
+            echo "Either recompile Apache with prefork, or find another Apache install."
+            echo
+            AC_MSG_ERROR( aborting! )
+        fi
+    fi
+
+])
+
+# --with-R
+AC_DEFUN([R_PROG],[
+
+    AC_ARG_WITH(
+            R,
+            [  --with-R=PATH                Path to R (usually /usr/local/bin/R) ],
+            ,
+            [with_R="no"]
+    )
+
+    AC_MSG_CHECKING(for R Program)
+
+    if test "$with_R" = "no"; then
+        echo
+        echo
+        echo "Specify the R program using --with-R (like /usr/local/bin/R)"
+        echo
+        AC_MSG_ERROR( aborting! )
+    else
+        # make sure that a well known include file exists
+        # and the libR.so
+        if $with_R CMD config --ldflags 2>/dev/null | grep -v 'R was not built as a shared library' >/dev/null; then
+                RPROG=$with_R
+                RHOME=`$with_R RHOME`
+                AC_MSG_RESULT(R found!)
+        else
+            echo
+            echo
+            echo "R was not built as a shared library"
+            echo
+            echo "Either build it with one, or use another install of R"
+            echo
+            AC_MSG_ERROR( aborting! )
+        fi
+    fi
+
+])
+
+# --with-apreq2-config
+AC_DEFUN([APREQ_CONFIG],[
+
+    AC_ARG_WITH(
+            apreq2-config,
+            [  --with-apreq2-config=PATH    Path to apreq2-config ],
+            ,
+            [with_apreq2_config="no"]
+    )
+
+    AC_MSG_CHECKING(for apreq2-config)
+
+    if test "$with_apreq2_config" = "no"; then
+        echo
+        echo
+        echo "Using libapreq2 that comes bundled with mod_R"
+        echo
+        APREQ=`pwd`/libapreq2/apreq2-config
+        APREQ_COMPILE="(cd libapreq2/library; make)"
+        APREQ_INSTALL="(cd libapreq2/library; make install)"
+        (cd libapreq2; ./configure --with-apache2-apxs=$APXS)
+		APREQ_LIB_DIR=`$APREQ --link-ld | sed -e 's/-L//;s/-lapreq2//;'`
+    else
+        # make sure that a well known include file exists
+        if test -f `$with_apreq2_config --includedir`/apreq.h  ; then
+                APREQ=$with_apreq2_config
+                APREQ_COMPILE=
+                APREQ_INSTALL=
+				APREQ_LIB_DIR=`$APREQ --link-ld | sed -e 's/-L//;s/-lapreq2;'`
+                AC_MSG_RESULT(apreq2-config found!)
+        else
+            echo
+            echo
+            echo "Cannot find libapreq2 header files"
+            echo
+            echo "Check to make sure libapreq2 is already installed in your Apache install."
+            echo "If not, then don't specifiy the --with-apreq2-config option as mod_R comes bundled"
+            echo "with it."
+            echo
+            AC_MSG_ERROR( aborting! )
+        fi
+    fi
+])
+
+AC_DEFUN([SET_DOCROOT],[
+        DOCROOT=`pwd`/test
+])
+
+AC_PATH_PROG([GDLIBCONF],[gdlib-config],not found,[$PATH])
+
+if test "$GDLIBCONF" != "not found" -a -x "$GDLIBCONF"; then
+    GDCFLAGS="`$GDLIBCONF --cflags`  -DHAVE_GDLIB"
+    GDLDFLAGS="-L`$GDLIBCONF --libdir` -lgd `$GDLIBCONF --ldflags` `$GDLIBCONF --libs`"
+else
+    GDCFLAGS=""
+    GDLDFLAGS=""
+fi
+
+
+APACHE_APXS
+AC_SUBST(APXS)
+AC_SUBST(HTTPD)
+R_PROG
+AC_SUBST(RPROG)
+AC_SUBST(RHOME)
+APREQ_CONFIG
+AC_SUBST(APREQ)
+AC_SUBST(APREQ_COMPILE)
+AC_SUBST(APREQ_INSTALL)
+AC_SUBST(APREQ_LIB_DIR)
+SET_DOCROOT
+AC_SUBST(DOCROOT)
+AC_SUBST(GDCFLAGS)
+AC_SUBST(GDLDFLAGS)
+
+AC_OUTPUT(Makefile mod_R.h RApache/src/Makevars test/httpd.conf)

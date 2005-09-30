@@ -1,0 +1,34 @@
+=head1 Issues during installation.
+
+[...]
+
+
+=head1 Using libapreq2 with Apache 2 and mod_perl 2.
+
+
+=head2 When I use Apache::Request in my output filter, it seems to lose the incoming POST variables.
+
+The problem is likely that the mod_apreq filter has not been 
+added to the input filter chain in time to read the POST data.
+
+There are two solutions to this problem:
+
+
+ 1) Write a filter init handler for you filter that instantiates an Apache::Request object. 
+
+    http://perl.apache.org/docs/2.0/api/Apache/Filter.html#C_FilterInitHandler_
+
+ 2) Use .htaccess or your server config to ensure the apreq input filter
+    is active for this request with "AddInputFilter APREQ" or somesuch.
+
+We recommend using (1), and falling back to (2) until you get (1) working.
+
+=head2 When I try to upload a file, why do I get this error "[error] Can't locate .../Apache/Request/upload.al in @INC"?
+
+I<Apache::Upload> is now a separate module in apreq2, so you need to 
+C<use Apache::Upload> to load the C<Apache::Request::upload> function.
+
+
+=head1 Using libapreq2 outside of Apache.
+
+[...]

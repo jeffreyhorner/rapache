@@ -1,0 +1,150 @@
+.TH "include/apreq_error.h" 3 "4 May 2005" "Version 2.05-dev" "libapreq2" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+include/apreq_error.h \- Error status codes. 
+.SH SYNOPSIS
+.br
+.PP
+\fC#include 'apr_errno.h'\fP
+.br
+\fC#include 'apreq.h'\fP
+.br
+
+.SS "Defines"
+
+.in +1c
+.ti -1c
+.RI "#define \fBAPR_EBADARG\fP   \fBAPR_BADARG\fP"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_GENERAL\fP   \fBAPR_OS_START_USERERR\fP"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_TAINTED\fP   (APREQ_ERROR_GENERAL + 1)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_INTERRUPT\fP   (APREQ_ERROR_GENERAL + 2)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_BADDATA\fP   (APREQ_ERROR_GENERAL  + 10)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_BADCHAR\fP   (APREQ_ERROR_BADDATA  +  1)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_BADSEQ\fP   (APREQ_ERROR_BADDATA  +  2)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_BADATTR\fP   (APREQ_ERROR_BADDATA  +  3)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_BADHEADER\fP   (APREQ_ERROR_BADDATA  +  4)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_BADUTF8\fP   (APREQ_ERROR_BADDATA  +  5)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_NODATA\fP   (APREQ_ERROR_GENERAL  + 20)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_NOTOKEN\fP   (APREQ_ERROR_NODATA   +  1)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_NOATTR\fP   (APREQ_ERROR_NODATA   +  2)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_NOHEADER\fP   (APREQ_ERROR_NODATA   +  3)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_NOPARSER\fP   (APREQ_ERROR_NODATA   +  4)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_MISMATCH\fP   (APREQ_ERROR_GENERAL  + 30)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_OVERLIMIT\fP   (APREQ_ERROR_MISMATCH +  1)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_UNDERLIMIT\fP   (APREQ_ERROR_MISMATCH +  2)"
+.br
+.ti -1c
+.RI "#define \fBAPREQ_ERROR_NOTEMPTY\fP   (APREQ_ERROR_MISMATCH +  3)"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "char * \fBapreq_strerror\fP (\fBapr_status_t\fP s, char *buf, \fBapr_size_t\fP bufsize)"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Error status codes. 
+
+Define the APREQ_ error codes. 
+.SH "Define Documentation"
+.PP 
+.SS "#define APREQ_ERROR_BADATTR   (APREQ_ERROR_BADDATA  +  3)"
+.PP
+Invalid attribute. 
+.SS "#define APREQ_ERROR_BADCHAR   (APREQ_ERROR_BADDATA  +  1)"
+.PP
+Invalid character. 
+.SS "#define APREQ_ERROR_BADDATA   (APREQ_ERROR_GENERAL  + 10)"
+.PP
+Invalid input data. 
+.SS "#define APREQ_ERROR_BADHEADER   (APREQ_ERROR_BADDATA  +  4)"
+.PP
+Invalid header. 
+.SS "#define APREQ_ERROR_BADSEQ   (APREQ_ERROR_BADDATA  +  2)"
+.PP
+Invalid byte sequence. 
+.SS "#define APREQ_ERROR_BADUTF8   (APREQ_ERROR_BADDATA  +  5)"
+.PP
+Invalid utf8 encoding. 
+.SS "#define APREQ_ERROR_GENERAL   \fBAPR_OS_START_USERERR\fP"
+.PP
+Internal apreq error. 
+.SS "#define APREQ_ERROR_INTERRUPT   (APREQ_ERROR_GENERAL + 2)"
+.PP
+Parsing interrupted. 
+.SS "#define APREQ_ERROR_MISMATCH   (APREQ_ERROR_GENERAL  + 30)"
+.PP
+Conflicting information. 
+.SS "#define APREQ_ERROR_NOATTR   (APREQ_ERROR_NODATA   +  2)"
+.PP
+Missing attribute. 
+.SS "#define APREQ_ERROR_NODATA   (APREQ_ERROR_GENERAL  + 20)"
+.PP
+Missing input data. 
+.SS "#define APREQ_ERROR_NOHEADER   (APREQ_ERROR_NODATA   +  3)"
+.PP
+Missing header. 
+.SS "#define APREQ_ERROR_NOPARSER   (APREQ_ERROR_NODATA   +  4)"
+.PP
+Missing parser. 
+.SS "#define APREQ_ERROR_NOTEMPTY   (APREQ_ERROR_MISMATCH +  3)"
+.PP
+Setting already configured. 
+.SS "#define APREQ_ERROR_NOTOKEN   (APREQ_ERROR_NODATA   +  1)"
+.PP
+Missing required token. 
+.SS "#define APREQ_ERROR_OVERLIMIT   (APREQ_ERROR_MISMATCH +  1)"
+.PP
+Exceeds configured maximum limit. 
+.SS "#define APREQ_ERROR_TAINTED   (APREQ_ERROR_GENERAL + 1)"
+.PP
+Attempted to perform unsafe action with tainted data. 
+.SS "#define APREQ_ERROR_UNDERLIMIT   (APREQ_ERROR_MISMATCH +  2)"
+.PP
+Below configured minimum limit. 
+.SH "Function Documentation"
+.PP 
+.SS "char* apreq_strerror (\fBapr_status_t\fP s, char * buf, \fBapr_size_t\fP bufsize)"
+.PP
+apreq's wrapper around \fBapr_strerror()\fP; recognizes APREQ_ERROR_* status codes. 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for libapreq2 from the source code.

@@ -1,0 +1,231 @@
+To parse the libapreq headers into xsbuilder/tables:
+
+        % perl ../../build/xsbuilder.pl run
+
+To build the xs/ directory and configure the tests:
+
+        % perl Makefile.PL -apxs /path/to/apache2/bin/apxs        
+
+To run the test suite:
+
+        % make test
+
+
+
+
+DEVELOPER NOTES
+
+APR::Request::* should be a simple translation of the apreq C API:
+
+apreq_handle_t -> APR::Request-derived instance.
+apreq_module_t -> APR::Request-derived class.
+apreq_param_t  -> APR::Request::Param
+apreq_cookie_t -> APR::Request::Cookie
+apreq_parser_t -> APR::Request::Parser (todo)
+apreq_hook_t   -> APR::Request::Hook (todo)
+
+
+--------------------------------------------------
+Current APR:: module breakdown
+--------------------------------------------------
+
+APR::Request
+
+  subs:
+    encode
+    decode
+
+  methods:
+    parse
+    read_limit
+    brigade_limit
+    temp_dir
+    header_in
+    header_out
+    jar_status
+    args_status
+    body_status
+    param_status
+    disable_uploads
+
+  missing:
+    add_hook (requires APR::Request::Hook)
+    parser (requires APR::Request::Parser)
+
+==================================================
+
+APR::Request::CGI @ISA=(APR::Request)
+
+  method:
+    param
+
+  ctor:
+    new
+
+==================================================
+
+APR::Request::Apache2 @ISA=(APR::Request)
+
+  method:
+    param
+
+  ctor:
+    new
+
+==================================================
+
+APR::Request::Error  @ISA=(APR::Error, APR::Request)
+
+  subs:
+    strerror
+
+==================================================
+
+APR::Request::Cookie
+
+  provides:
+    APR::Request::jar()
+    APR::Request::Cookie::Table
+      methods:
+        get, FETCH
+        FIRSTKEY, NEXTKEY
+        cookie_class
+      missing:
+        rest of const apr_table_t * API (do, etc)
+
+  methods:
+    name
+    value
+    secure
+    version
+    is_tainted
+    as_string
+    bake
+    bake2
+    expires
+    path
+    domain
+    port
+    comment
+    commentURL
+
+    freeze
+    thaw
+
+    bind_handle
+
+  ctor:
+    new
+
+==================================================
+
+APR::Request::Param
+
+  provides:
+    APR::Request::args()
+    APR::Request::body()
+    APR::Request::param()
+    APR::Request::params()
+
+    APR::Request::Param::Table
+      methods:
+        get, FETCH
+        FIRSTKEY, NEXTKEY
+        param_class
+        uploads
+        do
+      missing:
+        rest of const apr_table_t * API
+
+    APR::Request::Brigade
+      methods:
+        TIEHANDLE, new
+        READ
+        READLINE
+    APR::Request::Brigade::IO
+        read
+        readline
+
+  methods:
+    name
+    value
+    info
+    upload
+    upload_link
+    upload_slurp
+    upload_size
+    upload_type
+    upload_tempname
+    upload_io
+    upload_fh
+
+--------------------------------------------------
+Current (pure-perl) Apache2:: module breakdown
+--------------------------------------------------
+
+Apache2::Request @ISA=(Apache2::RequestRec, APR::Request::Apache2)
+
+  ctor:
+    new
+
+  methods:
+    instance           (deprecated, ok to remove this)
+    disable_uploads
+
+  missing:
+    hook_data
+    upload_hook
+
+  2.04-deltas:
+    env() removed
+    params() method inherited from APR::Request; not deprecated anymore.
+    parms() removed
+    status() removed.
+    args() needs to become Apache2::RequestRec::args!!!
+    The args() change probably deserves a runtime warning in 2.05-dev.
+
+==================================================
+
+Apache2::Cookie @ISA=(APR::Request::Cookie)
+
+  provides:
+    Apache2::Cookie::Jar @ISA=(APR::Request::Apache2)
+      methods:
+        cookies
+        status
+
+  subs:
+    encode
+    decode
+
+  methods:
+    new
+    fetch
+    set_attr
+    freeze
+    thaw
+    value
+
+  2.04-deltas:
+    env() removed
+
+==================================================
+
+Apache2::Upload @ISA=(APR::Request::Param)
+
+  provides:
+    Apache2::Request::upload
+
+  methods:
+    slurp
+    type
+    size
+    link
+    tempname
+    fh
+    io
+    filename
+    bb          (need to deprecate this)
+
+  2.04-deltas:
+    Apache::Upload::Brigade is now APR::Request::Brigade.

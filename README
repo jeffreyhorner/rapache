@@ -1,0 +1,136 @@
+
+               mod_R: The R/Apache Integration Project
+
+  What is it?
+  -----------
+  mod_R is a project dedicated to embedding the R interpreter inside
+  the Apache 2.0 (and beyond) web server. It's composed of three parts:
+
+  mod_R: the Apache 2.0 module that implements the glue to load the
+  R interpreter.
+
+  RApache: the R package that provides the API for programming web
+  applications in R.
+
+  libapreq 2.0.4: an Apache sponsored project for parsing request input.
+  If you don't want to compile and install this version, then you can
+  specify which libapreq2 library to use during configuration.
+
+  The Latest Version
+  ------------------
+
+  Details of the latest version can be found at the mod_R
+  project page:
+
+http://biostat.mc.vanderbilt.edu/twiki/bin/view/Main/ApacheRproject
+
+  (mind the wrap)
+
+
+  Prerequisites
+  -------------
+  This release has been tested under Debian Linux with Apache 2.0.54,
+  R 2.1.1, and libapreq 2.0.4.  Apache2 _MUST_ be compiled with the
+  prefork MPM to compile mod_R. Also, R must have been compiled with
+  the --enable-R-shlib configure flag.
+
+  Installation
+  ------------
+  The following is the preferred way to compile and install mod_R:
+
+    $ ./configure --with-apache2-apxs=/path/to/apxs --with-R=/path/to/R
+    $ make
+    $ make install
+
+  Both --with-apache2-apxs and --with-R _MUST_ be specified.  Otherwise,
+  trying to figure out the dependencies between the sources and headers
+  and library paths becomes quite complex.
+
+  If you don't want to compile and install the bundled libapreq2 version,
+  then add --with-apreq2-config=/path/to/apreq2-config. The version _MUST_
+  be equal to or greater than 2.0.4.
+
+  Configuration
+  -------------
+  In order to use mod_R and RApache, you must configure apache to find
+  it. Type help("directives",package="RApache") once mod_R is installed
+  for a little more detail. Add something similar to this to the apache
+  config file:
+
+    LoadModule R_Module /path/to/mod_R.so
+
+    <Location /URL>
+       SetHandler r-handler
+       Rsource /path/to/R/code.R
+       RreqHandler function-name
+       Rlibrary library-name
+    </Location>
+
+  Also, libR.so _MUST_ be found in the shared library path as it is
+  linked to by mod_R, RApache and the rest of the packages containing
+  shared libraries. You can either set LD_LIBRARY_PATH like this:
+
+     $ export LD_LIBRARY_PATH=`/path/to/R RHOME`/lib
+
+  or add that path to /etc/ld.so.conf and then run ldconfig. 
+
+  NOTE: the latest apache2 debian packages cause the web server to run
+  in a very reduced environment, thus one is unable to set LD_LIBRARY_PATH
+  before calling /etc/init.d/apache2. One option is to actually edit that
+  file and add the LD_LIBRARY_PATH explicitly. Another is to use the apache2ctl
+  scripts which are also bundled with the debian packages. Or you can add it
+  to /etc/ld.so.conf.
+
+  Documentation
+  -------------
+  All of the documentation is currently in the RApache package. Once
+  you install mod_R, start R and load the RApache package. You'll get
+  a warning that you're currently not running the R interpreter within
+  Apache; just don't try to run any of the code. Sample session:
+
+   > library(RApache)
+   Warning message:
+
+   RApache is only useful within the Apache web server.
+   It is loaded now for informational purposes only
+
+    in: firstlib(which.lib.loc, package)
+   > help(package="RApache")
+
+                   Information on package 'RApache'
+
+   Description:
+
+   Package:       RApache
+   Version:       0.1-0
+   Date:          2005-08-02
+   Title:         An R interface to the Apache 2.0 web server
+   Author:        Jeffrey Horner
+   Maintainer:    Jeffrey Horner <jeff.horner@vanderbilt.edu>
+   License:       Apache License, Version 2.0
+   Description:   RApache allows web applications to be written in R and
+   executed within the Apache 2.0 web server.
+   Built:         R 2.1.0; i386-pc-linux-gnu; 2005-08-02 01:06:26; unix
+
+   Index:
+
+   IO                      IO in RApache
+   apache.add_cookie       Adding Cookies to Outgoing Headers
+   apache.add_header       Adding HTTP headers
+   apache.allow_methods    RApache Methods
+   apache.log_error        Logging Errors to the Apache error log
+   apache.set_content_type
+   Setting the Content Type header
+   apr_table               Structure of the apr_table type in RApache
+   as.html                 Converting RApache objects to HTML
+   directives              RApache directives used in Apace config file
+   intro                   Introduction to RApache
+   request_rec             Structure of the RApache request record
+   return_codes            RApache handler return codes
+
+
+  Licensing
+  ---------
+
+  Please see the file called LICENSE.
+

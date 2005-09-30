@@ -1,0 +1,339 @@
+=head1 NAME
+
+APR::Request::Cookie - wrapper for libapreq2's cookie API.
+
+
+
+
+=head1 SYNOPSIS
+
+  use APR::Request::Cookie;
+  my $cookie = APR::Request::Cookie->new($req, 
+                                         name => "foo",
+                                        value => "bar",
+                                       domain => "capricorn.com");
+
+  print "$cookie"; # prints "bar"
+
+  $cookie->domain("example.com"); # change domains
+  $cookie->version(1); # upgrade it to conform with RFC 2109/2965.
+
+  # print a response header
+  printf "Set-Cookie: %s\n", $cookie->as_string;
+
+
+
+
+=head1 DESCRIPTION
+
+The APR::Request::Cookie module provides base methods
+for interfacing with libapreq2's cookie API.  It also provides
+a few utility functions and constants.
+
+This manpage documents the APR::Request::Cookie and 
+APR::Request::Cookie::Table packages.
+
+
+
+
+=head1 OVERLOADS
+
+APR::Request::Cookie
+
+
+
+
+=head2 ""
+
+    "$cookie"
+
+The double-quote interpolation operator maps to
+C<< APR::Request::Cookie::value() >>.
+
+
+
+
+=head1 METHODS
+
+APR::Request::Cookie
+
+
+
+
+=head2 new
+
+    APR::Request::Cookie->new($pool, 
+                               name => $name, 
+                              value => $value, 
+                              %args)
+
+
+Creates a new cookie.  Here C<< $pool >> is an APR::Pool object,
+and C<< $name >> is the cookie's name. The C<< $value >> is transformed
+into the cookie's raw value through the class' C<< freeze() >> method. 
+The remaining arguments are optional:
+
+=over 4
+
+=item -secure
+
+=item -version
+
+=item -path
+
+=item -domain
+
+=item -port
+
+=item -expires
+
+=item -comment
+
+=item -commentURL
+
+=back
+
+For details on these arguments, please consult
+the corresponding method's documentation.
+
+
+
+
+=head2 freeze
+
+    APR::Request::Cookie->freeze($value)
+
+Default serializer- returns $value unmodified.
+
+
+
+
+=head2 thaw
+
+    APR::Request::Cookie->thaw($value)
+
+Reverses C<< freeze() >>; here it's a noop.
+
+
+
+
+=head2 name
+
+    $cookie->name()
+
+Fetch the cookie's name.
+This attribute cannot be modified.
+
+
+
+
+=head2 value
+
+    $cookie->value()
+
+Fetch the cookie's value.
+This attribute cannot be modified.
+
+
+
+
+=head2 secure
+
+    $cookie->secure()
+    $cookie->secure($set)
+
+
+Get/set the cookie's secure flag.
+
+
+
+
+=head2 version
+
+    $cookie->version()
+    $cookie->version($set)
+
+Get/set the cookie's version number.
+Version 0 cookies conform to the Netscape
+spec; Version 1 cookies conform to either
+RFC 2109 or RFC 2965.
+
+
+
+
+=head2 path
+
+    $cookie->path()
+    $cookie->path($set)
+
+Get/set the cookie's path string.
+
+
+
+
+=head2 domain
+
+    $cookie->domain()
+    $cookie->domain($set)
+
+Get/set the cookie's domain string.
+
+
+
+
+=head2 port
+
+    $cookie->port()
+    $cookie->port($set)
+
+Get/set the cookie's port string.
+Only valid for Version 1 cookies.
+
+
+
+
+=head2 comment
+
+    $cookie->comment()
+    $cookie->comment($set)
+
+Get/set the cookie's comment string.
+Only valid for Version 1 cookies.
+
+
+
+
+=head2 commentURL
+
+    $cookie->commentURL()
+    $cookie->commentURL($set)
+
+Get/set the cookie's commentURL string.
+Only valid for Version 1 cookies.
+
+
+
+
+=head2 is_tainted
+
+    $cookie->is_tainted()
+    $cookie->is_tainted($set)
+
+
+Get/set the cookie's internal tainted flag.
+
+
+=head2 make
+
+    APR::Request::Cookie->make($pool, $name, $value)
+
+Fast XS cookie constructor invoked by C<< new() >>.  
+The cookie's raw name & value are taken directly from the
+passed in arguments; no freezing/encoding is done on the $value.
+
+
+
+
+=head2 as_string
+
+    $cookie->as_string()
+
+
+String representation of the cookie, suitable for inclusion
+in a "Set-Cookie" header.
+
+
+
+
+=head1 SUBROUTINES
+
+  APR::Request::Cookie
+
+
+
+
+=head2 expires
+
+
+  expires($date_string)
+
+
+
+
+=head1 METHODS
+
+  APR::Request::Cookie::Table - read-only version of APR::Table.
+
+Tables in this class normally arise from calls to 
+C<< APR::Request::jar() >>.
+
+
+
+
+=head2 cookie_class
+
+    $table->cookie_class()
+    $table->cookie_class($set)
+
+Get/set the class each table element is blessed into during a 
+L<get> or L<FETCH> call.  If defined, the class must be derived 
+from APR::Request::Cookie.
+
+
+
+
+=head2 get
+
+    $table->get($name)
+    $table->get()
+
+
+
+
+=head2 FETCH
+
+    $table->FETCH($name)
+
+
+
+
+=head2 FIRSTKEY
+
+    $table->FIRSTKEY()
+
+
+
+
+=head2 NEXTKEY
+
+    $table->NEXTKEY()
+
+
+
+
+=head2 do
+
+    $table->do($callback, @keys)
+
+
+
+
+=head1 SEE ALSO
+
+L<< Apache2::Cookie >>, L<< APR::Request >>
+
+=head1 COPYRIGHT
+
+  Copyright 2003-2005  The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
