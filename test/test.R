@@ -1,6 +1,8 @@
 # Test request handler
+testsum <- 0
 hello <- function(r){
-	apache.write(r,"<h1>Hello World</h1")
+	apache.write(r,"<h1>Hello World ",testsum,"</h1")
+	testsum <<- testsum + 1
 	OK
 }
 handler <- function(r)

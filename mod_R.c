@@ -36,6 +36,7 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include "apr_strings.h"
 #include "apr_env.h"
 #include "apr_pools.h"
+#include "apr_hash.h"
 
 /*
  * Include the R headers and hook code specific to mod_R
@@ -61,6 +62,9 @@ static int MR_config_pass = 0;
 /* Don't start R more than once, if the flag is 1 it's already started */
 static int MR_init_status = 0;
 
+static apr_pool_t *MR_cfg_pool = NULL;
+static apr_hash_t *MR_cfg_libs = NULL;
+static apr_hash_t *MR_cfg_scripts = NULL;
 typedef struct {
 	int loaded;
 } MR_cfg_persist;
@@ -69,8 +73,14 @@ typedef struct MR_cfg {
 	char *library;
 	char *script;
 	char *reqhandler;
-	MR_cfg_persist *persist;
 }  MR_cfg;
+
+void MR_init_cfg_pool(void);
+void MR_init_cfg_pool(void){
+	apr_pool_create(&MR_cfg_pool,NULL);
+	MR_cfg_libs = apr_hash_make(MR_cfg_pool);
+	MR_cfg_scripts = apr_hash_make(MR_cfg_pool);
+}
 
 /*
  * Brigades for reading and writing to client
@@ -282,6 +292,12 @@ static apr_status_t MR_child_exit(void *data){
 			apr_dir_remove_recursively(Rtmp,p);
 		}
 	}
+
+	if (MR_cfg_pool) {
+		apr_pool_destroy(MR_cfg_pool);
+		MR_cfg_pool = NULL;
+	}
+
 	return APR_SUCCESS;
 }
 
@@ -291,33 +307,40 @@ static void MR_child_init(apr_pool_t *p, server_rec *s){
 }
 
 static int mr_check_cfg(request_rec *r, MR_cfg *cfg){
+	MR_cfg_persist *cfg_persist;
 	if (cfg == NULL){
 		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): cfg is NULL");
 		return 0;
 	}
 
-	ap_log_rerror(APLOG_MARK,APLOG_NOTICE,0,r,"cfg: %x, cfg->persist: %x, loaded %d",cfg,cfg->persist,cfg->persist->loaded);
-
-	/* Check and see if we've already loaded this config */
-	if (cfg->persist->loaded) return 1;
-
-	if (cfg->library && !mr_call_fun1str("library",cfg->library)){
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): library(%s) failed!",cfg->library);
-		return 0;
+	if (cfg->library){
+		cfg_persist = (MR_cfg_persist *)apr_hash_get(MR_cfg_libs,cfg->library,APR_HASH_KEY_STRING);
+		if (cfg_persist && !cfg_persist->loaded){
+			if(!mr_call_fun1str("library",cfg->library)){
+				ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): library(%s) failed!",cfg->library);
+				return 0;
+			}
+			cfg_persist->loaded = 1;
+		}
 	}
-	if (cfg->script && !mr_call_fun1str("source",cfg->script)){
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): source(%s) failed!",cfg->script);
-		return 0;
+
+	if (cfg->script){
+		cfg_persist = (MR_cfg_persist *)apr_hash_get(MR_cfg_scripts,cfg->script,APR_HASH_KEY_STRING);
+		if (cfg_persist && !cfg_persist->loaded){
+			if (!mr_call_fun1str("source",cfg->script)){
+				ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): source(%s) failed!",cfg->script);
+				return 0;
+			}
+			cfg_persist->loaded = 1;
+		}
 	}
+
 	if (cfg->reqhandler && !mr_findFun(cfg->reqhandler)){
 		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): RreqHandler %s not found!",cfg->reqhandler);
 		return 0;
 	}
 
-	cfg->persist->loaded = 11;
-
 	return 1;
-
 }
 
 static int MR_request_handler (request_rec *r)
@@ -399,9 +422,6 @@ static void *MR_create_dir_cfg(apr_pool_t *p, char *dir){
 	MR_cfg *cfg;
 
 	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
-	cfg->persist = (MR_cfg_persist *)malloc(sizeof(MR_cfg_persist));
-	cfg->persist->loaded = 0;
-	apr_pool_cleanup_register(p, cfg->persist, free, free);
 
 	return (void *)cfg;
 }
@@ -412,9 +432,6 @@ void *MR_merge_dir_cfg(apr_pool_t *p, void *parent, void *new){
 	MR_cfg *ncfg = (MR_cfg *)new;
 
 	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
-	cfg->persist = (MR_cfg_persist *)malloc(sizeof(MR_cfg_persist));
-	cfg->persist->loaded = 0;
-	apr_pool_cleanup_register(p, cfg->persist, free, free);
 
 	/* Add parent stuff, even if null */
 	cfg->library = pcfg->library;
@@ -453,9 +470,6 @@ void *MR_create_srv_cfg(apr_pool_t *p, server_rec *s){
 	/* if (MR_config_pass == 2) mr_init(p); */
 
 	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
-	cfg->persist = (MR_cfg_persist *)malloc(sizeof(MR_cfg_persist));
-	cfg->persist->loaded = 0;
-	apr_pool_cleanup_register(p, cfg->persist, free, free);
 
 	return (void *)cfg;
 }
@@ -466,9 +480,6 @@ void *MR_merge_srv_cfg(apr_pool_t *p, void *parent, void *new){
 	MR_cfg *ncfg = (MR_cfg *)new;
 
 	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
-	cfg->persist = (MR_cfg_persist *)malloc(sizeof(MR_cfg_persist));
-	cfg->persist->loaded = 0;
-	apr_pool_cleanup_register(p, cfg->persist, free, free);
 
 	/* Add parent stuff, even if null */
 	cfg->library = pcfg->library;
@@ -486,6 +497,7 @@ void *MR_merge_srv_cfg(apr_pool_t *p, void *parent, void *new){
 static void MR_register_hooks (apr_pool_t *p)
 {
 	/* ap_hook_open_logs(MR_hook_init, NULL, NULL, APR_HOOK_FIRST); */
+	if (MR_cfg_pool != NULL) MR_init_cfg_pool();
 	ap_hook_child_init(MR_child_init, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_handler(MR_request_handler, NULL, NULL, APR_HOOK_MIDDLE);
 }
@@ -518,6 +530,9 @@ static const char *MR_cmd_source(cmd_parms *cmd, void *conf, const char *val){
 	MR_cfg *cfg = (MR_cfg *)conf;
 
 	cfg->script = apr_pstrdup(cmd->pool,val);
+	if (!MR_cfg_pool) MR_init_cfg_pool();
+	apr_hash_set(MR_cfg_scripts,cfg->script,APR_HASH_KEY_STRING,apr_pcalloc(MR_cfg_pool,sizeof(MR_cfg_persist)));
+
 
 //	if (MR_config_pass == 2){
 //		mr_init(cmd->pool);
@@ -538,6 +553,8 @@ static const char *MR_cmd_library(cmd_parms *cmd, void *conf, const char *val){
 	MR_cfg *cfg = (MR_cfg *)conf;
 
 	cfg->library = apr_pstrdup(cmd->pool,val);
+	if (!MR_cfg_pool) MR_init_cfg_pool();
+	apr_hash_set(MR_cfg_libs,cfg->library,APR_HASH_KEY_STRING,apr_pcalloc(MR_cfg_pool,sizeof(MR_cfg_persist)));
 
 //	if (MR_config_pass == 2){
 //		mr_init(cmd->pool);
