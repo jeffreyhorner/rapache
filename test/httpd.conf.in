@@ -66,11 +66,18 @@ DocumentRoot "@DOCROOT@"
     AllowOverride None
 </Directory>
 
+<Location /test/hello>
+        SetHandler r-handler
+        Rsource @DOCROOT@/test.R
+        RreqHandler hello
+</Location>
+
 <Location /test/R>
         SetHandler r-handler
         Rsource @DOCROOT@/test.R
         RreqHandler handler
 </Location>
+
 <Location /test/Rplot>
         SetHandler r-handler
         Rsource @DOCROOT@/plot.R
