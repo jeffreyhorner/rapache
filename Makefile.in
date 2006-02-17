@@ -50,6 +50,9 @@ install: all
 itest: all
 	R_LIBS=./Rlib $(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(HTTPD) -X -f $(DOCROOT)/httpd.conf
 
+stop: all
+	R_LIBS=./Rlib $(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(HTTPD) -X -f $(DOCROOT)/httpd.conf -k stop
+
 valgrind: all
 	R_LIBS=./Rlib $(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) valgrind $(HTTPD) -X -f $(DOCROOT)/httpd.conf
 

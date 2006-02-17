@@ -75,7 +75,6 @@ typedef struct MR_cfg {
 	char *reqhandler;
 }  MR_cfg;
 
-void MR_init_cfg_pool(void);
 void MR_init_cfg_pool(void){
 	apr_pool_create(&MR_cfg_pool,NULL);
 	MR_cfg_libs = apr_hash_make(MR_cfg_pool);
@@ -362,7 +361,12 @@ static int MR_request_handler (request_rec *r)
 	/* Config */
 	cfg = mr_dir_config(r);
 
-	/* Bad apache config? */
+	/* 
+	 * Bad apache config? 
+	 *
+	 * Here, we find the handler we must run and
+	 * load any scripts or librarys.
+	 */
 	if (!mr_check_cfg(r,cfg))
 		return DECLINED;
 
@@ -513,16 +517,6 @@ static const char *MR_cmd_req_handler(cmd_parms *cmd, void *conf, const char *va
 
 	cfg->reqhandler = apr_pstrdup(cmd->pool,val);
 
-//	if (MR_config_pass == 2){
-//		if (mr_findFun(cfg->reqhandler)) return NULL;
-//		else {
-//			return apr_psprintf(cmd->pool,
-//					"RreqHandler: Error: couldn't find function \"%s\"",
-//					cfg->reqhandler
-//					);
-//		}
-//	}
-
 	return NULL;
 }
 
@@ -530,22 +524,13 @@ static const char *MR_cmd_source(cmd_parms *cmd, void *conf, const char *val){
 	MR_cfg *cfg = (MR_cfg *)conf;
 
 	cfg->script = apr_pstrdup(cmd->pool,val);
+
+	/* Cache all script files in persistent config pool.
+	 * We'll test to se if we've sourced these in the request handler
+	 */
 	if (!MR_cfg_pool) MR_init_cfg_pool();
 	apr_hash_set(MR_cfg_scripts,cfg->script,APR_HASH_KEY_STRING,apr_pcalloc(MR_cfg_pool,sizeof(MR_cfg_persist)));
 
-
-//	if (MR_config_pass == 2){
-//		mr_init(cmd->pool);
-//		/* Now source() the script */
-//		if (mr_call_fun1str("source",cfg->script)){
-//			return NULL;
-//		} else {
-//			return apr_psprintf(cmd->pool,
-//					"Rsource: there was an error sourcing \"%s\"",
-//					cfg->script
-//					);
-//		}
-//	}
 	return  NULL;
 }
 
@@ -553,21 +538,13 @@ static const char *MR_cmd_library(cmd_parms *cmd, void *conf, const char *val){
 	MR_cfg *cfg = (MR_cfg *)conf;
 
 	cfg->library = apr_pstrdup(cmd->pool,val);
+
+	/* Cache all library names in persistent config pool.
+	 * We'll test to se if we've called library() on these in the request handler
+	 */
 	if (!MR_cfg_pool) MR_init_cfg_pool();
 	apr_hash_set(MR_cfg_libs,cfg->library,APR_HASH_KEY_STRING,apr_pcalloc(MR_cfg_pool,sizeof(MR_cfg_persist)));
 
-//	if (MR_config_pass == 2){
-//		mr_init(cmd->pool);
-//		/* Now call library() */
-//		if (mr_call_fun1str("library",cfg->library)){
-//			return NULL;
-//		} else {
-//			return apr_psprintf(cmd->pool,
-//					"Rlibrary: there was an error loading \"%s\"",
-//					cfg->library
-//					);
-//		}
-//	}
 	return NULL;
 }
 
