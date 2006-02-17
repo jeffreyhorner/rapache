@@ -131,29 +131,29 @@ void mr_init(apr_pool_t *p){
 
 	/* Set tmp dir */
 	if (apr_temp_dir_get(&tmpdir,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!");
+		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
 		exit(-1);
 	}
 	Rtmp = apr_pstrcat(p,tmpdir, "/RtmpXXXXXX",NULL);
 	if (apr_file_mktemp(&dummy_file,Rtmp,0,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!");
+		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
 		exit(-1);
 	}
 	if (apr_file_close(dummy_file) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!");
+		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
 		exit(-1);
 	}
 	if (apr_env_set("R_SESSION_TMPDIR",Rtmp,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!");
+		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
 		exit(-1);
 	}
 
 	if (apr_env_set("R_HOME",R_HOME,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set R_HOME from mr_init!");
+		fprintf(stderr,"Fatal Error: could not set R_HOME from mr_init!\n");
 		exit(-1);
 	}
 	if (apr_dir_make(Rtmp,APR_UREAD | APR_UWRITE | APR_UEXECUTE, p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set R_HOME from mr_init!");
+		fprintf(stderr,"Fatal Error: could not set R_HOME from mr_init!\n");
 		exit(-1);
 	}
 	/* fprintf(stderr,"%d:%d %s\n",getppid(),getpid(),Rtmp); */
@@ -162,7 +162,7 @@ void mr_init(apr_pool_t *p){
 	/* Now load RApache library */
 	if (!mr_call_fun1str("library","RApache")){
 		apr_dir_remove_recursively(Rtmp,p);
-		fprintf(stderr,"Fatal Error: library(\"Rapache\") failed!");
+		fprintf(stderr,"Fatal Error: library(\"Rapache\") failed!\n");
 		exit(-1);
 	}
 }
@@ -505,9 +505,19 @@ void *MR_merge_srv_cfg(apr_pool_t *p, void *parent, void *new){
 }
 
 void MR_init_cfg_pool(void){
-	apr_pool_create(&MR_cfg_pool,NULL);
+
+	if (apr_pool_create(&MR_cfg_pool,NULL) != APR_SUCCESS){
+		fprintf(stderr,"Fatal Error: could not apr_pool_create(MR_cfg_pool)!\n");
+		exit(-1);
+	}
+
 	MR_cfg_libs = apr_hash_make(MR_cfg_pool);
 	MR_cfg_scripts = apr_hash_make(MR_cfg_pool);
+
+	if (!MR_cfg_libs || !MR_cfg_scripts){
+		fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_cfg_pool!\n");
+		exit(-1);
+	}
 }
 
 static void MR_register_hooks (apr_pool_t *p)
