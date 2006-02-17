@@ -16,6 +16,7 @@
 /*
  * $Id$
  */
+#define MOD_R_VERSION "mod_R/0.1.2"
 #include "mod_R.h" 
 
 #include <sys/types.h>
@@ -78,11 +79,6 @@ typedef struct MR_cfg {
 	char *reqhandler;
 }  MR_cfg;
 
-void MR_init_cfg_pool(void){
-	apr_pool_create(&MR_cfg_pool,NULL);
-	MR_cfg_libs = apr_hash_make(MR_cfg_pool);
-	MR_cfg_scripts = apr_hash_make(MR_cfg_pool);
-}
 
 /*
  * Brigades for reading and writing to client
@@ -95,7 +91,8 @@ apr_bucket_brigade *MR_bbout;
 /* Declaration of variable that holds Apache module info */
 module AP_MODULE_DECLARE_DATA R_module;
 
-/* static int MR_hook_init(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s); */
+void MR_init_cfg_pool(void);
+static int MR_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s);
 static apr_status_t MR_child_exit(void *data);
 static int MR_request_handler (request_rec *r);
 static void *MR_create_dir_cfg(apr_pool_t *p, char *dir);
@@ -279,6 +276,11 @@ static apr_status_t apr_dir_remove_recursively (const char *path, apr_pool_t *po
 	return OK;
 } */
 
+static int MR_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s){
+	ap_add_version_component(pconf,MOD_R_VERSION);
+	return OK;
+}
+
 
 static apr_status_t MR_child_exit(void *data){
 	apr_pool_t *p = (apr_pool_t *)data;
@@ -425,6 +427,7 @@ static int MR_request_handler (request_rec *r)
  *
  *************************************************************************/
 
+
 static void *MR_create_dir_cfg(apr_pool_t *p, char *dir){
 	MR_cfg *cfg;
 
@@ -501,10 +504,17 @@ void *MR_merge_srv_cfg(apr_pool_t *p, void *parent, void *new){
 	return (void *)cfg;
 }
 
+void MR_init_cfg_pool(void){
+	apr_pool_create(&MR_cfg_pool,NULL);
+	MR_cfg_libs = apr_hash_make(MR_cfg_pool);
+	MR_cfg_scripts = apr_hash_make(MR_cfg_pool);
+}
+
 static void MR_register_hooks (apr_pool_t *p)
 {
 	/* ap_hook_open_logs(MR_hook_init, NULL, NULL, APR_HOOK_FIRST); */
 	if (MR_cfg_pool != NULL) MR_init_cfg_pool();
+	ap_hook_post_config(MR_post_config, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_child_init(MR_child_init, NULL, NULL, APR_HOOK_MIDDLE);
 	ap_hook_handler(MR_request_handler, NULL, NULL, APR_HOOK_MIDDLE);
 }
