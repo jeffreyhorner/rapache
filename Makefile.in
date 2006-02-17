@@ -1,3 +1,7 @@
+# DARWIN has to be different than everyone else
+# and define their autoconf $shlibpath_var to be DYLD_LIBRARY_PATH
+SHLIBPATH_VAR=@SHLIBPATH_VAR@
+
 APXS=@APXS@
 HTTPD=@HTTPD@
 DOCROOT=@DOCROOT@
@@ -44,21 +48,21 @@ install: all
 	$(APREQ_INSTALL)
 
 itest: all
-	R_LIBS=./Rlib LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(HTTPD) -X -f $(DOCROOT)/httpd.conf
+	R_LIBS=./Rlib $(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(HTTPD) -X -f $(DOCROOT)/httpd.conf
 
 valgrind: all
-	R_LIBS=./Rlib LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) valgrind $(HTTPD) -X -f $(DOCROOT)/httpd.conf
+	R_LIBS=./Rlib $(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) valgrind $(HTTPD) -X -f $(DOCROOT)/httpd.conf
 
 debug: all
 	@echo run -X -f $(DOCROOT)/httpd.conf > gdb.debug
-	R_LIBS=./Rlib LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) gdb -d RApache/src -x ./gdb.debug $(HTTPD)
+	R_LIBS=./Rlib $(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) gdb -d RApache/src -x ./gdb.debug $(HTTPD)
 	@rm -f gdb.debug
 
 rcheck: all
-	DRCHECK=-DRCHECK R_LIBS=./Rlib LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(RPROG) CMD check RApache
+	DRCHECK=-DRCHECK R_LIBS=./Rlib $(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(RPROG) CMD check RApache
 	
 rdoc: all
-	echo 'help($(DOC),package="RApache")' | R_LIBS=./Rlib LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(RPROG) --vanilla
+	echo 'help($(DOC),package="RApache")' | R_LIBS=./Rlib $(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(RPROG) --vanilla
 
 clean:
 	rm -rf $(OBJS) core mod_R.o mod_R.so *~ .libs *.o *.slo *.lo *.la RApache/src/*.so RApache/src/*.o ./Rlib .apreq-config

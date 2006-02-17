@@ -169,4 +169,7 @@ AC_SUBST(DOCROOT)
 AC_SUBST(GDCFLAGS)
 AC_SUBST(GDLDFLAGS)
 
+SHLIBPATH_VAR=$shlibpath_var
+AC_SUBST(SHLIBPATH_VAR)
+
 AC_OUTPUT(Makefile mod_R.h RApache/src/Makevars test/httpd.conf)

@@ -464,7 +464,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT build build_cpu build_vendor build_os host host_cpu host_vendor host_os EGREP LN_S ECHO AR ac_ct_AR RANLIB ac_ct_RANLIB STRIP ac_ct_STRIP CPP CXX CXXFLAGS ac_ct_CXX CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL GDLIBCONF APXS HTTPD RPROG RHOME APREQ APREQ_COMPILE APREQ_INSTALL APREQ_LIB_DIR DOCROOT GDCFLAGS GDLDFLAGS LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT build build_cpu build_vendor build_os host host_cpu host_vendor host_os EGREP LN_S ECHO AR ac_ct_AR RANLIB ac_ct_RANLIB STRIP ac_ct_STRIP CPP CXX CXXFLAGS ac_ct_CXX CXXCPP F77 FFLAGS ac_ct_F77 LIBTOOL GDLIBCONF APXS HTTPD RPROG RHOME APREQ APREQ_COMPILE APREQ_INSTALL APREQ_LIB_DIR DOCROOT GDCFLAGS GDLDFLAGS SHLIBPATH_VAR LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -18849,6 +18849,9 @@ echo "$as_me: error: aborting! " >&2;}
 
 
 
+SHLIBPATH_VAR=$shlibpath_var
+
+
                                         ac_config_files="$ac_config_files Makefile mod_R.h RApache/src/Makevars test/httpd.conf"
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -19544,6 +19547,7 @@ s,@APREQ_LIB_DIR@,$APREQ_LIB_DIR,;t t
 s,@DOCROOT@,$DOCROOT,;t t
 s,@GDCFLAGS@,$GDCFLAGS,;t t
 s,@GDLDFLAGS@,$GDLDFLAGS,;t t
+s,@SHLIBPATH_VAR@,$SHLIBPATH_VAR,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t
 s,@LTLIBOBJS@,$LTLIBOBJS,;t t
 CEOF
