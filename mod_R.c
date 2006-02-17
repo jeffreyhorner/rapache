@@ -61,12 +61,15 @@ static int MR_config_pass = 0;
 /* Don't start R more than once, if the flag is 1 it's already started */
 static int MR_init_status = 0;
 
-/* mod_R config struct for holding Directory and Location specific directives */
+typedef struct {
+	int loaded;
+} MR_cfg_persist;
+
 typedef struct MR_cfg {
 	char *library;
 	char *script;
 	char *reqhandler;
-	int loaded;
+	MR_cfg_persist *persist;
 }  MR_cfg;
 
 /*
@@ -293,8 +296,10 @@ static int mr_check_cfg(request_rec *r, MR_cfg *cfg){
 		return 0;
 	}
 
-	/* Everything has been loaded */
-	if (cfg->loaded) return 1;
+	ap_log_rerror(APLOG_MARK,APLOG_NOTICE,0,r,"cfg: %x, cfg->persist: %x, loaded %d",cfg,cfg->persist,cfg->persist->loaded);
+
+	/* Check and see if we've already loaded this config */
+	if (cfg->persist->loaded) return 1;
 
 	if (cfg->library && !mr_call_fun1str("library",cfg->library)){
 		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): library(%s) failed!",cfg->library);
@@ -309,7 +314,8 @@ static int mr_check_cfg(request_rec *r, MR_cfg *cfg){
 		return 0;
 	}
 
-	cfg->loaded = 1;
+	cfg->persist->loaded = 11;
+
 	return 1;
 
 }
@@ -393,7 +399,9 @@ static void *MR_create_dir_cfg(apr_pool_t *p, char *dir){
 	MR_cfg *cfg;
 
 	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
-
+	cfg->persist = (MR_cfg_persist *)malloc(sizeof(MR_cfg_persist));
+	cfg->persist->loaded = 0;
+	apr_pool_cleanup_register(p, cfg->persist, free, free);
 
 	return (void *)cfg;
 }
@@ -404,6 +412,9 @@ void *MR_merge_dir_cfg(apr_pool_t *p, void *parent, void *new){
 	MR_cfg *ncfg = (MR_cfg *)new;
 
 	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
+	cfg->persist = (MR_cfg_persist *)malloc(sizeof(MR_cfg_persist));
+	cfg->persist->loaded = 0;
+	apr_pool_cleanup_register(p, cfg->persist, free, free);
 
 	/* Add parent stuff, even if null */
 	cfg->library = pcfg->library;
@@ -442,6 +453,9 @@ void *MR_create_srv_cfg(apr_pool_t *p, server_rec *s){
 	/* if (MR_config_pass == 2) mr_init(p); */
 
 	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
+	cfg->persist = (MR_cfg_persist *)malloc(sizeof(MR_cfg_persist));
+	cfg->persist->loaded = 0;
+	apr_pool_cleanup_register(p, cfg->persist, free, free);
 
 	return (void *)cfg;
 }
@@ -452,6 +466,9 @@ void *MR_merge_srv_cfg(apr_pool_t *p, void *parent, void *new){
 	MR_cfg *ncfg = (MR_cfg *)new;
 
 	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
+	cfg->persist = (MR_cfg_persist *)malloc(sizeof(MR_cfg_persist));
+	cfg->persist->loaded = 0;
+	apr_pool_cleanup_register(p, cfg->persist, free, free);
 
 	/* Add parent stuff, even if null */
 	cfg->library = pcfg->library;

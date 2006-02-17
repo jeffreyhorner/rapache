@@ -35,6 +35,8 @@ handler <- function(r)
     apache.write(r,as.html(uploads))
     apache.write(r,"<h2>Request Record</h2>\n")
     apache.write(r,as.html(r))
+	apache.write(r,"<h2>About R</h2>\n")
+    apache.write(r,".libPaths(): ",as.html(.libPaths()),sep="")
 	apache.write(r,"</BODY></HTML>\n")
     OK
 }
