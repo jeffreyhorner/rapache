@@ -16,6 +16,8 @@
 /*
  * $Id$
  *
+ * $Date$
+ *
  * testing svn date string revision
  * again
  * again
