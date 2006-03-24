@@ -1,9 +1,9 @@
 
-               mod_R: The R/Apache Integration Project
+               The R/Apache Integration Project
 
   What is it?
   -----------
-  mod_R is a project dedicated to embedding the R interpreter inside
+  R/Apache is a project dedicated to embedding the R interpreter inside
   the Apache 2.0 (and beyond) web server. It's composed of three parts:
 
   mod_R: the Apache 2.0 module that implements the glue to load the
@@ -19,18 +19,15 @@
   The Latest Version
   ------------------
 
-  Details of the latest version can be found at the mod_R
+  Details of the latest version can be found at the R/Apache
   project page:
 
-http://biostat.mc.vanderbilt.edu/twiki/bin/view/Main/RApacheProject
-
-  (mind the wrap)
-
+	http://biostat.mc.vanderbilt.edu/RApacheProject
 
   Prerequisites
   -------------
-  This release has been tested under Debian Linux with Apache 2.0.54,
-  R 2.1.1, and libapreq 2.0.4.  Apache2 _MUST_ be compiled with the
+  This release has been tested under Debian Linux with Apache 2.0.55,
+  R 2.2.1, and libapreq 2.0.4.  Apache2 _MUST_ be compiled with the
   prefork MPM to compile mod_R. Also, R must have been compiled with
   the --enable-R-shlib configure flag.
 
