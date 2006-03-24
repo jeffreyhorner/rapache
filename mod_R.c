@@ -15,7 +15,10 @@
 */
 /*
  * $Id$
+ *
+ * testing svn date string revision
  */
+
 #define MOD_R_VERSION "mod_R/0.1.2"
 #include "mod_R.h" 
 
