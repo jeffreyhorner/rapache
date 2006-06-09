@@ -61,11 +61,13 @@ apache.read     <- function(r,len=0)  .Call("RA_read",r,as.integer(len),PACKAGE=
 apache.readline     <- function(r,len=0)  .Call("RA_readline",r,as.integer(len),PACKAGE="RApache");
 apache.write    <- function(r,...,flush=TRUE) .Call("RA_write",r,paste(...),flush,PACKAGE="RApache")
 
+# CGI functions
 apache.get_args <- function(r) .Call("RA_get_args",r,PACKAGE="RApache");
 apache.get_post <- function(r)  .Call("RA_get_post",r,PACKAGE="RApache");
 apache.get_cookies  <- function(r) .Call("RA_get_cookies",r,PACKAGE="RApache");
 apache.get_uploads <- function (r) .Call("RA_get_uploads",r,PACKAGE="RApache");
 
+# HTTP header stuff
 apache.add_header <- function(r,name,value){
 	if (!is.character(name) || length(name)!=1)
 		return(NULL)
@@ -114,6 +116,11 @@ apache.add_cookie <- function(r,name=NULL,value="",expires=NULL,path=NULL,domain
 
     apache.add_header(r,"Set-Cookie",cookie)
 }
+
+# encoding and decoding of strings containing HTML Entities
+apache.encode <- function (str) .Call("RA_endecode",str,TRUE,PACKAGE="RApache");
+apache.decode <- function (str) .Call("RA_endecode",str,FALSE,PACKAGE="RApache");
+
 
 
 # Handler Return values

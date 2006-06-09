@@ -921,6 +921,69 @@ SEXP RA_ap_set_content_type(SEXP sr, SEXP stype){
 	return stype;
 }
 
+/* HTML Entity en/decoding */
+static SEXP encode(char *str){
+	SEXP retstr;
+	char *buf;
+	int len;
+
+	len = strlen(str);
+	buf = malloc(3*len+1);
+	if (!buf) return R_NilValue;
+
+	if (apreq_encode(buf,str,len)){
+		retstr = mkChar(buf);
+	} else {
+		retstr = R_NilValue;
+	}
+	free(buf);
+
+	return retstr;
+}
+static SEXP decode(char *str){
+	SEXP retstr;
+	char *buf;
+	apr_size_t len, blen;
+
+	len = strlen(str);
+	buf = malloc(len);
+	if (!buf) return R_NilValue;
+
+	if (apreq_decode(buf,&blen,str,len) == APR_SUCCESS){
+		retstr = mkChar(buf);
+	} else {
+		retstr = R_NilValue;
+	}
+	free(buf);
+
+	return retstr;
+}
+
+SEXP RA_endecode(SEXP str,SEXP enc){
+	int vlen, i;
+	SEXP new_str;
+	SEXP (*endecode)(char *str);
+
+	if (IS_LOGICAL(enc) && asInteger(enc)){
+		endecode = encode;
+	} else {
+		endecode = decode;
+	}
+
+	if (!IS_CHARACTER(str)){
+		warning("apache.encode: not a string!");
+		return R_NilValue;
+	}
+	vlen = LENGTH(str);
+
+	PROTECT(new_str = NEW_STRING(vlen));
+	for (i = 0; i < vlen; i++)
+		CHARACTER_DATA(new_str)[i] = endecode(CHAR(STRING_PTR(str)[i]));
+	UNPROTECT(1);
+
+	return new_str;
+}
+
 static void *ra_unmarshall_pointer(SEXP ptr, SEXP type)
 {
 
@@ -1087,6 +1150,7 @@ R_CallMethodDef callMethods[] =
 	CALLDEF(RA_allow_methods,3),
 	CALLDEF(RA_ap_set_content_type,2),
 	CALLDEF(RA_gdlib_ioctx,1),
+	CALLDEF(RA_endecode,2),
 
 
 	{NULL,NULL, 0}
