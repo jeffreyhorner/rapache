@@ -112,7 +112,7 @@ AC_DEFUN([APREQ_CONFIG],[
         echo "Using libapreq2 that comes bundled with mod_R"
         echo
         APREQ=`pwd`/libapreq2/apreq2-config
-        APREQ_COMPILE="(cd libapreq2/library; make)"
+        APREQ_COMPILE="(cd libapreq2; make apreq2-config; cd library; make)"
         APREQ_INSTALL="(cd libapreq2/library; make install)"
         (cd libapreq2; ./configure --with-apache2-apxs=$APXS)
 		APREQ_LIB_DIR=`$APREQ --link-ld | sed -e 's/-L//;s/-lapreq2//;'`

@@ -38,7 +38,12 @@ handler <- function(r)
     apache.write(r,"<h2>Request Record</h2>\n")
     apache.write(r,as.html(r))
 	apache.write(r,"<h2>About R</h2>\n")
-    apache.write(r,".libPaths(): ",as.html(.libPaths()),sep="")
+	apache.write(r,"R.version: ",as.html(as.list(unlist(R.version))),'<br>',sep="")
+	apache.write(r,"Sys.info(): ",as.html(as.list(Sys.info())),'<br>',sep="")
+    apache.write(r,"Sys.getenv(): ",as.html(as.list(Sys.getenv())),'<br>',sep="")
+	apache.write(r,".Platform: ",as.html(.Platform),'<br>',sep='')
+	apache.write(r,".Machine: ",as.html(.Machine),'<br>',sep='')
+    apache.write(r,".libPaths(): ",as.html(.libPaths()),'<br>',sep="")
 	apache.write(r,"</BODY></HTML>\n")
     OK
 }

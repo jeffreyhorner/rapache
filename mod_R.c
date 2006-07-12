@@ -46,12 +46,16 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
  * Include the R headers and hook code specific to mod_R
  */
 #include <R.h>
-#include <Rinternals.h>
 #include <Rdefines.h>
-#include <Rdevices.h>
-#include <R_ext/Parse.h>
-#include <R_ext/RStartup.h>
+#include <Rinterface.h>
 
+/*
+ * Define some internal R library stuff to make embedding less
+ * harmful
+ */
+
+/* Override R's setting of temporary directory */
+extern char *R_TempDir;
 
 /*************************************************************************
  *
@@ -69,7 +73,7 @@ static int MR_config_pass = 1;
 static int MR_init_status = 0;
 
 /* Cache child pid on startup. If we fork() we don't want to do certain
- * cleanup steps.
+ * cleanup steps, especially on cgi fork
  */
 static unsigned long MR_child_pid;
 
@@ -104,12 +108,14 @@ typedef struct MR_cfg {
  *
  * Function declarations
  *
+ * MR_* functions are called by apache code base
+ * mr_* functions are called from within mod_R
+ *
  *************************************************************************/
 /* 
  * Exported by libR
  */
 extern int Rf_initEmbeddedR(int argc, char *argv[]);
-extern int R_CleanUp(SA_TYPE, int, int);
 
 /*
  * Module functions
@@ -135,17 +141,20 @@ static void MR_hook_child_init(apr_pool_t *p, server_rec *s);
 static int MR_hook_request_handler (request_rec *r);
 
 /*
+ * Exit callback
+ */
+static apr_status_t MR_child_exit(void *data);
+
+/*
  * Helper functions
  */
 void mr_init_pool(void);
 void mr_init_config_pass(apr_pool_t *p);
 static void mr_init(apr_pool_t *);
-static apr_status_t mr_child_exit(void *data);
 static int mr_call_fun1str( char *funstr, char *argstr);
 static int mr_decode_return_value(SEXP ret);
 static int mr_findFun( char *funstr);
 static int mr_check_cfg(request_rec *, MR_cfg *);
-static apr_status_t apr_dir_remove_recursively (const char *path, apr_pool_t *pool);
 static MR_cfg *mr_dir_config(const request_rec *r);
 
 /*************************************************************************
@@ -315,7 +324,7 @@ static int MR_hook_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *
 static void MR_hook_child_init(apr_pool_t *p, server_rec *s){
 	MR_child_pid=(unsigned long)getpid();
 	mr_init(p);
-	apr_pool_cleanup_register(p, p, mr_child_exit, mr_child_exit);
+	apr_pool_cleanup_register(p, p, MR_child_exit, MR_child_exit);
 }
 
 static int MR_hook_request_handler (request_rec *r)
@@ -341,7 +350,7 @@ static int MR_hook_request_handler (request_rec *r)
 	 * Bad apache config? 
 	 *
 	 * Here, we find the handler we must run and
-	 * load any scripts or librarys.
+	 * load any scripts or libraries.
 	 */
 	if (!mr_check_cfg(r,cfg))
 		return DECLINED;
@@ -401,50 +410,64 @@ static MR_cfg *mr_dir_config(const request_rec *r){
 	return (MR_cfg *) ap_get_module_config(r->per_dir_config,&R_module);
 }
 
+
+/* 
+ * Time now to integrate the following stuff
+ *
+ * 1) Figure out how to set R_TempDir to the apache temp dir
+ * 2) Set own signal handlers
+ *    a) sigsegv - so as not to delete tmp dir or ask questions
+ *    b) all the others that R sets
+ * 3) Set own cleanup routine to avoid deleting temp dir and do
+ *    proper cleanup
+ * 4) Integrate as many apache.* functions into R functions:
+ *    a) apache.read* and apache.write can definitely be morphed int
+ *       read() and cat()/printf()/print(), etc.
+ *    b) others?
+ */
+ 
 void mr_init(apr_pool_t *p){
 	char *argv[] = {"mod_R", "--gui=none", "--slave", "--silent", "--vanilla","--no-readline"};
 	int argc = sizeof(argv)/sizeof(argv[0]);
 	const char *tmpdir;
-	char *Rtmp;
-	apr_file_t *dummy_file;
 
 	if (MR_init_status != 0) return;
 
 	MR_init_status = 1;
 
-	/* Set tmp dir */
-	if (apr_temp_dir_get(&tmpdir,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
-		exit(-1);
-	}
-	Rtmp = apr_pstrcat(p,tmpdir, "/RtmpXXXXXX",NULL);
-	if (apr_file_mktemp(&dummy_file,Rtmp,0,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
-		exit(-1);
-	}
-	if (apr_file_close(dummy_file) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
-		exit(-1);
-	}
-	if (apr_env_set("R_SESSION_TMPDIR",Rtmp,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
-		exit(-1);
-	}
-
 	if (apr_env_set("R_HOME",R_HOME,p) != APR_SUCCESS){
 		fprintf(stderr,"Fatal Error: could not set R_HOME from mr_init!\n");
-		exit(-1);
-	}
-	if (apr_dir_make(Rtmp,APR_UREAD | APR_UWRITE | APR_UEXECUTE, p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR %s from mr_init!\n",Rtmp);
 		exit(-1);
 	}
 
 	Rf_initEmbeddedR(argc, argv);
 
+	/* Set R's tmp dir to apache's */
+
+	/* First remove R's version */
+	if (R_TempDir){
+		if (apr_dir_remove (R_TempDir, p) != APR_SUCCESS){
+			fprintf(stderr,"Fatal Error: could not remove R's TempDir: %s!\n",R_TempDir);
+			exit(-1);
+		}
+	}
+
+	if (apr_temp_dir_get(&tmpdir,p) != APR_SUCCESS){
+		fprintf(stderr,"Fatal Error: apr_temp_dir_get() failed!\n");
+		exit(-1);
+	}
+
+	R_TempDir = (char *)tmpdir;
+
+	if (apr_env_set("R_SESSION_TMPDIR",R_TempDir,p) != APR_SUCCESS){
+		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
+		exit(-1);
+	}
+
+	/* Set own signal handlers */
+
 	/* Now load RApache library */
 	if (!mr_call_fun1str("library","RApache")){
-		apr_dir_remove_recursively(Rtmp,p);
 		fprintf(stderr,"Fatal Error: library(\"Rapache\") failed!\n");
 		exit(-1);
 	}
@@ -490,61 +513,8 @@ static int mr_findFun( char *funstr){
 	return (fun != NULL)? 1 : 0;
 
 }
-/* Take from marc.theaimsgroup.com/?l=apr-dev&m=99056742918882&w=2
- * Never made it into APR. Does that mean it's public domain?
- */ 
-static apr_status_t apr_dir_remove_recursively (const char *path, apr_pool_t *pool)
-{
-	apr_status_t status;
-	apr_dir_t *this_dir;
-	apr_finfo_t this_entry;
-	apr_pool_t *subpool;
-	apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
 
-	status = apr_pool_create (&subpool, pool);
-	if (status != APR_SUCCESS) return status;
-
-	status = apr_dir_open (&this_dir, path, subpool);
-	if (status != APR_SUCCESS) return status;
-
-	for (status = apr_dir_read (&this_entry, flags, this_dir);
-			status == APR_SUCCESS; 
-			status = apr_dir_read (&this_entry, flags, this_dir))
-	{
-		char *fullpath = apr_pstrcat (subpool, path, "/", this_entry.name, NULL);
-
-		if (this_entry.filetype == APR_DIR)
-		{
-			if ((strcmp (this_entry.name, ".") == 0)
-					|| (strcmp (this_entry.name, "..") == 0))
-				continue;
-
-			status = apr_dir_remove_recursively (fullpath, subpool);
-			if (status != APR_SUCCESS) return status;
-		}
-		else if (this_entry.filetype == APR_REG)
-		{
-			status = apr_file_remove (fullpath, subpool);
-			if (status != APR_SUCCESS) return status;
-		}
-	}
-
-	if (! (APR_STATUS_IS_ENOENT (status))) return status;
-	else
-	{
-		status = apr_dir_close (this_dir);
-		if (status != APR_SUCCESS) return status;
-	}
-
-	status = apr_dir_remove (path, subpool);
-	if (status != APR_SUCCESS) return status;
-
-	apr_pool_destroy (subpool);
-
-	return APR_SUCCESS;
-}
-
-static apr_status_t mr_child_exit(void *data){
+static apr_status_t MR_child_exit(void *data){
 	apr_pool_t *p = (apr_pool_t *)data;
 	char *Rtmp;
 	/* R_dot_Last(); */
@@ -560,9 +530,6 @@ static apr_status_t mr_child_exit(void *data){
 		/* R_RunExitFinalizers(); */
 		/* Rf_CleanEd(); */
 		/* KillAllDevices(); */
-		if (apr_env_get(&Rtmp,"R_SESSION_TMPDIR",p) == APR_SUCCESS){
-			apr_dir_remove_recursively(Rtmp,p);
-		}
 	}
 
 	if (MR_pool) {
