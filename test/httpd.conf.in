@@ -64,6 +64,8 @@ DocumentRoot "@DOCROOT@"
 <Directory />
     Options FollowSymLinks
     AllowOverride None
+	Order allow,deny
+	Allow from all
 </Directory>
 
 <Location /test/hello>
@@ -81,7 +83,7 @@ DocumentRoot "@DOCROOT@"
 <Location /test/Rplot>
         SetHandler r-handler
         Rsource @DOCROOT@/plot.R
-        RreqHandler handler
+        RreqHandler rplot
 </Location>
 
 DirectoryIndex index.html

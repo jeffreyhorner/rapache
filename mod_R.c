@@ -16,7 +16,7 @@
 /*
  * $Id$
  */
-#define MOD_R_VERSION "mod_R/0.1.2"
+#define MOD_R_VERSION "mod_R/0.1.5"
 #include "mod_R.h" 
 
 #include <sys/types.h>

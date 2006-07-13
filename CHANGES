@@ -1,7 +1,10 @@
-Changes in 1.0.0
+Changes in 0.1.5
+Changes in 0.1.4
 
     *) Added apache.encode() and apache.decode() for en(de)coding html
        entities
+
+    *) R now uses Apache's tmp dir
 
 Changes in 0.1.3
 

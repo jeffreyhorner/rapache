@@ -1,12 +1,14 @@
 # Test request handler
 testsum <- 0
 hello <- function(r){
+	apache.set_content_type(r,"text/html")
 	apache.write(r,"<h1>Hello World ",testsum,"</h1")
 	testsum <<- testsum + 1
 	OK
 }
 handler <- function(r)
 {
+	apache.set_content_type(r,"text/html")
     args <- apache.get_args(r)
     post <- apache.get_post(r)
     cookies <- apache.get_cookies(r)
