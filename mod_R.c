@@ -440,6 +440,8 @@ void mr_init(apr_pool_t *p){
 		exit(-1);
 	}
 
+	/* Don't let R set up its own signal handlers */
+	R_SignalHandlers = 0;
 	Rf_initEmbeddedR(argc, argv);
 
 	/* Set R's tmp dir to apache's */
