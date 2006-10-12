@@ -68,22 +68,22 @@ DocumentRoot "@DOCROOT@"
 	Allow from all
 </Directory>
 
+# Output RApache messages to browser
+ROutputErrors
+
 <Location /test/hello>
         SetHandler r-handler
-        Rsource @DOCROOT@/test.R
-        RreqHandler hello
+        RHandler hello @DOCROOT@/test.R TRUE
 </Location>
 
 <Location /test/R>
         SetHandler r-handler
-        Rsource @DOCROOT@/test.R
-        RreqHandler handler
+        RHandler handler @DOCROOT@/test.R TRUE
 </Location>
 
 <Location /test/Rplot>
         SetHandler r-handler
-        Rsource @DOCROOT@/plot.R
-        RreqHandler rplot
+        RHandler handler @DOCROOT@/plot.R TRUE
 </Location>
 
 DirectoryIndex index.html

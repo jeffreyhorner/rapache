@@ -25,7 +25,7 @@ mod_R.so: .apreq-config mod_R.c mod_R.h
 	@echo
 	@echo Compiling mod_R
 	@echo
-	$(APXS) $(INCLUDES) -c mod_R.c $(LDFLAGS)
+	$(APXS) $(INCLUDES) -c mod_R.c -Wl,-rpath,$(R_LD_LIBRARY_PATH) $(LDFLAGS)
 	@rm -f mod_R.so
 	@ln -s .libs/mod_R.so mod_R.so
 

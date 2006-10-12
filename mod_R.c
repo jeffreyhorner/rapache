@@ -16,12 +16,18 @@
 /*
  * $Id$
  */
+/*************************************************************************
+ *
+ * Headers and macros
+ *
+ *************************************************************************/
 #define MOD_R_VERSION "mod_R/0.1.5"
 #include "mod_R.h" 
 
 #include <sys/types.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <dlfcn.h>
 
 /*
  * Include the core server components.
@@ -46,16 +52,17 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
  * Include the R headers and hook code specific to mod_R
  */
 #include <R.h>
+#include <Rversion.h>
 #include <Rdefines.h>
+#define R_INTERFACE_PTRS
 #include <Rinterface.h>
+#define R_240 132096 /* This is set in Rversion.h */
 
 /*
- * Define some internal R library stuff to make embedding less
- * harmful
+ * We're hijacking stdin, stdout, and stderr, and since
+ * Rconnections aren't fully opened yet, we need some help.
  */
-
-/* Override R's setting of temporary directory */
-extern char *R_TempDir;
+#include "mod_R_Rconn.h"
 
 /*************************************************************************
  *
@@ -63,8 +70,19 @@ extern char *R_TempDir;
  *
  *************************************************************************/
 
+/* Override R's setting of temporary directory */
+extern char *R_TempDir;
+
 /* Functions exported by RApache which we need to find at RApache load time */
 SEXP (*RA_new_request_rec)(request_rec *r);
+
+/* Current request_rec */
+request_rec *mr_cur_request_rec = NULL;
+
+/* Option to turn on errors in output */
+static int MR_OutputErrors = 0;
+static char *MR_OutputErrors_Prefix = "<pre style=\"background-color:#eee; padding 10px; font-size: 11px\"><code>";
+static char *MR_OutputErrors_Suffix = "</code></pre>";
 
 /* Number of times apache has parsed config files; we'll do stuff on second pass */
 static int MR_config_pass = 1;
@@ -79,8 +97,7 @@ static unsigned long MR_child_pid;
 
 /* Per-child memory for configuration */
 static apr_pool_t *MR_pool = NULL;
-static apr_hash_t *MR_cfg_libs = NULL;
-static apr_hash_t *MR_cfg_scripts = NULL;
+static apr_hash_t *MR_scripts = NULL;
 
 /*
  * Brigades for reading and writing to client
@@ -91,18 +108,22 @@ apr_bucket_brigade *MR_bbout;
 
 /*************************************************************************
  *
- * R module types
+ * RApache types
  *
  *************************************************************************/
-typedef struct {
-	int loaded;
-} MR_cfg_persist;
-
 typedef struct MR_cfg {
-	char *library;
-	char *script;
-	char *reqhandler;
+	char *file;
+	char *handler;
+	int reload;
 }  MR_cfg;
+
+/*
+ * R connection functions
+ */
+typedef struct RApacheCon {
+	request_rec *req;
+	apr_bucket_brigade *brigade;
+} *RApacheCon;
 
 /*************************************************************************
  *
@@ -115,7 +136,9 @@ typedef struct MR_cfg {
 /* 
  * Exported by libR
  */
+#if (R_VERSION < R_240) /* we can delete this code after R 2.4.0 release */
 extern int Rf_initEmbeddedR(int argc, char *argv[]);
+#endif
 
 /*
  * Module functions
@@ -129,9 +152,8 @@ static void MR_register_hooks (apr_pool_t *p);
 /*
  * Command functions
  */
-static const char *MR_cmd_req_handler(cmd_parms *cmd, void *conf, const char *val);
-static const char *MR_cmd_source(cmd_parms *cmd, void *conf, const char *val);
-static const char *MR_cmd_library(cmd_parms *cmd, void *conf, const char *val);
+static const char *MR_cmd_Handler(cmd_parms *cmd, void *conf, const char *handler, const char *file, const char *reload);
+static const char *MR_cmd_OutputErrors(cmd_parms *cmd, void *mconfig);
 
 /*
  * Hook functions
@@ -157,6 +179,23 @@ static int mr_findFun( char *funstr);
 static int mr_check_cfg(request_rec *, MR_cfg *);
 static MR_cfg *mr_dir_config(const request_rec *r);
 
+/*
+ * R specific functions
+ */
+
+void mr_InitTempDir(apr_pool_t *p);
+int mr_stdout_vfprintf(Rconnection con, const char *format, va_list ap);
+int mr_stdout_fflush(Rconnection con);
+size_t mr_stdout_write(const void *ptr, size_t size, size_t n, Rconnection con);
+int mr_stderr_vfprintf(Rconnection, const char *format, va_list ap);
+int mr_stderr_vfprintf_OutputErrors(Rconnection, const char *format, va_list ap);
+int mr_stderr_fflush(Rconnection con);
+int mr_stdin_fgetc(Rconnection con);
+void mr_WriteConsole(char *, int);
+void mr_WriteConsole_OutputErrors(char *, int);
+
+
+
 /*************************************************************************
  *
  * Command array
@@ -164,9 +203,8 @@ static MR_cfg *mr_dir_config(const request_rec *r);
  *************************************************************************/
 
 static const command_rec MR_cmds[] = {
-	AP_INIT_TAKE1("RreqHandler", MR_cmd_req_handler, NULL, OR_OPTIONS, "R Function to handle request"),
-	AP_INIT_TAKE1("Rsource", MR_cmd_source, NULL, OR_OPTIONS, "R file to be sourced at startup"),
-	AP_INIT_TAKE1("Rlibrary", MR_cmd_library, NULL, OR_OPTIONS, "R library to be loaded at startup"),
+	AP_INIT_TAKE3("RHandler", MR_cmd_Handler, NULL, OR_OPTIONS, "R source file and function to handle request."),
+	AP_INIT_NO_ARGS("ROutputErrors", MR_cmd_OutputErrors, NULL, OR_OPTIONS, "Option to print error messages in output."),
 	{ NULL},
 };
 
@@ -188,7 +226,7 @@ module AP_MODULE_DECLARE_DATA R_module =
 
 /*************************************************************************
  *
- * Module functions
+ * Module functions: called by apache code base
  *
  *************************************************************************/
 
@@ -200,54 +238,54 @@ static void *MR_create_dir_cfg(apr_pool_t *p, char *dir){
 	return (void *)cfg;
 }
 
-void *MR_merge_dir_cfg(apr_pool_t *p, void *parent, void *new){
-	MR_cfg *cfg;
-	MR_cfg *pcfg = (MR_cfg *)parent;
-	MR_cfg *ncfg = (MR_cfg *)new;
+void *MR_merge_dir_cfg(apr_pool_t *pool, void *parent, void *new){
+	MR_cfg *c;
+	MR_cfg *p = (MR_cfg *)parent;
+	MR_cfg *n = (MR_cfg *)new;
 
-	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
+	c = (MR_cfg *)apr_pcalloc(pool,sizeof(MR_cfg));
 
 	/* Add parent stuff, even if null */
-	cfg->library = pcfg->library;
-	cfg->script = pcfg->script;
-	cfg->reqhandler = pcfg->reqhandler;
+	c->file =    p->file;
+	c->handler = p->handler;
+	c->reload =  p->reload;
 
 	/* Now add new config stuff, overriding parent */
-	cfg->library = ncfg->library;
-	cfg->script = ncfg->script;
-	cfg->reqhandler = ncfg->reqhandler;
+	c->file =    n->file;
+	c->handler = n->handler;
+	c->reload =  n->reload;
 
-	return (void *)cfg;
+	return (void *)c;
 }
 
 void *MR_create_srv_cfg(apr_pool_t *p, server_rec *s){
-	MR_cfg *cfg;
+	MR_cfg *c;
 
 	mr_init_config_pass(s->process->pool);
 
-	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
+	c = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
 
-	return (void *)cfg;
+	return (void *)c;
 }
 
-void *MR_merge_srv_cfg(apr_pool_t *p, void *parent, void *new){
-	MR_cfg *cfg;
-	MR_cfg *pcfg = (MR_cfg *)parent;
-	MR_cfg *ncfg = (MR_cfg *)new;
+void *MR_merge_srv_cfg(apr_pool_t *pool, void *parent, void *new){
+	MR_cfg *c;
+	MR_cfg *p = (MR_cfg *)parent;
+	MR_cfg *n = (MR_cfg *)new;
 
-	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
+	c = (MR_cfg *)apr_pcalloc(pool,sizeof(MR_cfg));
 
 	/* Add parent stuff, even if null */
-	cfg->library = pcfg->library;
-	cfg->script = pcfg->script;
-	cfg->reqhandler = pcfg->reqhandler;
+	c->file =    p->file;
+	c->handler = p->handler;
+	c->reload =  p->reload;
 
 	/* Now add new config stuff, overriding parent */
-	cfg->library = ncfg->library;
-	cfg->script = ncfg->script;
-	cfg->reqhandler = ncfg->reqhandler;
+	c->file =    n->file;
+	c->handler = n->handler;
+	c->reload =  n->reload;
 
-	return (void *)cfg;
+	return (void *)c;
 }
 
 
@@ -260,64 +298,52 @@ static void MR_register_hooks (apr_pool_t *p)
 
 /*************************************************************************
  *
- * Command functions
+ * Command functions: called by apache code base
  *
  *************************************************************************/
 
-static const char *MR_cmd_req_handler(cmd_parms *cmd, void *conf, const char *val){
-	MR_cfg *cfg = (MR_cfg *)conf;
-
-	cfg->reqhandler = apr_pstrdup(cmd->pool,val);
-
-	return NULL;
-}
-
-static const char *MR_cmd_source(cmd_parms *cmd, void *conf, const char *val){
-	MR_cfg *cfg = (MR_cfg *)conf;
-
-	cfg->script = apr_pstrdup(cmd->pool,val);
+static const char *MR_cmd_Handler(cmd_parms *cmd, void *conf, const char *handler, const char *file, const char *reload){
+	MR_cfg *c = (MR_cfg *)conf;
 
 	if (MR_config_pass == 1){
 		apr_finfo_t finfo;
-		if (apr_stat(&finfo,val,APR_FINFO_TYPE,cmd->pool) != APR_SUCCESS){
-			return apr_psprintf(cmd->pool,"Rsource: %s file not found!",val);
+		if (apr_stat(&finfo,file,APR_FINFO_TYPE,cmd->pool) != APR_SUCCESS){
+			return apr_psprintf(cmd->pool,"Rsource: %s file not found!",file);
 		}
 		return NULL;
 	}
 
-	/* Cache all script files in persistent config pool.
-	 * We'll test to see if we've sourced these in the request handler
+	c->file = apr_pstrdup(cmd->pool,file);
+	c->handler = apr_pstrdup(cmd->pool,handler);
+	if (reload[0] == 'Y' || reload[0] == 'y' || reload[0] == 't' || reload[0] =='T' ||
+			reload[0] == '1'){
+		c->reload = 1;
+	} else {
+		c->reload  = 0;
+	}
+
+	/* Cache modification time of all script files in the MR_scripts hash.
+	 * It's set to zero by default, so that it can be loaded later
 	 */
 	mr_init_pool();
-	apr_hash_set(MR_cfg_scripts,cfg->script,APR_HASH_KEY_STRING,apr_pcalloc(MR_pool,sizeof(MR_cfg_persist)));
-
-	return  NULL;
-}
-
-static const char *MR_cmd_library(cmd_parms *cmd, void *conf, const char *val){
-	MR_cfg *cfg = (MR_cfg *)conf;
-
-	cfg->library = apr_pstrdup(cmd->pool,val);
-
-	if (MR_config_pass == 1) return NULL;
-
-	/* Cache all library names in persistent config pool.
-	 * We'll test to se if we've called library() on these in the request handler
-	 */
-	mr_init_pool();
-	apr_hash_set(MR_cfg_libs,cfg->library,APR_HASH_KEY_STRING,apr_pcalloc(MR_pool,sizeof(MR_cfg_persist)));
+	apr_hash_set(MR_scripts,c->file,APR_HASH_KEY_STRING,apr_pcalloc(MR_pool,sizeof(apr_time_t)));
 
 	return NULL;
 }
 
+static const char *MR_cmd_OutputErrors(cmd_parms *cmd, void *mconfig){
+	MR_OutputErrors = 1;
+	return NULL;
+}
 /*************************************************************************
  *
- * Hook functions
+ * Hook functions: called by apache code base
  *
  *************************************************************************/
 
 static int MR_hook_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s){
 	ap_add_version_component(pconf,MOD_R_VERSION);
+	ap_add_version_component(pconf,apr_psprintf(pconf,"R/%s.%s",R_MAJOR,R_MINOR));
 	return OK;
 }
 
@@ -329,7 +355,9 @@ static void MR_hook_child_init(apr_pool_t *p, server_rec *s){
 
 static int MR_hook_request_handler (request_rec *r)
 {
-	MR_cfg *cfg;
+	MR_cfg *c;
+	Rconnection con;
+	RApacheCon thiscon;
 
 	SEXP val, rhandler_exp, rhandler;
 	int errorOccurred;
@@ -344,7 +372,13 @@ static int MR_hook_request_handler (request_rec *r)
 	/* ap_set_content_type(r,"text/html"); */
 
 	/* Config */
-	cfg = mr_dir_config(r);
+	c = mr_dir_config(r);
+
+	/* Set current request_rec */
+	mr_cur_request_rec = r;
+
+	/* Set output brigade early */
+	MR_bbout = apr_brigade_create(r->pool, r->connection->bucket_alloc);
 
 	/* 
 	 * Bad apache config? 
@@ -352,20 +386,40 @@ static int MR_hook_request_handler (request_rec *r)
 	 * Here, we find the handler we must run and
 	 * load any scripts or libraries.
 	 */
-	if (!mr_check_cfg(r,cfg))
-		return DECLINED;
+	if (!mr_check_cfg(r,c)){
+		if (MR_bbout){
+			if(!APR_BRIGADE_EMPTY(MR_bbout)){
+				ap_filter_flush(MR_bbout,r->output_filters);
+			}
+			apr_brigade_cleanup(MR_bbout);
+			apr_brigade_destroy(MR_bbout);
+		}
+		return (MR_OutputErrors)? DONE: DECLINED;
+	}
+
 
 	/* Init reading */
 	MR_bbin = NULL;
+	con = getConnection(0); /* This must be globally accessible in libR.so */
+	thiscon = con->private;
+	thiscon->req = r;
 
 	/* Init writing */
-	MR_bbout = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+	con = getConnection(1); /* This must be globally accessible in libR.so */
+	thiscon = con->private;
+	thiscon->req = r;
+	thiscon->brigade = MR_bbout;
+
+	con = getConnection(2); /* This must be globally accessible in libR.so */
+	thiscon = con->private;
+	thiscon->req = r;
+	thiscon->brigade = MR_bbout;
 
 	/*
-	 * Now call (cfg->reqhandler)(req)
+	 * Now call (c->handler)(req)
 	 */
 
-	rhandler = Rf_findFun(Rf_install(cfg->reqhandler), R_GlobalEnv);
+	rhandler = Rf_findFun(Rf_install(c->handler), R_GlobalEnv);
 	PROTECT(rhandler);
 
 	PROTECT(rhandler_exp = allocVector(LANGSXP,2));
@@ -386,15 +440,27 @@ static int MR_hook_request_handler (request_rec *r)
 
 	/* Clean up writing */
 	if (MR_bbout){
-		if (!APR_BRIGADE_EMPTY(MR_bbout)) ap_filter_flush(MR_bbout,r->output_filters);
+		if(!APR_BRIGADE_EMPTY(MR_bbout)){
+			ap_filter_flush(MR_bbout,r->output_filters);
+		}
 		apr_brigade_cleanup(MR_bbout);
 		apr_brigade_destroy(MR_bbout);
 	}
 
+	/* And request_rec */
+	mr_cur_request_rec = NULL;
 
 	if (errorOccurred){
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mod_R: tryEval(%s) failed!",r->filename);
-		return HTTP_INTERNAL_SERVER_ERROR;
+		if (MR_OutputErrors){
+			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
+			ap_fprintf(r->output_filters,MR_bbout,"error in handler: %s\nfile:%s .",c->handler,c->file);
+			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+			return DONE;
+		} else {
+			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"error in handler: %s, file: %s .",c->handler,c->file);
+			return HTTP_INTERNAL_SERVER_ERROR;
+		}
+		return (MR_OutputErrors)? DONE: HTTP_INTERNAL_SERVER_ERROR;
 	}
 
 	return mr_decode_return_value(val);
@@ -430,6 +496,8 @@ void mr_init(apr_pool_t *p){
 	char *argv[] = {"mod_R", "--gui=none", "--slave", "--silent", "--vanilla","--no-readline"};
 	int argc = sizeof(argv)/sizeof(argv[0]);
 	const char *tmpdir;
+	Rconnection con;
+	void *libR;
 
 	if (MR_init_status != 0) return;
 
@@ -442,31 +510,40 @@ void mr_init(apr_pool_t *p){
 
 	/* Don't let R set up its own signal handlers */
 	R_SignalHandlers = 0;
+
+	#ifdef CSTACK_DEFNS
+	/* Don't do any stack checking */
+	R_CStackLimit = -1;
+	#endif
+
+	#if (R_VERSION >= R_240) /* we'll take out the ifdef after R 2.4.0 release */
+	mr_InitTempDir(p);
+	#endif
+
 	Rf_initEmbeddedR(argc, argv);
 
+	R_Consolefile = NULL;
+	R_Outputfile = NULL;
+	ptr_R_WriteConsole = (MR_OutputErrors)? mr_WriteConsole_OutputErrors : mr_WriteConsole;
+
 	/* Set R's tmp dir to apache's */
+	#if (R_VERSION < R_240) /* we can delete this code after R 2.4.0 release */
+	mr_InitTempDir(p);
+	#endif
 
-	/* First remove R's version */
-	if (R_TempDir){
-		if (apr_dir_remove (R_TempDir, p) != APR_SUCCESS){
-			fprintf(stderr,"Fatal Error: could not remove R's TempDir: %s!\n",R_TempDir);
-			exit(-1);
-		}
-	}
+	/* Apachify stdout */
+	con = getConnection(1);
+	con->private = (void *) apr_pcalloc(p,sizeof(struct RApacheCon));
+	con->text = FALSE; /* allows us to do binary writes */
+	con->vfprintf = mr_stdout_vfprintf;
+	con->write = mr_stdout_write;
+	con->fflush = mr_stdout_fflush;
 
-	if (apr_temp_dir_get(&tmpdir,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: apr_temp_dir_get() failed!\n");
-		exit(-1);
-	}
-
-	R_TempDir = (char *)tmpdir;
-
-	if (apr_env_set("R_SESSION_TMPDIR",R_TempDir,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
-		exit(-1);
-	}
-
-	/* Set own signal handlers */
+	/* Apachify stderr */
+	con = getConnection(2);
+	con->private = (void *) apr_pcalloc(p,sizeof(struct RApacheCon));
+	con->vfprintf = (MR_OutputErrors)? mr_stderr_vfprintf_OutputErrors: mr_stderr_vfprintf;
+	con->fflush = mr_stderr_fflush;
 
 	/* Now load RApache library */
 	if (!mr_call_fun1str("library","RApache")){
@@ -542,37 +619,59 @@ static apr_status_t MR_child_exit(void *data){
 	return APR_SUCCESS;
 }
 
-static int mr_check_cfg(request_rec *r, MR_cfg *cfg){
-	MR_cfg_persist *cfg_persist;
-	if (cfg == NULL){
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): cfg is NULL");
+static int mr_check_cfg(request_rec *r, MR_cfg *c){
+	apr_finfo_t finfo;
+	apr_time_t *file_mtime;
+	if (c == NULL){
+		if (MR_OutputErrors){
+			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
+			ap_fprintf(r->output_filters,MR_bbout,"config is NULL.",c->file);
+			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+		} else {
+			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"config is NULL");
+		}
 		return 0;
 	}
 
-	if (cfg->library){
-		cfg_persist = (MR_cfg_persist *)apr_hash_get(MR_cfg_libs,cfg->library,APR_HASH_KEY_STRING);
-		if (cfg_persist && !cfg_persist->loaded){
-			if(!mr_call_fun1str("library",cfg->library)){
-				ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): library(%s) failed!",cfg->library);
+	/* Grab modified time of file */
+	file_mtime = (apr_time_t *)apr_hash_get(MR_scripts,c->file,APR_HASH_KEY_STRING);
+
+	if (c->reload || !(*file_mtime)){ /* File not sourced yet */
+
+		if (apr_stat(&finfo,c->file,APR_FINFO_MTIME,r->pool) != APR_SUCCESS){
+			if (MR_OutputErrors){
+				ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
+				ap_fprintf(r->output_filters,MR_bbout,"%s: file not found.",c->file);
+				ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+			} else {
+				ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"%s: file not found!",c->file);
+			}
+			return 0;
+		}
+		if (*file_mtime < finfo.mtime){
+			if (!mr_call_fun1str("source",c->file)){
+				if (MR_OutputErrors){
+					ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
+					ap_fprintf(r->output_filters,MR_bbout,"source(%s) failed.",c->file);
+					ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+				} else {
+					ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"source(%s) failed.",c->file);
+				}
 				return 0;
 			}
-			cfg_persist->loaded = 1;
 		}
+		*file_mtime = finfo.mtime;
 	}
 
-	if (cfg->script){
-		cfg_persist = (MR_cfg_persist *)apr_hash_get(MR_cfg_scripts,cfg->script,APR_HASH_KEY_STRING);
-		if (cfg_persist && !cfg_persist->loaded){
-			if (!mr_call_fun1str("source",cfg->script)){
-				ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): source(%s) failed!",cfg->script);
-				return 0;
-			}
-			cfg_persist->loaded = 1;
+	/* Make sure function is found */
+	if (!mr_findFun(c->handler)){
+		if (MR_OutputErrors){
+			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
+			ap_fprintf(r->output_filters,MR_bbout,"handler %s not found in %s .",c->handler,c->file);
+			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+		} else {
+			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"handler %s not found in %s .",c->handler,c->file);
 		}
-	}
-
-	if (cfg->reqhandler && !mr_findFun(cfg->reqhandler)){
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"mr_check_cfg(): RreqHandler %s not found!",cfg->reqhandler);
 		return 0;
 	}
 
@@ -588,10 +687,9 @@ void mr_init_pool(void){
 		exit(-1);
 	}
 
-	MR_cfg_libs = apr_hash_make(MR_pool);
-	MR_cfg_scripts = apr_hash_make(MR_pool);
+	MR_scripts = apr_hash_make(MR_pool);
 
-	if (!MR_cfg_libs || !MR_cfg_scripts){
+	if (!MR_scripts){
 		fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_pool!\n");
 		exit(-1);
 	}
@@ -616,4 +714,85 @@ void mr_init_config_pass(apr_pool_t *p){
 		*((int *)cfg_pass) = 2;
 	}
 	MR_config_pass = *((int *)cfg_pass);
+}
+
+/*************************************************************************
+ *
+ * R specific functions
+ *
+ *************************************************************************/
+
+void mr_InitTempDir(apr_pool_t *p)
+{
+	const char *tmp;
+
+	#if (R_VERSION < R_240) /* we can delete this code after R 2.4.0 release */
+	if (R_TempDir){
+		/* Undo R's InitTempdir() and do something sane */
+		if (apr_dir_remove (R_TempDir, p) != APR_SUCCESS){
+			fprintf(stderr,"Fatal Error: could not remove R's TempDir: %s!\n",R_TempDir);
+			exit(-1);
+		}
+	}
+	#endif
+
+	if (apr_temp_dir_get(&tmp,p) != APR_SUCCESS){
+		fprintf(stderr,"Fatal Error: apr_temp_dir_get() failed!\n");
+		exit(-1);
+	}
+
+	R_TempDir=(char *)tmp;
+
+	if (apr_env_set("R_SESSION_TMPDIR",R_TempDir,p) != APR_SUCCESS){
+		fprintf(stderr,"Fatal Error: could not set up R_SESSION_TMPDIR!\n");
+		exit(-1);
+	}
+}
+
+/* stdout */
+int mr_stdout_vfprintf(Rconnection con, const char *format, va_list ap){
+	RApacheCon this = con->private;
+	apr_status_t rv;
+	rv = apr_brigade_vprintf(this->brigade, ap_filter_flush, this->req->output_filters, format, ap);
+	return (rv == APR_SUCCESS)? 0 : 1;
+}
+int mr_stdout_fflush(Rconnection con){
+	RApacheCon this = con->private;
+	ap_filter_flush(this->brigade,this->req->output_filters);
+	return 0;
+}
+size_t mr_stdout_write(const void *ptr, size_t size, size_t n, Rconnection con){
+	RApacheCon this = con->private;
+	apr_status_t rv;
+	rv = apr_brigade_write(this->brigade, ap_filter_flush, this->req->output_filters, (const char *)ptr, size*n);
+	return (rv == APR_SUCCESS)? n : 1;
+}
+
+/* stderr */
+int mr_stderr_vfprintf(Rconnection con, const char *format, va_list ap){
+	RApacheCon this = con->private;
+	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,this->req,format,ap);
+	return 0;
+}
+int mr_stderr_vfprintf_OutputErrors(Rconnection con, const char *format, va_list ap){
+	RApacheCon this = con->private;
+	apr_status_t rv;
+	ap_fputs(this->req->output_filters,this->brigade,MR_OutputErrors_Prefix);
+	rv = apr_brigade_vprintf(this->brigade, ap_filter_flush, this->req->output_filters, format, ap);
+	ap_fputs(this->req->output_filters,this->brigade,MR_OutputErrors_Suffix);
+	return (rv == APR_SUCCESS)? 0 : 1;
+}
+int mr_stderr_fflush(Rconnection con){
+	return 0;
+}
+
+void mr_WriteConsole(char *buf, int size){
+	fprintf(stderr,"%s",buf);
+}
+void mr_WriteConsole_OutputErrors(char *buf, int size){
+	request_rec *r = mr_cur_request_rec; 
+
+	ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
+	ap_fputs(r->output_filters,MR_bbout,buf);
+	ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
 }
