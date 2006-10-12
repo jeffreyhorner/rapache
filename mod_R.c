@@ -403,9 +403,6 @@ static int MR_hook_request_handler (request_rec *r)
 
 	/* Init reading */
 	MR_bbin = NULL;
-	con = getConnection(0); /* This must be globally accessible in libR.so */
-	thiscon = con->private;
-	thiscon->req = r;
 
 	/* Init writing */
 	con = getConnection(1); /* This must be globally accessible in libR.so */
