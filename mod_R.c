@@ -57,6 +57,9 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #define R_INTERFACE_PTRS
 #include <Rinterface.h>
 #define R_240 132096 /* This is set in Rversion.h */
+#if (R_VERSION >= R_240) /* we can delete this code after R 2.4.0 release */
+#include <Rembedded.h>
+#endif
 
 /*
  * We're hijacking stdin, stdout, and stderr, and since
@@ -495,9 +498,7 @@ static MR_cfg *mr_dir_config(const request_rec *r){
 void mr_init(apr_pool_t *p){
 	char *argv[] = {"mod_R", "--gui=none", "--slave", "--silent", "--vanilla","--no-readline"};
 	int argc = sizeof(argv)/sizeof(argv[0]);
-	const char *tmpdir;
 	Rconnection con;
-	void *libR;
 
 	if (MR_init_status != 0) return;
 
@@ -594,8 +595,6 @@ static int mr_findFun( char *funstr){
 }
 
 static apr_status_t MR_child_exit(void *data){
-	apr_pool_t *p = (apr_pool_t *)data;
-	char *Rtmp;
 	/* R_dot_Last(); */
 	unsigned long pid;
 
@@ -625,7 +624,7 @@ static int mr_check_cfg(request_rec *r, MR_cfg *c){
 	if (c == NULL){
 		if (MR_OutputErrors){
 			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
-			ap_fprintf(r->output_filters,MR_bbout,"config is NULL.",c->file);
+			ap_fprintf(r->output_filters,MR_bbout,"config is NULL.");
 			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
 		} else {
 			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"config is NULL");
