@@ -120,14 +120,6 @@ typedef struct MR_cfg {
 	int reload;
 }  MR_cfg;
 
-/*
- * R connection functions
- */
-typedef struct RApacheCon {
-	request_rec *req;
-	apr_bucket_brigade *brigade;
-} *RApacheCon;
-
 /*************************************************************************
  *
  * Function declarations
@@ -359,8 +351,6 @@ static void MR_hook_child_init(apr_pool_t *p, server_rec *s){
 static int MR_hook_request_handler (request_rec *r)
 {
 	MR_cfg *c;
-	Rconnection con;
-	RApacheCon thiscon;
 
 	SEXP val, rhandler_exp, rhandler;
 	int errorOccurred;
@@ -379,6 +369,9 @@ static int MR_hook_request_handler (request_rec *r)
 
 	/* Set current request_rec */
 	mr_cur_request_rec = r;
+
+	/* Init reading */
+	MR_bbin = NULL;
 
 	/* Set output brigade early */
 	MR_bbout = apr_brigade_create(r->pool, r->connection->bucket_alloc);
@@ -401,19 +394,6 @@ static int MR_hook_request_handler (request_rec *r)
 	}
 
 
-	/* Init reading */
-	MR_bbin = NULL;
-
-	/* Init writing */
-	con = getConnection(1); /* This must be globally accessible in libR.so */
-	thiscon = con->private;
-	thiscon->req = r;
-	thiscon->brigade = MR_bbout;
-
-	con = getConnection(2); /* This must be globally accessible in libR.so */
-	thiscon = con->private;
-	thiscon->req = r;
-	thiscon->brigade = MR_bbout;
 
 	/*
 	 * Now call (c->handler)(req)
@@ -531,7 +511,6 @@ void mr_init(apr_pool_t *p){
 
 	/* Apachify stdout */
 	con = getConnection(1);
-	con->private = (void *) apr_pcalloc(p,sizeof(struct RApacheCon));
 	con->text = FALSE; /* allows us to do binary writes */
 	con->vfprintf = mr_stdout_vfprintf;
 	con->write = mr_stdout_write;
@@ -539,7 +518,6 @@ void mr_init(apr_pool_t *p){
 
 	/* Apachify stderr */
 	con = getConnection(2);
-	con->private = (void *) apr_pcalloc(p,sizeof(struct RApacheCon));
 	con->vfprintf = (MR_OutputErrors)? mr_stderr_vfprintf_OutputErrors: mr_stderr_vfprintf;
 	con->fflush = mr_stderr_fflush;
 
@@ -747,35 +725,30 @@ void mr_InitTempDir(apr_pool_t *p)
 
 /* stdout */
 int mr_stdout_vfprintf(Rconnection con, const char *format, va_list ap){
-	RApacheCon this = con->private;
 	apr_status_t rv;
-	rv = apr_brigade_vprintf(this->brigade, ap_filter_flush, this->req->output_filters, format, ap);
+	rv = apr_brigade_vprintf(MR_bbout, ap_filter_flush, mr_cur_request_rec->output_filters, format, ap);
 	return (rv == APR_SUCCESS)? 0 : 1;
 }
 int mr_stdout_fflush(Rconnection con){
-	RApacheCon this = con->private;
-	ap_filter_flush(this->brigade,this->req->output_filters);
+	ap_filter_flush(MR_bbout,mr_cur_request_rec->output_filters);
 	return 0;
 }
 size_t mr_stdout_write(const void *ptr, size_t size, size_t n, Rconnection con){
-	RApacheCon this = con->private;
 	apr_status_t rv;
-	rv = apr_brigade_write(this->brigade, ap_filter_flush, this->req->output_filters, (const char *)ptr, size*n);
+	rv = apr_brigade_write(MR_bbout, ap_filter_flush, mr_cur_request_rec->output_filters, (const char *)ptr, size*n);
 	return (rv == APR_SUCCESS)? n : 1;
 }
 
 /* stderr */
 int mr_stderr_vfprintf(Rconnection con, const char *format, va_list ap){
-	RApacheCon this = con->private;
-	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,this->req,format,ap);
+	vfprintf(stderr,format,ap);
 	return 0;
 }
 int mr_stderr_vfprintf_OutputErrors(Rconnection con, const char *format, va_list ap){
-	RApacheCon this = con->private;
 	apr_status_t rv;
-	ap_fputs(this->req->output_filters,this->brigade,MR_OutputErrors_Prefix);
-	rv = apr_brigade_vprintf(this->brigade, ap_filter_flush, this->req->output_filters, format, ap);
-	ap_fputs(this->req->output_filters,this->brigade,MR_OutputErrors_Suffix);
+	ap_fputs(mr_cur_request_rec->output_filters,MR_bbout,MR_OutputErrors_Prefix);
+	rv = apr_brigade_vprintf(MR_bbout, ap_filter_flush, mr_cur_request_rec->output_filters, format, ap);
+	ap_fputs(mr_cur_request_rec->output_filters,MR_bbout,MR_OutputErrors_Suffix);
 	return (rv == APR_SUCCESS)? 0 : 1;
 }
 int mr_stderr_fflush(Rconnection con){
