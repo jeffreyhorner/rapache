@@ -135,8 +135,8 @@ SEXP RA_APR_TABLE_class;
 /*
  * Brigades for reading and writing
  */
-extern apr_bucket_brigade *MR_bbin;
-extern apr_bucket_brigade *MR_bbout;
+extern apr_bucket_brigade *MR_BBin;
+extern apr_bucket_brigade *MR_BBout;
 
 /* Functions called by mod_R */
 extern SEXP (*RA_new_request_rec)(request_rec *r);
@@ -469,12 +469,12 @@ SEXP RA_read(SEXP sr, SEXP slen){
 	buf = R_alloc(blen+1, sizeof(char)); /* +1 for NULL */
 	bpos = 0;
 
-	if (MR_bbin == NULL){
-		MR_bbin = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+	if (MR_BBin == NULL){
+		MR_BBin = apr_brigade_create(r->pool, r->connection->bucket_alloc);
 	}
 
 
-	rv = ap_get_brigade(r->input_filters, MR_bbin, AP_MODE_READBYTES,
+	rv = ap_get_brigade(r->input_filters, MR_BBin, AP_MODE_READBYTES,
 			APR_BLOCK_READ, len);
 
 	if (rv != APR_SUCCESS) {
@@ -482,11 +482,11 @@ SEXP RA_read(SEXP sr, SEXP slen){
 		return R_NilValue;
 	}
 
-	APR_BRIGADE_FOREACH(bucket, MR_bbin) {
+	APR_BRIGADE_FOREACH(bucket, MR_BBin) {
 
 		if (APR_BUCKET_IS_EOS(bucket)) {
 			if (bpos == 0) { /* end of stream and no data , so return NULL */
-				apr_brigade_cleanup(MR_bbin);
+				apr_brigade_cleanup(MR_BBin);
 				return R_NilValue;
 			} else { /* We've read some data, so go ahead and return it */
 				break;
@@ -503,7 +503,7 @@ SEXP RA_read(SEXP sr, SEXP slen){
 		memcpy(buf+bpos,data,len);
 		bpos += len;
 	}
-	apr_brigade_cleanup(MR_bbin);
+	apr_brigade_cleanup(MR_BBin);
 
 	buf[bpos] = '\0';
 	PROTECT(str = NEW_STRING(1));
@@ -552,12 +552,12 @@ SEXP RA_readline(SEXP sr, SEXP slen){
 	buf = R_alloc(blen+1, sizeof(char)); /* +1 for NULL */
 	bpos = 0;
 
-	if (MR_bbin == NULL){
-		MR_bbin = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+	if (MR_BBin == NULL){
+		MR_BBin = apr_brigade_create(r->pool, r->connection->bucket_alloc);
 	}
 
 
-	rv = ap_get_brigade(r->input_filters, MR_bbin, AP_MODE_GETLINE,
+	rv = ap_get_brigade(r->input_filters, MR_BBin, AP_MODE_GETLINE,
 			APR_BLOCK_READ, 0);
 
 	if (rv != APR_SUCCESS) {
@@ -565,11 +565,11 @@ SEXP RA_readline(SEXP sr, SEXP slen){
 		return R_NilValue;
 	}
 
-	APR_BRIGADE_FOREACH(bucket, MR_bbin) {
+	APR_BRIGADE_FOREACH(bucket, MR_BBin) {
 
 		if (APR_BUCKET_IS_EOS(bucket)) {
 			if (bpos == 0) { /* end of stream and no data , so return NULL */
-				apr_brigade_cleanup(MR_bbin);
+				apr_brigade_cleanup(MR_BBin);
 				return R_NilValue;
 			} else { /* We've read some data, so go ahead and return it */
 				break;
@@ -586,7 +586,7 @@ SEXP RA_readline(SEXP sr, SEXP slen){
 		memcpy(buf+bpos,data,len);
 		bpos += len;
 	}
-	apr_brigade_cleanup(MR_bbin);
+	apr_brigade_cleanup(MR_BBin);
 
 	buf[bpos] = '\0';
 	PROTECT(str = NEW_STRING(1));
@@ -615,12 +615,12 @@ SEXP RA_write(SEXP sr, SEXP str, SEXP flush){
 	}
 
 	for (i = 0; i < LENGTH(str); i++){
-		if (ap_fputs(r->output_filters,MR_bbout,CHAR(CHARACTER_DATA(str)[i])) != APR_SUCCESS)
+		if (ap_fputs(r->output_filters,MR_BBout,CHAR(CHARACTER_DATA(str)[i])) != APR_SUCCESS)
 			return ra_logical(FALSE);
 	}
 
 	if (IS_LOGICAL(flush) && asInteger(flush))
-		ap_filter_flush(MR_bbout,r->output_filters);
+		ap_filter_flush(MR_BBout,r->output_filters);
 
 	return ra_logical(TRUE);
 }
@@ -897,11 +897,11 @@ static int ra_gd_getC(gdIOCtxPtr ioctx){ return 0; }
 static int ra_gd_getBuf(gdIOCtxPtr ioctx, void *buf, int i){ return 0; }
 static void ra_gd_putC(gdIOCtxPtr ioctx, int c){
 	request_rec *r = ((ra_gd_ioctx*)ioctx)->r;
-	ap_fputc(r->output_filters,MR_bbout,(char)c);
+	ap_fputc(r->output_filters,MR_BBout,(char)c);
 }
 static int ra_gd_putBuf(gdIOCtxPtr ioctx, const void *buf, int i){
 	request_rec *r = ((ra_gd_ioctx*)ioctx)->r;
-	ap_fwrite(r->output_filters,MR_bbout,buf,i);
+	ap_fwrite(r->output_filters,MR_BBout,buf,i);
 	return i;
 }
 static int ra_gd_seek(gdIOCtxPtr ioctx, const int i){ return 0; }

@@ -80,34 +80,34 @@ extern char *R_TempDir;
 SEXP (*RA_new_request_rec)(request_rec *r);
 
 /* Current request_rec */
-request_rec *mr_cur_request_rec = NULL;
+request_rec *MR_Request = NULL;
 
 /* Option to turn on errors in output */
 static int MR_OutputErrors = 0;
-static char *MR_OutputErrors_Prefix = "<pre style=\"background-color:#eee; padding 10px; font-size: 11px\"><code>";
-static char *MR_OutputErrors_Suffix = "</code></pre>";
+static char *MR_ErrorPrefix = "<pre style=\"background-color:#eee; padding 10px; font-size: 11px\"><code>";
+static char *MR_ErrorSuffix = "</code></pre>";
 
 /* Number of times apache has parsed config files; we'll do stuff on second pass */
-static int MR_config_pass = 1;
+static int MR_ConfigPass = 1;
 
 /* Don't start R more than once, if the flag is 1 it's already started */
-static int MR_init_status = 0;
+static int MR_InitStatus = 0;
 
 /* Cache child pid on startup. If we fork() we don't want to do certain
  * cleanup steps, especially on cgi fork
  */
-static unsigned long MR_child_pid;
+static unsigned long MR_pid;
 
 /* Per-child memory for configuration */
-static apr_pool_t *MR_pool = NULL;
-static apr_hash_t *MR_scripts = NULL;
+static apr_pool_t *MR_Pool = NULL;
+static apr_hash_t *MR_Scripts = NULL;
 
 /*
- * Brigades for reading and writing to client
+ * Bucket brigades for reading and writing to client
  * exported to RApache
  */
-apr_bucket_brigade *MR_bbin;
-apr_bucket_brigade *MR_bbout;
+apr_bucket_brigade *MR_BBin;
+apr_bucket_brigade *MR_BBout;
 
 /*************************************************************************
  *
@@ -300,7 +300,7 @@ static void MR_register_hooks (apr_pool_t *p)
 static const char *MR_cmd_Handler(cmd_parms *cmd, void *conf, const char *handler, const char *file, const char *reload){
 	MR_cfg *c = (MR_cfg *)conf;
 
-	if (MR_config_pass == 1){
+	if (MR_ConfigPass == 1){
 		apr_finfo_t finfo;
 		if (apr_stat(&finfo,file,APR_FINFO_TYPE,cmd->pool) != APR_SUCCESS){
 			return apr_psprintf(cmd->pool,"Rsource: %s file not found!",file);
@@ -317,11 +317,11 @@ static const char *MR_cmd_Handler(cmd_parms *cmd, void *conf, const char *handle
 		c->reload  = 0;
 	}
 
-	/* Cache modification time of all script files in the MR_scripts hash.
+	/* Cache modification time of all script files in the MR_Scripts hash.
 	 * It's set to zero by default, so that it can be loaded later
 	 */
 	mr_init_pool();
-	apr_hash_set(MR_scripts,c->file,APR_HASH_KEY_STRING,apr_pcalloc(MR_pool,sizeof(apr_time_t)));
+	apr_hash_set(MR_Scripts,c->file,APR_HASH_KEY_STRING,apr_pcalloc(MR_Pool,sizeof(apr_time_t)));
 
 	return NULL;
 }
@@ -343,7 +343,7 @@ static int MR_hook_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *
 }
 
 static void MR_hook_child_init(apr_pool_t *p, server_rec *s){
-	MR_child_pid=(unsigned long)getpid();
+	MR_pid=(unsigned long)getpid();
 	mr_init(p);
 	apr_pool_cleanup_register(p, p, MR_child_exit, MR_child_exit);
 }
@@ -351,6 +351,7 @@ static void MR_hook_child_init(apr_pool_t *p, server_rec *s){
 static int MR_hook_request_handler (request_rec *r)
 {
 	MR_cfg *c;
+	Rconnection con;
 
 	SEXP val, rhandler_exp, rhandler;
 	int errorOccurred;
@@ -359,22 +360,33 @@ static int MR_hook_request_handler (request_rec *r)
 	if (strcmp(r->handler,"r-handler") != 0)
 		return DECLINED;
 
-	/* Let the Apache config or the handler determine
-	 * the type
-	 */
-	/* ap_set_content_type(r,"text/html"); */
-
 	/* Config */
 	c = mr_dir_config(r);
 
 	/* Set current request_rec */
-	mr_cur_request_rec = r;
+	MR_Request = r;
 
 	/* Init reading */
-	MR_bbin = NULL;
+	MR_BBin = NULL;
 
 	/* Set output brigade early */
-	MR_bbout = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+	MR_BBout = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+
+
+
+	/* Apachify stdout */
+	con = getConnection(1);
+	con->text = FALSE; /* allows us to do binary writes */
+	con->vfprintf = mr_stdout_vfprintf;
+	con->write = mr_stdout_write;
+	con->fflush = mr_stdout_fflush;
+
+	/* Apachify stderr */
+	con = getConnection(2);
+	con->vfprintf = (MR_OutputErrors)? mr_stderr_vfprintf_OutputErrors: mr_stderr_vfprintf;
+	con->fflush = mr_stderr_fflush;
+	/*  Some stderr messages go through here */
+	ptr_R_WriteConsole = (MR_OutputErrors)? mr_WriteConsole_OutputErrors : mr_WriteConsole;
 
 	/* 
 	 * Bad apache config? 
@@ -383,12 +395,12 @@ static int MR_hook_request_handler (request_rec *r)
 	 * load any scripts or libraries.
 	 */
 	if (!mr_check_cfg(r,c)){
-		if (MR_bbout){
-			if(!APR_BRIGADE_EMPTY(MR_bbout)){
-				ap_filter_flush(MR_bbout,r->output_filters);
+		if (MR_BBout){
+			if(!APR_BRIGADE_EMPTY(MR_BBout)){
+				ap_filter_flush(MR_BBout,r->output_filters);
 			}
-			apr_brigade_cleanup(MR_bbout);
-			apr_brigade_destroy(MR_bbout);
+			apr_brigade_cleanup(MR_BBout);
+			apr_brigade_destroy(MR_BBout);
 		}
 		return (MR_OutputErrors)? DONE: DECLINED;
 	}
@@ -413,28 +425,28 @@ static int MR_hook_request_handler (request_rec *r)
 	val = R_tryEval(rhandler_exp,NULL,&errorOccurred);
 
 	/* Clean up reading */
-	if (MR_bbin){
-		apr_brigade_cleanup(MR_bbin);
-		apr_brigade_destroy(MR_bbin);
+	if (MR_BBin){
+		apr_brigade_cleanup(MR_BBin);
+		apr_brigade_destroy(MR_BBin);
 	}
 
 	/* Clean up writing */
-	if (MR_bbout){
-		if(!APR_BRIGADE_EMPTY(MR_bbout)){
-			ap_filter_flush(MR_bbout,r->output_filters);
+	if (MR_BBout){
+		if(!APR_BRIGADE_EMPTY(MR_BBout)){
+			ap_filter_flush(MR_BBout,r->output_filters);
 		}
-		apr_brigade_cleanup(MR_bbout);
-		apr_brigade_destroy(MR_bbout);
+		apr_brigade_cleanup(MR_BBout);
+		apr_brigade_destroy(MR_BBout);
 	}
 
 	/* And request_rec */
-	mr_cur_request_rec = NULL;
+	MR_Request = NULL;
 
 	if (errorOccurred){
 		if (MR_OutputErrors){
-			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
-			ap_fprintf(r->output_filters,MR_bbout,"error in handler: %s\nfile:%s .",c->handler,c->file);
-			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+			ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
+			ap_fprintf(r->output_filters,MR_BBout,"error in handler: %s\nfile:%s .",c->handler,c->file);
+			ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
 			return DONE;
 		} else {
 			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"error in handler: %s, file: %s .",c->handler,c->file);
@@ -475,11 +487,10 @@ static MR_cfg *mr_dir_config(const request_rec *r){
 void mr_init(apr_pool_t *p){
 	char *argv[] = {"mod_R", "--gui=none", "--slave", "--silent", "--vanilla","--no-readline"};
 	int argc = sizeof(argv)/sizeof(argv[0]);
-	Rconnection con;
 
-	if (MR_init_status != 0) return;
+	if (MR_InitStatus != 0) return;
 
-	MR_init_status = 1;
+	MR_InitStatus = 1;
 
 	if (apr_env_set("R_HOME",R_HOME,p) != APR_SUCCESS){
 		fprintf(stderr,"Fatal Error: could not set R_HOME from mr_init!\n");
@@ -500,26 +511,14 @@ void mr_init(apr_pool_t *p){
 
 	Rf_initEmbeddedR(argc, argv);
 
-	R_Consolefile = NULL;
-	R_Outputfile = NULL;
-	ptr_R_WriteConsole = (MR_OutputErrors)? mr_WriteConsole_OutputErrors : mr_WriteConsole;
-
 	/* Set R's tmp dir to apache's */
 	#if (R_VERSION < R_240) /* we can delete this code after R 2.4.0 release */
 	mr_InitTempDir(p);
 	#endif
 
-	/* Apachify stdout */
-	con = getConnection(1);
-	con->text = FALSE; /* allows us to do binary writes */
-	con->vfprintf = mr_stdout_vfprintf;
-	con->write = mr_stdout_write;
-	con->fflush = mr_stdout_fflush;
-
-	/* Apachify stderr */
-	con = getConnection(2);
-	con->vfprintf = (MR_OutputErrors)? mr_stderr_vfprintf_OutputErrors: mr_stderr_vfprintf;
-	con->fflush = mr_stderr_fflush;
+	/* Do we really need this */
+	R_Consolefile = NULL;
+	R_Outputfile = NULL;
 
 	/* Now load RApache library */
 	if (!mr_call_fun1str("library","RApache")){
@@ -578,16 +577,16 @@ static apr_status_t MR_child_exit(void *data){
 	/* Only run if we've actually initialized AND
 	 * we haven't forked (for mod_cgi).
 	 */
-	if (MR_init_status && MR_child_pid == pid){
-		MR_init_status = 0;
+	if (MR_InitStatus && MR_pid == pid){
+		MR_InitStatus = 0;
 		/* R_RunExitFinalizers(); */
 		/* Rf_CleanEd(); */
 		/* KillAllDevices(); */
 	}
 
-	if (MR_pool) {
-		apr_pool_destroy(MR_pool);
-		MR_pool = NULL;
+	if (MR_Pool) {
+		apr_pool_destroy(MR_Pool);
+		MR_Pool = NULL;
 	}
 
 	return APR_SUCCESS;
@@ -598,9 +597,9 @@ static int mr_check_cfg(request_rec *r, MR_cfg *c){
 	apr_time_t *file_mtime;
 	if (c == NULL){
 		if (MR_OutputErrors){
-			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
-			ap_fprintf(r->output_filters,MR_bbout,"config is NULL.");
-			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+			ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
+			ap_fprintf(r->output_filters,MR_BBout,"config is NULL.");
+			ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
 		} else {
 			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"config is NULL");
 		}
@@ -608,15 +607,15 @@ static int mr_check_cfg(request_rec *r, MR_cfg *c){
 	}
 
 	/* Grab modified time of file */
-	file_mtime = (apr_time_t *)apr_hash_get(MR_scripts,c->file,APR_HASH_KEY_STRING);
+	file_mtime = (apr_time_t *)apr_hash_get(MR_Scripts,c->file,APR_HASH_KEY_STRING);
 
 	if (c->reload || !(*file_mtime)){ /* File not sourced yet */
 
 		if (apr_stat(&finfo,c->file,APR_FINFO_MTIME,r->pool) != APR_SUCCESS){
 			if (MR_OutputErrors){
-				ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
-				ap_fprintf(r->output_filters,MR_bbout,"%s: file not found.",c->file);
-				ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+				ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
+				ap_fprintf(r->output_filters,MR_BBout,"%s: file not found.",c->file);
+				ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
 			} else {
 				ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"%s: file not found!",c->file);
 			}
@@ -625,9 +624,9 @@ static int mr_check_cfg(request_rec *r, MR_cfg *c){
 		if (*file_mtime < finfo.mtime){
 			if (!mr_call_fun1str("source",c->file)){
 				if (MR_OutputErrors){
-					ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
-					ap_fprintf(r->output_filters,MR_bbout,"source(%s) failed.",c->file);
-					ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+					ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
+					ap_fprintf(r->output_filters,MR_BBout,"source(%s) failed.",c->file);
+					ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
 				} else {
 					ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"source(%s) failed.",c->file);
 				}
@@ -640,9 +639,9 @@ static int mr_check_cfg(request_rec *r, MR_cfg *c){
 	/* Make sure function is found */
 	if (!mr_findFun(c->handler)){
 		if (MR_OutputErrors){
-			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
-			ap_fprintf(r->output_filters,MR_bbout,"handler %s not found in %s .",c->handler,c->file);
-			ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+			ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
+			ap_fprintf(r->output_filters,MR_BBout,"handler %s not found in %s .",c->handler,c->file);
+			ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
 		} else {
 			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"handler %s not found in %s .",c->handler,c->file);
 		}
@@ -654,17 +653,17 @@ static int mr_check_cfg(request_rec *r, MR_cfg *c){
 
 void mr_init_pool(void){
 
-	if (MR_pool) return;
+	if (MR_Pool) return;
 
-	if (apr_pool_create(&MR_pool,NULL) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not apr_pool_create(MR_pool)!\n");
+	if (apr_pool_create(&MR_Pool,NULL) != APR_SUCCESS){
+		fprintf(stderr,"Fatal Error: could not apr_pool_create(MR_Pool)!\n");
 		exit(-1);
 	}
 
-	MR_scripts = apr_hash_make(MR_pool);
+	MR_Scripts = apr_hash_make(MR_Pool);
 
-	if (!MR_scripts){
-		fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_pool!\n");
+	if (!MR_Scripts){
+		fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_Pool!\n");
 		exit(-1);
 	}
 }
@@ -687,7 +686,7 @@ void mr_init_config_pass(apr_pool_t *p){
 	} else {
 		*((int *)cfg_pass) = 2;
 	}
-	MR_config_pass = *((int *)cfg_pass);
+	MR_ConfigPass = *((int *)cfg_pass);
 }
 
 /*************************************************************************
@@ -726,42 +725,45 @@ void mr_InitTempDir(apr_pool_t *p)
 /* stdout */
 int mr_stdout_vfprintf(Rconnection con, const char *format, va_list ap){
 	apr_status_t rv;
-	rv = apr_brigade_vprintf(MR_bbout, ap_filter_flush, mr_cur_request_rec->output_filters, format, ap);
+	rv = apr_brigade_vprintf(MR_BBout, ap_filter_flush, MR_Request->output_filters, format, ap);
 	return (rv == APR_SUCCESS)? 0 : 1;
 }
 int mr_stdout_fflush(Rconnection con){
-	ap_filter_flush(MR_bbout,mr_cur_request_rec->output_filters);
+	ap_filter_flush(MR_BBout,MR_Request->output_filters);
 	return 0;
 }
 size_t mr_stdout_write(const void *ptr, size_t size, size_t n, Rconnection con){
 	apr_status_t rv;
-	rv = apr_brigade_write(MR_bbout, ap_filter_flush, mr_cur_request_rec->output_filters, (const char *)ptr, size*n);
+	rv = apr_brigade_write(MR_BBout, ap_filter_flush, MR_Request->output_filters, (const char *)ptr, size*n);
 	return (rv == APR_SUCCESS)? n : 1;
 }
 
 /* stderr */
 int mr_stderr_vfprintf(Rconnection con, const char *format, va_list ap){
-	vfprintf(stderr,format,ap);
+	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request,"%s",apr_pvsprintf(MR_Request->pool,format,ap));
 	return 0;
 }
+
 int mr_stderr_vfprintf_OutputErrors(Rconnection con, const char *format, va_list ap){
 	apr_status_t rv;
-	ap_fputs(mr_cur_request_rec->output_filters,MR_bbout,MR_OutputErrors_Prefix);
-	rv = apr_brigade_vprintf(MR_bbout, ap_filter_flush, mr_cur_request_rec->output_filters, format, ap);
-	ap_fputs(mr_cur_request_rec->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+	ap_fputs(MR_Request->output_filters,MR_BBout,MR_ErrorPrefix);
+	rv = apr_brigade_vprintf(MR_BBout, ap_filter_flush, MR_Request->output_filters, format, ap);
+	ap_fputs(MR_Request->output_filters,MR_BBout,MR_ErrorSuffix);
 	return (rv == APR_SUCCESS)? 0 : 1;
 }
 int mr_stderr_fflush(Rconnection con){
 	return 0;
 }
 
+/* We assume that buf is null-terminated */
 void mr_WriteConsole(char *buf, int size){
-	fprintf(stderr,"%s",buf);
+	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request,"%s",buf);
 }
-void mr_WriteConsole_OutputErrors(char *buf, int size){
-	request_rec *r = mr_cur_request_rec; 
 
-	ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Prefix);
-	ap_fputs(r->output_filters,MR_bbout,buf);
-	ap_fputs(r->output_filters,MR_bbout,MR_OutputErrors_Suffix);
+void mr_WriteConsole_OutputErrors(char *buf, int size){
+	request_rec *r = MR_Request; 
+
+	ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
+	ap_fputs(r->output_filters,MR_BBout,buf);
+	ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
 }
