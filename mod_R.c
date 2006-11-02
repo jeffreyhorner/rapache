@@ -56,8 +56,7 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include <Rdefines.h>
 #define R_INTERFACE_PTRS
 #include <Rinterface.h>
-#define R_240 132096 /* This is set in Rversion.h */
-#if (R_VERSION >= R_240) /* we can delete this code after R 2.4.0 release */
+#if (R_VERSION >= R_Version(2,4,0)) /* we can delete this code after R 2.4.0 release */
 #include <Rembedded.h>
 #endif
 
@@ -131,7 +130,7 @@ typedef struct MR_cfg {
 /* 
  * Exported by libR
  */
-#if (R_VERSION < R_240) /* we can delete this code after R 2.4.0 release */
+#if (R_VERSION < R_Version(2,4,0)) /* we can delete this code after R 2.4.0 release */
 extern int Rf_initEmbeddedR(int argc, char *argv[]);
 #endif
 
@@ -505,14 +504,14 @@ void mr_init(apr_pool_t *p){
 	R_CStackLimit = -1;
 	#endif
 
-	#if (R_VERSION >= R_240) /* we'll take out the ifdef after R 2.4.0 release */
+	#if (R_VERSION >= R_Version(2,4,0)) /* we'll take out the ifdef after R 2.4.0 release */
 	mr_InitTempDir(p);
 	#endif
 
 	Rf_initEmbeddedR(argc, argv);
 
 	/* Set R's tmp dir to apache's */
-	#if (R_VERSION < R_240) /* we can delete this code after R 2.4.0 release */
+	#if (R_VERSION < R_Version(2,4,0)) /* we can delete this code after R 2.4.0 release */
 	mr_InitTempDir(p);
 	#endif
 
@@ -699,7 +698,7 @@ void mr_InitTempDir(apr_pool_t *p)
 {
 	const char *tmp;
 
-	#if (R_VERSION < R_240) /* we can delete this code after R 2.4.0 release */
+	#if (R_VERSION < R_Version(2,4,0)) /* we can delete this code after R 2.4.0 release */
 	if (R_TempDir){
 		/* Undo R's InitTempdir() and do something sane */
 		if (apr_dir_remove (R_TempDir, p) != APR_SUCCESS){
