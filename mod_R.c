@@ -60,11 +60,8 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include <Rembedded.h>
 #endif
 
-/*
- * We're hijacking stdin, stdout, and stderr, and since
- * Rconnections aren't fully opened yet, we need some help.
- */
-#include "mod_R_Rconn.h"
+/* Connection Patch support */
+#include <R_ext/RConn.h>
 
 /*************************************************************************
  *
@@ -350,7 +347,6 @@ static void MR_hook_child_init(apr_pool_t *p, server_rec *s){
 static int MR_hook_request_handler (request_rec *r)
 {
 	MR_cfg *c;
-	Rconnection con;
 
 	SEXP val, rhandler_exp, rhandler;
 	int errorOccurred;
@@ -370,22 +366,6 @@ static int MR_hook_request_handler (request_rec *r)
 
 	/* Set output brigade early */
 	MR_BBout = apr_brigade_create(r->pool, r->connection->bucket_alloc);
-
-
-
-	/* Apachify stdout */
-	con = getConnection(1);
-	con->text = FALSE; /* allows us to do binary writes */
-	con->vfprintf = mr_stdout_vfprintf;
-	con->write = mr_stdout_write;
-	con->fflush = mr_stdout_fflush;
-
-	/* Apachify stderr */
-	con = getConnection(2);
-	con->vfprintf = (MR_OutputErrors)? mr_stderr_vfprintf_OutputErrors: mr_stderr_vfprintf;
-	con->fflush = mr_stderr_fflush;
-	/*  Some stderr messages go through here */
-	ptr_R_WriteConsole = (MR_OutputErrors)? mr_WriteConsole_OutputErrors : mr_WriteConsole;
 
 	/* 
 	 * Bad apache config? 
@@ -423,6 +403,17 @@ static int MR_hook_request_handler (request_rec *r)
 	errorOccurred=1;
 	val = R_tryEval(rhandler_exp,NULL,&errorOccurred);
 
+
+	if (errorOccurred){
+		if (MR_OutputErrors){
+			ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
+			ap_fprintf(r->output_filters,MR_BBout,"error in handler: %s\nfile:%s .",c->handler,c->file);
+			ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
+		} else {
+			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"error in handler: %s, file: %s .",c->handler,c->file);
+		}
+	}
+
 	/* Clean up reading */
 	if (MR_BBin){
 		apr_brigade_cleanup(MR_BBin);
@@ -441,20 +432,10 @@ static int MR_hook_request_handler (request_rec *r)
 	/* And request_rec */
 	MR_Request = NULL;
 
-	if (errorOccurred){
-		if (MR_OutputErrors){
-			ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
-			ap_fprintf(r->output_filters,MR_BBout,"error in handler: %s\nfile:%s .",c->handler,c->file);
-			ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
-			return DONE;
-		} else {
-			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"error in handler: %s, file: %s .",c->handler,c->file);
-			return HTTP_INTERNAL_SERVER_ERROR;
-		}
-		return (MR_OutputErrors)? DONE: HTTP_INTERNAL_SERVER_ERROR;
-	}
-
-	return mr_decode_return_value(val);
+	if (MR_OutputErrors)
+		return DONE;
+	else
+		return mr_decode_return_value(val);
 }
 
 /*************************************************************************
@@ -468,24 +449,11 @@ static MR_cfg *mr_dir_config(const request_rec *r){
 }
 
 
-/* 
- * Time now to integrate the following stuff
- *
- * 1) Figure out how to set R_TempDir to the apache temp dir
- * 2) Set own signal handlers
- *    a) sigsegv - so as not to delete tmp dir or ask questions
- *    b) all the others that R sets
- * 3) Set own cleanup routine to avoid deleting temp dir and do
- *    proper cleanup
- * 4) Integrate as many apache.* functions into R functions:
- *    a) apache.read* and apache.write can definitely be morphed int
- *       read() and cat()/printf()/print(), etc.
- *    b) others?
- */
- 
 void mr_init(apr_pool_t *p){
 	char *argv[] = {"mod_R", "--gui=none", "--slave", "--silent", "--vanilla","--no-readline"};
 	int argc = sizeof(argv)/sizeof(argv[0]);
+	Rconnection con;
+	SEXP scon;
 
 	if (MR_InitStatus != 0) return;
 
@@ -515,9 +483,22 @@ void mr_init(apr_pool_t *p){
 	mr_InitTempDir(p);
 	#endif
 
-	/* Do we really need this */
-	R_Consolefile = NULL;
-	R_Outputfile = NULL;
+	/* Apachify stdout */
+	scon = R_NewConnection("rapache_stdout","apache output","w",&con);
+	con->text = FALSE; /* allows us to do binary writes */
+	con->vfprintf = mr_stdout_vfprintf;
+	con->write = mr_stdout_write;
+	con->fflush = mr_stdout_fflush;
+	R_RegisterStdoutConnection(scon);
+
+	/* Apachify stderr */
+	scon = R_NewConnection("rapache_stderr","apache error","w",&con);
+	con->vfprintf = (MR_OutputErrors)? mr_stderr_vfprintf_OutputErrors: mr_stderr_vfprintf;
+	con->fflush = mr_stderr_fflush;
+	R_RegisterStderrConnection(scon);
+
+	/*  Some stderr messages go through here ?*/
+	ptr_R_WriteConsole = (MR_OutputErrors)? mr_WriteConsole_OutputErrors : mr_WriteConsole;
 
 	/* Now load RApache library */
 	if (!mr_call_fun1str("library","RApache")){
