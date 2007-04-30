@@ -33,6 +33,7 @@ Rlib/RApache/libs/RApache.so: .apreq-config RApache/src/*.c RApache/man/*.Rd RAp
 	@echo
 	@echo Compiling RApache
 	@echo
+	mkdir -p ./Rlib
 	$(RPROG) CMD INSTALL -l ./Rlib RApache
 
 .apreq-config:
