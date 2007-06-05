@@ -16,70 +16,64 @@
 /*
  * $Id$
  */
+
 /*************************************************************************
  *
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "mod_R/0.1.5"
+#define MOD_R_VERSION "mod_R/1.0.0"
+#define SVNID "$Id$"
 #include "mod_R.h" 
 
 #include <sys/types.h>
 #include <unistd.h>
-#include <syslog.h>
-#include <dlfcn.h>
 
 /*
- * Include the core server components.
- * 
  * DARWIN's dyld.h defines an enum { FALSE TRUE} which conflicts with R
  */
 #ifdef DARWIN
 #define ENUM_DYLD_BOOL
 enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #endif
+
+/*
+ * Apache headers
+ */ 
 #include "httpd.h"
 #include "http_log.h"
 #include "http_config.h"
 #include "http_protocol.h"
 #include "util_filter.h"
+#include "util_script.h"
 #include "apr_strings.h"
 #include "apr_env.h"
 #include "apr_pools.h"
 #include "apr_hash.h"
 
 /*
- * Include the R headers and hook code specific to mod_R
+ * R headers
  */
 #include <R.h>
 #include <Rversion.h>
+#include <Rinternals.h>
 #include <Rdefines.h>
 #define R_INTERFACE_PTRS
 #include <Rinterface.h>
-#if (R_VERSION >= R_Version(2,4,0)) /* we can delete this code after R 2.4.0 release */
 #include <Rembedded.h>
-#endif
-
-/*
- * We're hijacking stdin, stdout, and stderr, and since
- * Rconnections aren't fully opened yet, we need some help.
- */
-#include "mod_R_Rconn.h"
+#include <R_ext/Parse.h>
+#include <R_ext/Callbacks.h>
+#include <R_ext/Rdynload.h>
 
 /*************************************************************************
  *
- * Globals
+ * Globals; prefixed with MR_ (if R ever becomes threaded, or can at least
+ * run multiple interpreters at once, we'll bundle these up into contexts).
  *
  *************************************************************************/
 
-/* Override R's setting of temporary directory */
-extern char *R_TempDir;
-
-/* Functions exported by RApache which we need to find at RApache load time */
-SEXP (*RA_new_request_rec)(request_rec *r);
-
 /* Current request_rec */
-request_rec *MR_Request = NULL;
+static request_rec *MR_Request = NULL;
 
 /* Option to turn on errors in output */
 static int MR_OutputErrors = 0;
@@ -92,103 +86,140 @@ static int MR_ConfigPass = 1;
 /* Don't start R more than once, if the flag is 1 it's already started */
 static int MR_InitStatus = 0;
 
-/* Cache child pid on startup. If we fork() we don't want to do certain
- * cleanup steps, especially on cgi fork
+/* 
+ * Child pid. If we fork() we don't want to do certain
+ * cleanup steps, especially on cgi fork, so we cache the original
+ * pid.
  */
 static unsigned long MR_pid;
 
 /* Per-child memory for configuration */
 static apr_pool_t *MR_Pool = NULL;
-static apr_hash_t *MR_Scripts = NULL;
+static apr_hash_t *MR_HandlerCache = NULL;
+static apr_hash_t *MR_ParsedFileCache = NULL;
+static apr_table_t *MR_OnStartup = NULL;
 
 /*
  * Bucket brigades for reading and writing to client
- * exported to RApache
  */
-apr_bucket_brigade *MR_BBin;
-apr_bucket_brigade *MR_BBout;
+static apr_bucket_brigade *MR_BBin;
+static apr_bucket_brigade *MR_BBout;
+
+/*
+ * RApache environment
+ */
+static SEXP MR_RApacheEnv;
+
+/*
+ * RApache code; evaluated in the above environment.
+ */
+
+static char MR_RApacheSource[] = "\
+setHeader <- function(header,value) .Call('RApache_setHeader',header,value)\n\
+setContentType <- function(type) .Call('RApache_setContentType',type)\n\
+setCookie <- function(name=NULL,value='',expires=NULL,path=NULL,domain=NULL,...){\n\
+	args <- list(...)\n\
+	therest <- ifelse(length(args)>0,paste(paste(names(args),args,sep='='),collapse=';'),'')\n\
+	.Call('RApache_setCookie',name,value,expires,path,domain,therest)}";
 
 /*************************************************************************
  *
  * RApache types
  *
  *************************************************************************/
-typedef struct MR_cfg {
+typedef enum {
+	R_HANDLER = 1,
+	R_SCRIPT,
+	R_INFO
+} RApacheHandlerType;
+typedef struct {
 	char *file;
-	char *handler;
-	int reload;
-}  MR_cfg;
+	char *function;
+	char *package;
+	char *handlerKey;
+	int preserveEnv;
+} RApacheDirective;
+
+typedef struct {
+	SEXP exprs;
+	apr_time_t mtime;
+} RApacheParsedFile;
+
+typedef struct {
+	SEXP expr;
+	SEXP envir;
+	RApacheParsedFile *parsedFile;
+	RApacheDirective *directive;
+} RApacheHandler;
 
 /*************************************************************************
  *
  * Function declarations
  *
- * MR_* functions are called by apache code base
- * mr_* functions are called from within mod_R
+ * AP_* functions are called by apache code base
  *
  *************************************************************************/
-/* 
- * Exported by libR
- */
-#if (R_VERSION < R_Version(2,4,0)) /* we can delete this code after R 2.4.0 release */
-extern int Rf_initEmbeddedR(int argc, char *argv[]);
-#endif
 
 /*
  * Module functions
  */
-static void *MR_create_dir_cfg(apr_pool_t *p, char *dir);
-static void *MR_merge_dir_cfg(apr_pool_t *p, void *parent, void *new);
-static void *MR_create_srv_cfg(apr_pool_t *p, server_rec *s);
-static void *MR_merge_srv_cfg(apr_pool_t *p, void *parent, void *new);
-static void MR_register_hooks (apr_pool_t *p);
+static void *AP_create_dir_cfg(apr_pool_t *p, char *dir);
+static void *AP_merge_dir_cfg(apr_pool_t *p, void *parent, void *new);
+static void *AP_create_srv_cfg(apr_pool_t *p, server_rec *s);
+static void *AP_merge_srv_cfg(apr_pool_t *p, void *parent, void *new);
+static void AP_register_hooks (apr_pool_t *p);
 
 /*
  * Command functions
  */
-static const char *MR_cmd_Handler(cmd_parms *cmd, void *conf, const char *handler, const char *file, const char *reload);
-static const char *MR_cmd_OutputErrors(cmd_parms *cmd, void *mconfig);
+static const char *AP_cmd_RHandler(cmd_parms *cmd, void *conf, const char *handler);
+static const char *AP_cmd_RFileHandler(cmd_parms *cmd, void *conf, const char *handler);
+static const char *AP_cmd_REvalOnStartup(cmd_parms *cmd, void *conf, const char *evalstr);
+static const char *AP_cmd_RSourceOnStartup(cmd_parms *cmd, void *conf, const char *evalstr);
+static const char *AP_cmd_ROutputErrors(cmd_parms *cmd, void *mconfig);
+static const char *AP_cmd_RPreserveEnv(cmd_parms *cmd, void *mconfig);
 
 /*
  * Hook functions
  */
-static int MR_hook_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s);
-static void MR_hook_child_init(apr_pool_t *p, server_rec *s);
-static int MR_hook_request_handler (request_rec *r);
+static int AP_hook_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s);
+static void AP_hook_child_init(apr_pool_t *p, server_rec *s);
+static int AP_hook_request_handler (request_rec *r);
 
 /*
  * Exit callback
  */
-static apr_status_t MR_child_exit(void *data);
+static apr_status_t AP_child_exit(void *data);
 
 /*
- * Helper functions
+ * The Rest.
  */
-void mr_init_pool(void);
-void mr_init_config_pass(apr_pool_t *p);
-static void mr_init(apr_pool_t *);
-static int mr_call_fun1str( char *funstr, char *argstr);
-static int mr_decode_return_value(SEXP ret);
-static int mr_findFun( char *funstr);
-static int mr_check_cfg(request_rec *, MR_cfg *);
-static MR_cfg *mr_dir_config(const request_rec *r);
-
-/*
- * R specific functions
- */
-
-void mr_InitTempDir(apr_pool_t *p);
-int mr_stdout_vfprintf(Rconnection con, const char *format, va_list ap);
-int mr_stdout_fflush(Rconnection con);
-size_t mr_stdout_write(const void *ptr, size_t size, size_t n, Rconnection con);
-int mr_stderr_vfprintf(Rconnection, const char *format, va_list ap);
-int mr_stderr_vfprintf_OutputErrors(Rconnection, const char *format, va_list ap);
-int mr_stderr_fflush(Rconnection con);
-int mr_stdin_fgetc(Rconnection con);
-void mr_WriteConsole(char *, int);
-void mr_WriteConsole_OutputErrors(char *, int);
-
-
+static void init_config_pass(apr_pool_t *p);
+static void init_R(apr_pool_t *);
+static int call_fun1str( char *funstr, char *argstr);
+static int decode_return_value(SEXP ret);
+static void SetUpIO(const request_rec *);
+static void TearDownIO();
+static RApacheHandler *GetHandlerFromRequest(const request_rec *r);
+static int RApacheError(const request_rec *r, char *msg);
+static void InitTempDir(apr_pool_t *p);
+static void WriteConsoleEx(char *, int, int);
+static void RegisterCallSymbols();
+static SEXP NewLogical(int tf);
+static SEXP NewEnv(SEXP enclos);
+static int ExecRCode(const char *code,SEXP env);
+static SEXP ExecFun1Arg(SEXP fun, SEXP arg);
+static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize);
+static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *fileParsed);
+static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType, int fileParsed);
+static SEXP EvalExprs(SEXP exprs, SEXP env, int *error); /* more than one expression evaluator*/
+static void StartRprof();
+static void StopRprof();
+static void InitRApacheEnv();
+static void InitRApachePool();
+static int OnStartupCallback(void *rec, const char *key, const char *value);
+static SEXP MyfindFun(SEXP fun, SEXP envir);
+static int RApacheInfo();
 
 /*************************************************************************
  *
@@ -197,8 +228,12 @@ void mr_WriteConsole_OutputErrors(char *, int);
  *************************************************************************/
 
 static const command_rec MR_cmds[] = {
-	AP_INIT_TAKE3("RHandler", MR_cmd_Handler, NULL, OR_OPTIONS, "R source file and function to handle request."),
-	AP_INIT_NO_ARGS("ROutputErrors", MR_cmd_OutputErrors, NULL, OR_OPTIONS, "Option to print error messages in output."),
+	AP_INIT_TAKE1("RHandler", AP_cmd_RHandler, NULL, OR_OPTIONS, "R function to handle request. "),
+	AP_INIT_TAKE1("RFileHandler", AP_cmd_RFileHandler, NULL, OR_OPTIONS, "File containing R code or function to handle request."),
+	AP_INIT_TAKE1("REvalOnStartup", AP_cmd_REvalOnStartup, NULL, OR_OPTIONS,"R expressions to evaluate on start."),
+	AP_INIT_TAKE1("RSourceOnStartup", AP_cmd_REvalOnStartup, NULL, OR_OPTIONS,"File containing R expressions to evaluate on start."),
+	AP_INIT_NO_ARGS("ROutputErrors", AP_cmd_ROutputErrors, NULL, OR_OPTIONS, "Option to print error messages to output."),
+	AP_INIT_NO_ARGS("RPreserveEnv", AP_cmd_RPreserveEnv, NULL, OR_OPTIONS, "Option to preserve handler environment across requests."),
 	{ NULL},
 };
 
@@ -210,12 +245,12 @@ static const command_rec MR_cmds[] = {
 module AP_MODULE_DECLARE_DATA R_module =
 {
 	STANDARD20_MODULE_STUFF,
-	MR_create_dir_cfg,        /* dir config creater */
-	MR_merge_dir_cfg,         /* dir merger --- default is to override */
-	MR_create_srv_cfg,        /* server config */
-	MR_merge_srv_cfg,         /* merge server config */
+	AP_create_dir_cfg,        /* dir config creater */
+	AP_merge_dir_cfg,         /* dir merger --- default is to override */
+	AP_create_srv_cfg,        /* server config */
+	AP_merge_srv_cfg,         /* merge server config */
 	MR_cmds,                  /* table of config file commands */
-	MR_register_hooks,        /* register hooks */
+	AP_register_hooks,        /* register hooks */
 };
 
 /*************************************************************************
@@ -224,70 +259,79 @@ module AP_MODULE_DECLARE_DATA R_module =
  *
  *************************************************************************/
 
-static void *MR_create_dir_cfg(apr_pool_t *p, char *dir){
-	MR_cfg *cfg;
-
-	cfg = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
-
+static void *AP_create_dir_cfg(apr_pool_t *p, char *dir){
+	RApacheDirective *cfg;
+	cfg = (RApacheDirective *)apr_pcalloc(p,sizeof(RApacheDirective));
 	return (void *)cfg;
 }
 
-void *MR_merge_dir_cfg(apr_pool_t *pool, void *parent, void *new){
-	MR_cfg *c;
-	MR_cfg *p = (MR_cfg *)parent;
-	MR_cfg *n = (MR_cfg *)new;
+/*
+void print_cfg(char *fname, char *cname1, RApacheDirective *c1, char *cname2, RApacheDirective *c2){
+	printf("CALLED %s\n",fname);
 
-	c = (MR_cfg *)apr_pcalloc(pool,sizeof(MR_cfg));
+	printf("%s:\n",cname1);
+	printf("\tfile: %s\n",c1->file);
+	printf("\tfunction: %s\n",c1->function);
+	printf("\tpackage: %s\n",c1->package);
+	printf("\thandlerKey: %s\n",c1->handlerKey);
+	printf("\tpreserveEnv: %d\n",c1->preserveEnv);
 
-	/* Add parent stuff, even if null */
-	c->file =    p->file;
-	c->handler = p->handler;
-	c->reload =  p->reload;
+	if (cname2){
+		printf("%s:\n",cname2);
+		printf("\tfile: %s\n",c2->file);
+		printf("\tfunction: %s\n",c2->function);
+		printf("\tpackage: %s\n",c2->package);
+		printf("\thandlerKey: %s\n",c2->handlerKey);
+		printf("\tpreserveEnv: %d\n",c2->preserveEnv);
+	}
 
-	/* Now add new config stuff, overriding parent */
-	c->file =    n->file;
-	c->handler = n->handler;
-	c->reload =  n->reload;
+} */
 
-	return (void *)c;
-}
+void *AP_merge_dir_cfg(apr_pool_t *pool, void *parent, void *new){
+	RApacheDirective *c;
+	RApacheDirective *p = (RApacheDirective *)parent;
+	RApacheDirective *n = (RApacheDirective *)new;
 
-void *MR_create_srv_cfg(apr_pool_t *p, server_rec *s){
-	MR_cfg *c;
+	/* print_cfg("AP_merge_dir_cfg","Parent",p,"New",n); */
 
-	mr_init_config_pass(s->process->pool);
+	c = (RApacheDirective *)apr_pcalloc(pool,sizeof(RApacheDirective));
 
-	c = (MR_cfg *)apr_pcalloc(p,sizeof(MR_cfg));
-
-	return (void *)c;
-}
-
-void *MR_merge_srv_cfg(apr_pool_t *pool, void *parent, void *new){
-	MR_cfg *c;
-	MR_cfg *p = (MR_cfg *)parent;
-	MR_cfg *n = (MR_cfg *)new;
-
-	c = (MR_cfg *)apr_pcalloc(pool,sizeof(MR_cfg));
-
-	/* Add parent stuff, even if null */
-	c->file =    p->file;
-	c->handler = p->handler;
-	c->reload =  p->reload;
-
-	/* Now add new config stuff, overriding parent */
-	c->file =    n->file;
-	c->handler = n->handler;
-	c->reload =  n->reload;
+	/* add new config stuff, overriding parent */
+	memcpy(c,n,sizeof(RApacheDirective));
 
 	return (void *)c;
 }
 
+void *AP_create_srv_cfg(apr_pool_t *p, server_rec *s){
+	RApacheDirective *c;
 
-static void MR_register_hooks (apr_pool_t *p)
+	init_config_pass(s->process->pool);
+
+	c = (RApacheDirective *)apr_pcalloc(p,sizeof(RApacheDirective));
+
+	return (void *)c;
+}
+
+void *AP_merge_srv_cfg(apr_pool_t *pool, void *parent, void *new){
+	RApacheDirective *c;
+	RApacheDirective *p = (RApacheDirective *)parent;
+	RApacheDirective *n = (RApacheDirective *)new;
+
+	/* print_cfg("AP_merge_srv_cfg","Parent",p,"New",n); */
+
+	c = (RApacheDirective *)apr_pcalloc(pool,sizeof(RApacheDirective));
+
+	/* add new config stuff, overriding parent */
+	memcpy(c,n,sizeof(RApacheDirective));
+
+	return (void *)c;
+}
+
+static void AP_register_hooks (apr_pool_t *p)
 {
-	ap_hook_post_config(MR_hook_post_config, NULL, NULL, APR_HOOK_MIDDLE);
-	ap_hook_child_init(MR_hook_child_init, NULL, NULL, APR_HOOK_MIDDLE);
-	ap_hook_handler(MR_hook_request_handler, NULL, NULL, APR_HOOK_MIDDLE);
+	ap_hook_post_config(AP_hook_post_config, NULL, NULL, APR_HOOK_MIDDLE);
+	ap_hook_child_init(AP_hook_child_init, NULL, NULL, APR_HOOK_MIDDLE);
+	ap_hook_handler(AP_hook_request_handler, NULL, NULL, APR_HOOK_MIDDLE);
 }
 
 /*************************************************************************
@@ -296,278 +340,172 @@ static void MR_register_hooks (apr_pool_t *p)
  *
  *************************************************************************/
 
-static const char *MR_cmd_Handler(cmd_parms *cmd, void *conf, const char *handler, const char *file, const char *reload){
-	MR_cfg *c = (MR_cfg *)conf;
+static const char *AP_cmd_RHandler(cmd_parms *cmd, void *conf, const char *handler){
+	const char *part, *function;
+	RApacheDirective *c = (RApacheDirective *)conf;
+	InitRApachePool();
 
+	if (ap_strchr(handler,'/')){
+		fprintf(stderr,"\n\tWARNING! %s seems to contain a file. If this is true, then use the RFileHandler directive instead.\n",handler);
+	}
+
+	c->handlerKey = apr_pstrdup(cmd->pool,handler);
+	part = ap_strstr(handler,"::");
+	if (part) {
+		c->package = apr_pstrmemdup(cmd->pool,handler,part - handler);
+		apr_table_add(MR_OnStartup,"package",c->package);
+		function = part + 2;
+	} else {
+		function = handler;
+	}
+	c->function = apr_pstrdup(cmd->pool,function);
+
+	return NULL;
+}
+
+static const char *AP_cmd_RFileHandler(cmd_parms *cmd, void *conf, const char *handler){
+	const char *part;
+	RApacheDirective *c = (RApacheDirective *)conf;
+	apr_finfo_t finfo;
+	InitRApachePool();
+
+	c->handlerKey = apr_pstrdup(cmd->pool,handler);
+
+	part = ap_strstr(handler,"::");
+	if (part) {
+		c->file = apr_pstrmemdup(cmd->pool,handler,part - handler);
+		c->function = apr_pstrdup(cmd->pool,part + 2);
+	} else {
+		c->file = apr_pstrdup(cmd->pool,handler);
+	}
+
+	if (apr_stat(&finfo,c->file,APR_FINFO_TYPE,cmd->pool) != APR_SUCCESS){
+		return apr_psprintf(cmd->pool,"RFileHandler: %s file not found!",c->file);
+	}
+	return NULL;
+}
+
+static const char *AP_cmd_REvalOnStartup(cmd_parms *cmd, void *conf, const char *evalstr){
+	InitRApachePool();
+	apr_table_add(MR_OnStartup,"eval",evalstr);
+	return NULL;
+}
+
+static const char *AP_cmd_RSourceOnStartup(cmd_parms *cmd, void *conf, const char *file){
+	InitRApachePool();
 	if (MR_ConfigPass == 1){
 		apr_finfo_t finfo;
 		if (apr_stat(&finfo,file,APR_FINFO_TYPE,cmd->pool) != APR_SUCCESS){
-			return apr_psprintf(cmd->pool,"Rsource: %s file not found!",file);
+			return apr_psprintf(cmd->pool,"RSourceFile: %s file not found!",file);
 		}
 		return NULL;
 	}
-
-	c->file = apr_pstrdup(cmd->pool,file);
-	c->handler = apr_pstrdup(cmd->pool,handler);
-	if (reload[0] == 'Y' || reload[0] == 'y' || reload[0] == 't' || reload[0] =='T' ||
-			reload[0] == '1'){
-		c->reload = 1;
-	} else {
-		c->reload  = 0;
-	}
-
-	/* Cache modification time of all script files in the MR_Scripts hash.
-	 * It's set to zero by default, so that it can be loaded later
-	 */
-	mr_init_pool();
-	apr_hash_set(MR_Scripts,c->file,APR_HASH_KEY_STRING,apr_pcalloc(MR_Pool,sizeof(apr_time_t)));
-
+	apr_table_add(MR_OnStartup,"file",file);
 	return NULL;
 }
 
-static const char *MR_cmd_OutputErrors(cmd_parms *cmd, void *mconfig){
+static const char *AP_cmd_ROutputErrors(cmd_parms *cmd, void *conf){
 	MR_OutputErrors = 1;
 	return NULL;
 }
+
+static const char *AP_cmd_RPreserveEnv(cmd_parms *cmd, void *conf){
+	RApacheDirective *c = (RApacheDirective *)conf;
+	c->preserveEnv = 1;
+	return NULL;
+}
+
 /*************************************************************************
  *
  * Hook functions: called by apache code base
  *
  *************************************************************************/
 
-static int MR_hook_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s){
+static int AP_hook_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s){
 	ap_add_version_component(pconf,MOD_R_VERSION);
 	ap_add_version_component(pconf,apr_psprintf(pconf,"R/%s.%s",R_MAJOR,R_MINOR));
 	return OK;
 }
 
-static void MR_hook_child_init(apr_pool_t *p, server_rec *s){
+static void AP_hook_child_init(apr_pool_t *p, server_rec *s){
 	MR_pid=(unsigned long)getpid();
-	mr_init(p);
-	apr_pool_cleanup_register(p, p, MR_child_exit, MR_child_exit);
+	init_R(p);
+	apr_pool_cleanup_register(p, p, AP_child_exit, AP_child_exit);
 }
 
-static int MR_hook_request_handler (request_rec *r)
+static int AP_hook_request_handler (request_rec *r)
 {
-	MR_cfg *c;
-	Rconnection con;
+	RApacheHandlerType handlerType = 0;
+	RApacheHandler *h;
+	SEXP val;
+	int error=1,fileParsed=1;
 
-	SEXP val, rhandler_exp, rhandler;
-	int errorOccurred;
-
-	// Only handle if correct handler
-	if (strcmp(r->handler,"r-handler") != 0)
-		return DECLINED;
-
-	/* Config */
-	c = mr_dir_config(r);
-
-	/* Set current request_rec */
-	MR_Request = r;
-
-	/* Init reading */
-	MR_BBin = NULL;
-
-	/* Set output brigade early */
-	MR_BBout = apr_brigade_create(r->pool, r->connection->bucket_alloc);
-
-
-
-	/* Apachify stdout */
-	con = getConnection(1);
-	con->text = FALSE; /* allows us to do binary writes */
-	con->vfprintf = mr_stdout_vfprintf;
-	con->write = mr_stdout_write;
-	con->fflush = mr_stdout_fflush;
-
-	/* Apachify stderr */
-	con = getConnection(2);
-	con->vfprintf = (MR_OutputErrors)? mr_stderr_vfprintf_OutputErrors: mr_stderr_vfprintf;
-	con->fflush = mr_stderr_fflush;
-	/*  Some stderr messages go through here */
-	ptr_R_WriteConsole = (MR_OutputErrors)? mr_WriteConsole_OutputErrors : mr_WriteConsole;
-
-	/* 
-	 * Bad apache config? 
-	 *
-	 * Here, we find the handler we must run and
-	 * load any scripts or libraries.
+	/* Only handle if correct handler
+	 * We work on r-handler and r-script
 	 */
-	if (!mr_check_cfg(r,c)){
-		if (MR_BBout){
-			if(!APR_BRIGADE_EMPTY(MR_BBout)){
-				ap_filter_flush(MR_BBout,r->output_filters);
-			}
-			apr_brigade_cleanup(MR_BBout);
-			apr_brigade_destroy(MR_BBout);
+	if (strcmp(r->handler,"r-handler")==0) handlerType = R_HANDLER;
+	if (strcmp(r->handler,"r-script")==0) handlerType = R_SCRIPT;
+	if (strcmp(r->handler,"r-info")==0) return RApacheInfo();
+	if (!handlerType) return DECLINED;
+
+	SetUpIO(r);
+
+	/* Get cached handler object from request */
+	h = GetHandlerFromRequest(r);
+
+	if (!h) return RApacheError(r,NULL);
+
+	/* Prepare calling environment */
+	if (h->directive->preserveEnv){
+	   if (!h->envir) R_PreserveObject(h->envir = NewEnv(MR_RApacheEnv));
+	} else {
+	   h->envir = NewEnv(MR_RApacheEnv);
+	}
+
+	/* Prepare file if needed */
+	if (h->directive->file){
+		fileParsed = 1;
+		if (!PrepareFileExprs(h,r,&fileParsed)) return RApacheError(r,NULL);
+
+		/* Do we need to eval parsed file?
+		 * Yes, if env is not preserved.
+		 * Yes, if file newly parsed.
+		 * Yes, if there's no function to eval.
+		 */
+		if (!h->directive->preserveEnv || fileParsed || !h->directive->function){
+			PROTECT(h->envir);
+			PROTECT(h->parsedFile->exprs);
+			error = 1;
+			val = EvalExprs(h->parsedFile->exprs,h->envir,&error);
+			UNPROTECT(2);
+			if (error) return RApacheError(r,apr_psprintf(r->pool,"Error evaluating %s!\n",h->directive->file));
 		}
-		return (MR_OutputErrors)? DONE: DECLINED;
 	}
 
+	/* Not sure we want to do this. For now, we load each package once in OnStartupCallback() */
+	/* Load package if needed */
+	/*jif (h->directive->package)
+		if (!Require(h->directive->package))
+			return RApacheError(r,apr_psprintf(r->pool,"Error in require(%s)!\n",h->directive->package));*/
 
 
-	/*
-	 * Now call (c->handler)(req)
-	 */
-
-	rhandler = Rf_findFun(Rf_install(c->handler), R_GlobalEnv);
-	PROTECT(rhandler);
-
-	PROTECT(rhandler_exp = allocVector(LANGSXP,2));
-
-	SETCAR(rhandler_exp,rhandler);
-	SETCAR(CDR(rhandler_exp),(*RA_new_request_rec)(r));
-
-	UNPROTECT(2);
-
-	errorOccurred=1;
-	val = R_tryEval(rhandler_exp,NULL,&errorOccurred);
-
-	/* Clean up reading */
-	if (MR_BBin){
-		apr_brigade_cleanup(MR_BBin);
-		apr_brigade_destroy(MR_BBin);
+	/* Eval handler expression if set */
+	if (h->directive->function){
+		if (!PrepareHandlerExpr(h,r,handlerType,fileParsed)) return RApacheError(r,NULL);
+		PROTECT(h->envir);
+		PROTECT(h->expr);
+		error=1;
+		val = R_tryEval(h->expr,h->envir,&error);
+		UNPROTECT(2);
+		if (error) return RApacheError(r,apr_psprintf(r->pool,"Error calling function %s!\n",h->directive->function));
 	}
 
-	/* Clean up writing */
-	if (MR_BBout){
-		if(!APR_BRIGADE_EMPTY(MR_BBout)){
-			ap_filter_flush(MR_BBout,r->output_filters);
-		}
-		apr_brigade_cleanup(MR_BBout);
-		apr_brigade_destroy(MR_BBout);
-	}
+	TearDownIO();
 
-	/* And request_rec */
-	MR_Request = NULL;
-
-	if (errorOccurred){
-		if (MR_OutputErrors){
-			ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
-			ap_fprintf(r->output_filters,MR_BBout,"error in handler: %s\nfile:%s .",c->handler,c->file);
-			ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
-			return DONE;
-		} else {
-			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"error in handler: %s, file: %s .",c->handler,c->file);
-			return HTTP_INTERNAL_SERVER_ERROR;
-		}
-		return (MR_OutputErrors)? DONE: HTTP_INTERNAL_SERVER_ERROR;
-	}
-
-	return mr_decode_return_value(val);
+	return decode_return_value(val);
 }
 
-/*************************************************************************
- *
- * Helper functions
- *
- *************************************************************************/
-
-static MR_cfg *mr_dir_config(const request_rec *r){
-	return (MR_cfg *) ap_get_module_config(r->per_dir_config,&R_module);
-}
-
-
-/* 
- * Time now to integrate the following stuff
- *
- * 1) Figure out how to set R_TempDir to the apache temp dir
- * 2) Set own signal handlers
- *    a) sigsegv - so as not to delete tmp dir or ask questions
- *    b) all the others that R sets
- * 3) Set own cleanup routine to avoid deleting temp dir and do
- *    proper cleanup
- * 4) Integrate as many apache.* functions into R functions:
- *    a) apache.read* and apache.write can definitely be morphed int
- *       read() and cat()/printf()/print(), etc.
- *    b) others?
- */
- 
-void mr_init(apr_pool_t *p){
-	char *argv[] = {"mod_R", "--gui=none", "--slave", "--silent", "--vanilla","--no-readline"};
-	int argc = sizeof(argv)/sizeof(argv[0]);
-
-	if (MR_InitStatus != 0) return;
-
-	MR_InitStatus = 1;
-
-	if (apr_env_set("R_HOME",R_HOME,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set R_HOME from mr_init!\n");
-		exit(-1);
-	}
-
-	/* Don't let R set up its own signal handlers */
-	R_SignalHandlers = 0;
-
-	#ifdef CSTACK_DEFNS
-	/* Don't do any stack checking */
-	R_CStackLimit = -1;
-	#endif
-
-	#if (R_VERSION >= R_Version(2,4,0)) /* we'll take out the ifdef after R 2.4.0 release */
-	mr_InitTempDir(p);
-	#endif
-
-	Rf_initEmbeddedR(argc, argv);
-
-	/* Set R's tmp dir to apache's */
-	#if (R_VERSION < R_Version(2,4,0)) /* we can delete this code after R 2.4.0 release */
-	mr_InitTempDir(p);
-	#endif
-
-	/* Do we really need this */
-	R_Consolefile = NULL;
-	R_Outputfile = NULL;
-
-	/* Now load RApache library */
-	if (!mr_call_fun1str("library","RApache")){
-		fprintf(stderr,"Fatal Error: library(\"Rapache\") failed!\n");
-		exit(-1);
-	}
-}
-
-static int mr_decode_return_value(SEXP ret)
-{
-	if (IS_INTEGER(ret) && LENGTH(ret) == 1){
-		return asInteger(ret);
-	}
-
-	return DONE;
-}
-
-int mr_call_fun1str( char *funstr, char *argstr){
-	SEXP val, expr, fun, arg;
-	int errorOccurred;
-
-	/* Call funstr */
-	fun = Rf_findFun(Rf_install(funstr), R_GlobalEnv);
-	PROTECT(fun);
-
-	/* argument */
-	PROTECT(arg = NEW_CHARACTER(1));
-	SET_STRING_ELT(arg, 0, COPY_TO_USER_STRING(argstr));
-
-	/* expression */
-	PROTECT(expr = allocVector(LANGSXP,2));
-	SETCAR(expr,fun);
-	SETCAR(CDR(expr),arg);
-
-	errorOccurred=1;
-	val = R_tryEval(expr,NULL,&errorOccurred);
-	UNPROTECT(3);
-
-	return (errorOccurred)? 0:1;
-}
-
-static int mr_findFun( char *funstr){
-	SEXP fun = NULL;
-
-	fun = Rf_findFun(Rf_install(funstr), R_GlobalEnv);
-	return (fun != NULL)? 1 : 0;
-
-}
-
-static apr_status_t MR_child_exit(void *data){
+static apr_status_t AP_child_exit(void *data){
 	/* R_dot_Last(); */
 	unsigned long pid;
 
@@ -591,66 +529,176 @@ static apr_status_t MR_child_exit(void *data){
 	return APR_SUCCESS;
 }
 
-static int mr_check_cfg(request_rec *r, MR_cfg *c){
-	apr_finfo_t finfo;
-	apr_time_t *file_mtime;
-	if (c == NULL){
-		if (MR_OutputErrors){
-			ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
-			ap_fprintf(r->output_filters,MR_BBout,"config is NULL.");
-			ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
-		} else {
-			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"config is NULL");
-		}
-		return 0;
+/*************************************************************************
+ *
+ * Helper functions
+ *
+ *************************************************************************/
+
+static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
+	RApacheDirective *d =  ap_get_module_config(r->per_dir_config,&R_module);
+	RApacheHandler *h;
+
+	if (d == NULL){
+		RApacheError(r,"RApache Directive is NULL");
+		return NULL;
+	}
+   
+	h = (RApacheHandler *)apr_hash_get(
+			MR_HandlerCache,d->handlerKey,APR_HASH_KEY_STRING);
+
+	if (!h){
+		h = (RApacheHandler *)apr_pcalloc(MR_Pool,sizeof(RApacheHandler));
+		apr_hash_set(MR_HandlerCache,d->handlerKey,APR_HASH_KEY_STRING,h);
 	}
 
-	/* Grab modified time of file */
-	file_mtime = (apr_time_t *)apr_hash_get(MR_Scripts,c->file,APR_HASH_KEY_STRING);
-
-	if (c->reload || !(*file_mtime)){ /* File not sourced yet */
-
-		if (apr_stat(&finfo,c->file,APR_FINFO_MTIME,r->pool) != APR_SUCCESS){
-			if (MR_OutputErrors){
-				ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
-				ap_fprintf(r->output_filters,MR_BBout,"%s: file not found.",c->file);
-				ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
-			} else {
-				ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"%s: file not found!",c->file);
-			}
-			return 0;
-		}
-		if (*file_mtime < finfo.mtime){
-			if (!mr_call_fun1str("source",c->file)){
-				if (MR_OutputErrors){
-					ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
-					ap_fprintf(r->output_filters,MR_BBout,"source(%s) failed.",c->file);
-					ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
-				} else {
-					ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"source(%s) failed.",c->file);
-				}
-				return 0;
-			}
-		}
-		*file_mtime = finfo.mtime;
+	if (h == NULL || (d->file == NULL && d->function == NULL)){
+		RApacheError(r,
+				apr_psprintf(r->pool,"Invalid RApache Directive: %s",d->handlerKey));
+		return NULL;
 	}
 
-	/* Make sure function is found */
-	if (!mr_findFun(c->handler)){
-		if (MR_OutputErrors){
-			ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
-			ap_fprintf(r->output_filters,MR_BBout,"handler %s not found in %s .",c->handler,c->file);
-			ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
-		} else {
-			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"handler %s not found in %s .",c->handler,c->file);
-		}
-		return 0;
-	}
+	h->directive = d;
 
-	return 1;
+	return(h);
 }
 
-void mr_init_pool(void){
+static void SetUpIO(const request_rec *r){
+	/* Set current request_rec */
+	MR_Request = (request_rec *)r;
+
+	/* Init reading */
+	MR_BBin = NULL;
+
+	/* Set output brigade */
+	MR_BBout = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+}
+
+static void TearDownIO(){
+	/* Clean up reading */
+	if (MR_BBin){
+		apr_brigade_cleanup(MR_BBin);
+		apr_brigade_destroy(MR_BBin);
+	}
+	MR_BBin = NULL;
+	/* Clean up writing */
+	if (MR_BBout){
+		if(!APR_BRIGADE_EMPTY(MR_BBout)){
+			ap_filter_flush(MR_BBout,MR_Request->output_filters);
+		}
+		apr_brigade_cleanup(MR_BBout);
+		apr_brigade_destroy(MR_BBout);
+	}
+	MR_BBout = NULL;
+	MR_Request = NULL;
+}
+
+/* Can be called with NULL msg to force proper request handler return
+ * value.
+ */
+static int RApacheError(const request_rec *r, char *msg){
+	int retval;
+	if (MR_OutputErrors){
+		if (msg){
+			ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
+			ap_fputs(r->output_filters,MR_BBout,msg);
+			ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
+		}
+		retval =  DONE;
+	} else {
+		if (msg) ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,msg);
+		retval = HTTP_INTERNAL_SERVER_ERROR;
+	}
+	TearDownIO();
+	return retval;
+}
+
+static void init_R(apr_pool_t *p){
+	char *argv[] = {"mod_R", "--gui=none", "--slave", "--silent", "--vanilla","--no-readline"};
+	int argc = sizeof(argv)/sizeof(argv[0]);
+
+	if (MR_InitStatus != 0) return;
+
+	MR_InitStatus = 1;
+
+	if (apr_env_set("R_HOME",R_HOME,p) != APR_SUCCESS){
+		fprintf(stderr,"Fatal Error: could not set R_HOME from init!\n");
+		exit(-1);
+	}
+
+	/* Don't let R set up its own signal handlers */
+	R_SignalHandlers = 0;
+
+	#ifdef CSTACK_DEFNS
+	/* Don't do any stack checking */
+	R_CStackLimit = -1;
+	#endif
+
+	InitTempDir(p);
+
+	Rf_initEmbeddedR(argc, argv);
+
+	R_Consolefile = NULL;
+	R_Outputfile = NULL;
+	ptr_R_WriteConsole = NULL;
+	ptr_R_WriteConsoleEx = WriteConsoleEx;
+
+	RegisterCallSymbols();
+
+	InitRApacheEnv();
+
+	InitRApachePool(); /* possibly done already if REvalOnStartup or RSourceOnStartup set */
+
+	/* Execute all *OnStartup code */
+	apr_table_do(OnStartupCallback,NULL,MR_OnStartup,NULL);
+
+	/* For the RFile directive */
+	if (!(MR_ParsedFileCache = apr_hash_make(MR_Pool))){
+		fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_Pool!\n");
+		exit(-1);
+	}
+
+	/* Handler Cache */
+	if (!(MR_HandlerCache = apr_hash_make(MR_Pool))){
+		fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_Pool!\n");
+		exit(-1);
+	}
+}
+
+static int decode_return_value(SEXP ret)
+{
+	if (IS_INTEGER(ret) && LENGTH(ret) == 1){
+		return asInteger(ret);
+	}
+
+	return DONE;
+}
+
+int call_fun1str( char *funstr, char *argstr){
+	SEXP val, expr, fun, arg;
+	int errorOccurred;
+
+	/* Call funstr */
+	fun = MyfindFun(Rf_install(funstr), R_GlobalEnv);
+	PROTECT(fun);
+
+	/* argument */
+	PROTECT(arg = NEW_CHARACTER(1));
+	SET_STRING_ELT(arg, 0, COPY_TO_USER_STRING(argstr));
+
+	/* expression */
+	PROTECT(expr = allocVector(LANGSXP,2));
+	SETCAR(expr,fun);
+	SETCAR(CDR(expr),arg);
+
+	errorOccurred=1;
+	val = R_tryEval(expr,R_GlobalEnv,&errorOccurred);
+	UNPROTECT(3);
+
+	return (errorOccurred)? 0:1;
+}
+
+void InitRApachePool(void){
 
 	if (MR_Pool) return;
 
@@ -659,12 +707,12 @@ void mr_init_pool(void){
 		exit(-1);
 	}
 
-	MR_Scripts = apr_hash_make(MR_Pool);
-
-	if (!MR_Scripts){
-		fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_Pool!\n");
+	/* Table to hold *OnStartup code. Allocate 8 entries. */
+	if (!(MR_OnStartup = apr_table_make(MR_Pool,8))){
+		fprintf(stderr,"Fatal Error: could not apr_table_make(MR_Pool)!\n");
 		exit(-1);
 	}
+
 }
 
 /*
@@ -673,7 +721,7 @@ void mr_init_pool(void){
  * feature called apr_pool_userdata_[set|get]() to store state from 1 config pass
  * to the next.
  */
-void mr_init_config_pass(apr_pool_t *p){
+void init_config_pass(apr_pool_t *p){
 	void *cfg_pass = NULL;
 	const char *userdata_key = "R_language";
 
@@ -694,19 +742,9 @@ void mr_init_config_pass(apr_pool_t *p){
  *
  *************************************************************************/
 
-void mr_InitTempDir(apr_pool_t *p)
+void InitTempDir(apr_pool_t *p)
 {
 	const char *tmp;
-
-	#if (R_VERSION < R_Version(2,4,0)) /* we can delete this code after R 2.4.0 release */
-	if (R_TempDir){
-		/* Undo R's InitTempdir() and do something sane */
-		if (apr_dir_remove (R_TempDir, p) != APR_SUCCESS){
-			fprintf(stderr,"Fatal Error: could not remove R's TempDir: %s!\n",R_TempDir);
-			exit(-1);
-		}
-	}
-	#endif
 
 	if (apr_temp_dir_get(&tmp,p) != APR_SUCCESS){
 		fprintf(stderr,"Fatal Error: apr_temp_dir_get() failed!\n");
@@ -721,48 +759,524 @@ void mr_InitTempDir(apr_pool_t *p)
 	}
 }
 
-/* stdout */
-int mr_stdout_vfprintf(Rconnection con, const char *format, va_list ap){
-	apr_status_t rv;
-	rv = apr_brigade_vprintf(MR_BBout, ap_filter_flush, MR_Request->output_filters, format, ap);
-	return (rv == APR_SUCCESS)? 0 : 1;
+void WriteConsoleEx(char *buf, int size, int error){
+	if (!error) ap_fwrite(MR_Request->output_filters,MR_BBout,buf,size);
+	else if (MR_OutputErrors) {
+		ap_fputs(MR_Request->output_filters,MR_BBout,MR_ErrorPrefix);
+		ap_fwrite(MR_Request->output_filters,MR_BBout,buf,size);
+		ap_fputs(MR_Request->output_filters,MR_BBout,MR_ErrorSuffix);
+	} else {
+		/* We assume that buf is null-terminated */
+		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request,"%s",buf);
+	}
 }
-int mr_stdout_fflush(Rconnection con){
-	ap_filter_flush(MR_BBout,MR_Request->output_filters);
-	return 0;
-}
-size_t mr_stdout_write(const void *ptr, size_t size, size_t n, Rconnection con){
-	apr_status_t rv;
-	rv = apr_brigade_write(MR_BBout, ap_filter_flush, MR_Request->output_filters, (const char *)ptr, size*n);
-	return (rv == APR_SUCCESS)? n : 1;
-}
-
-/* stderr */
-int mr_stderr_vfprintf(Rconnection con, const char *format, va_list ap){
-	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request,"%s",apr_pvsprintf(MR_Request->pool,format,ap));
-	return 0;
+static SEXP NewLogical(int tf) {
+	SEXP stf;
+	PROTECT(stf = NEW_LOGICAL(1));
+	LOGICAL_DATA(stf)[0] = tf;
+	UNPROTECT(1);
+	return stf;
 }
 
-int mr_stderr_vfprintf_OutputErrors(Rconnection con, const char *format, va_list ap){
-	apr_status_t rv;
-	ap_fputs(MR_Request->output_filters,MR_BBout,MR_ErrorPrefix);
-	rv = apr_brigade_vprintf(MR_BBout, ap_filter_flush, MR_Request->output_filters, format, ap);
-	ap_fputs(MR_Request->output_filters,MR_BBout,MR_ErrorSuffix);
-	return (rv == APR_SUCCESS)? 0 : 1;
-}
-int mr_stderr_fflush(Rconnection con){
-	return 0;
+static SEXP NewEnv(SEXP enclos){
+	SEXP env;
+	PROTECT(env = allocSExp(ENVSXP));
+
+	SET_TYPEOF(env, ENVSXP); /* may be redundant, but unsure */
+	SET_FRAME(env, R_NilValue);
+	SET_ENCLOS(env, (enclos)? enclos: R_GlobalEnv);
+	SET_HASHTAB(env, R_NilValue);
+	SET_ATTRIB(env, R_NilValue);
+
+	UNPROTECT(1);
+
+	return env;
 }
 
-/* We assume that buf is null-terminated */
-void mr_WriteConsole(char *buf, int size){
-	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request,"%s",buf);
+static int ExecRCode(const char *code, SEXP env){
+	ParseStatus status;
+	SEXP cmd, expr, fun;
+	int i, errorOccurred, retval = 1;
+
+	PROTECT(cmd = allocVector(STRSXP, 1));
+	SET_STRING_ELT(cmd, 0, mkChar(code));
+
+	PROTECT(expr = R_ParseVector(cmd, -1, &status,R_NilValue));
+
+	switch (status){
+		case PARSE_OK:
+			for(i = 0; i < length(expr); i++){
+				R_tryEval(VECTOR_ELT(expr, i),env,&errorOccurred);
+				if (errorOccurred){
+					retval=0;
+					break;
+				}
+			}
+		break;
+		case PARSE_INCOMPLETE:
+		case PARSE_NULL:
+		case PARSE_ERROR:
+		case PARSE_EOF:
+		default:
+			retval=0;
+		break;
+	}
+	UNPROTECT(2);
+
+	return retval;
 }
 
-void mr_WriteConsole_OutputErrors(char *buf, int size){
-	request_rec *r = MR_Request; 
+static SEXP ExecFun1Arg(SEXP fun, SEXP arg){
+	SEXP val, expr;
+	int errorOccurred;
 
-	ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
-	ap_fputs(r->output_filters,MR_BBout,buf);
-	ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
+	PROTECT(fun); PROTECT(arg);
+	PROTECT(expr = allocVector(LANGSXP,2));
+	SETCAR(expr,fun);
+	SETCAR(CDR(expr),arg);
+
+	errorOccurred=1;
+	val = R_tryEval(expr,R_GlobalEnv,&errorOccurred);
+	UNPROTECT(3);
+
+	return val;
+}
+
+static void StartRprof(){
+	SEXP fun, expr;
+	int errorOccurred;
+	PROTECT(fun = MyfindFun(install("Rprof"),R_GlobalEnv));
+	PROTECT(expr = allocVector(LANGSXP,1));
+	SETCAR(expr,fun);
+
+	errorOccurred=1;
+	R_tryEval(expr,R_GlobalEnv,&errorOccurred);
+	UNPROTECT(2);
+}
+
+static void StopRprof(){
+	SEXP fun, expr ;
+	int errorOccurred;
+	PROTECT(fun = MyfindFun(install("Rprof"),R_GlobalEnv));
+	PROTECT(expr = allocVector(LANGSXP,2));
+	SETCAR(expr,fun);
+	SETCAR(CDR(expr),R_NilValue);
+
+	errorOccurred=1;
+	R_tryEval(expr,R_GlobalEnv,&errorOccurred);
+	UNPROTECT(2);
+}
+
+static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize){
+	apr_file_t *fd;
+	apr_size_t bufsize;
+	void *buf;
+	apr_finfo_t finfo;
+	SEXP cmd, expr;
+	ParseStatus status;
+
+	apr_file_open(&fd,file,APR_READ,APR_OS_DEFAULT,pool);
+	if (!fsize){
+		apr_stat(&finfo,file,APR_FINFO_SIZE,pool);
+		fsize = finfo.size;
+	}
+
+	bufsize = fsize;
+	buf = (void *)apr_pcalloc(pool,fsize+1);
+
+	apr_file_read(fd,buf,&bufsize);
+
+	PROTECT(cmd = allocVector(STRSXP, 1));
+	SET_STRING_ELT(cmd, 0, mkChar(buf));
+
+	expr = R_ParseVector(cmd,-1,&status,R_NilValue);
+	UNPROTECT(1);
+
+	if (status == PARSE_OK) return expr;
+
+	return NULL;
+}
+
+static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *fileParsed){
+	RApacheParsedFile *parsedFile;
+	apr_finfo_t finfo;
+	if (apr_stat(&finfo,h->directive->file,APR_FINFO_MTIME|APR_FINFO_SIZE,r->pool) != APR_SUCCESS){
+		RApacheError(r, apr_psprintf(r->pool,
+					"From RApache Directive: %s\n\tInvalid file: %s\n",
+					h->directive->handlerKey,h->directive->file));
+		return 0;
+	}
+	if (h->parsedFile) parsedFile = h->parsedFile;
+	else {
+		/* Grab file cache element */
+		parsedFile = (RApacheParsedFile *)apr_hash_get(MR_ParsedFileCache,h->directive->file,APR_HASH_KEY_STRING);
+
+		/* File not cached yet */
+		if (!parsedFile){
+			parsedFile = (RApacheParsedFile *)apr_pcalloc(MR_Pool,sizeof(RApacheParsedFile));
+			apr_hash_set(MR_ParsedFileCache,h->directive->file,APR_HASH_KEY_STRING,parsedFile);
+		}
+		h->parsedFile = parsedFile;
+	}
+
+	/* Parse file */
+	if (parsedFile->mtime < finfo.mtime){
+
+		if (*fileParsed) *fileParsed = 1;
+
+		/* Release old parse file expressions for gc */
+		if (parsedFile->exprs) R_ReleaseObject(parsedFile->exprs);
+
+		if ((parsedFile->exprs = ParseFile(h->directive->file,r->pool,finfo.size)) == NULL){
+			RApacheError(r,apr_psprintf(r->pool,"ParsedFile(%s) failed!",h->directive->file));
+			return 0;
+		} else {
+			R_PreserveObject(parsedFile->exprs);
+			parsedFile->mtime = finfo.mtime;
+		}
+
+	} else {
+		if (*fileParsed) *fileParsed = 0;
+	}
+	return 1;
+}
+
+static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType, int fileParsed){
+	SEXP fun;
+	int veclen = (handlerType == R_SCRIPT)? 3 : 1;
+	if (h->directive->file){
+	   	if (fileParsed || !h->expr){
+			if (h->expr) R_ReleaseObject(h->expr);
+			fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
+			if (fun ==  R_UnboundValue){
+				RApacheError(r,apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
+				return 0;
+			}
+			R_PreserveObject(h->expr = allocVector(LANGSXP,veclen));
+			SETCAR(h->expr,fun);
+		}
+	} else {
+		if (!h->expr){
+			fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
+			if (fun ==  R_UnboundValue){
+				RApacheError(r,apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
+				return 0;
+			}
+			PROTECT(h->expr = allocVector(LANGSXP,veclen));
+			SETCAR(h->expr,fun);
+			R_PreserveObject(h->expr);
+		}
+	}
+
+	if (handlerType == R_SCRIPT){
+		SETCAR(CDR(h->expr),mkString(r->filename));
+		SET_TAG(CDR(h->expr),install("file"));
+		SETCAR(CDR(CDR(h->expr)),h->envir);
+		SET_TAG(CDR(CDR(h->expr)),install("envir"));
+	}
+
+	return 1;
+}
+
+/* Protected evaluation of a vector of exprs */
+typedef struct {
+	SEXP exprs;
+	SEXP val;
+	SEXP env;
+} ProtectedEvalData;
+
+static void protectedEval(void *d){
+	int i;
+	ProtectedEvalData *data = (ProtectedEvalData *)d;
+
+	for(i = 0; i < length(data->exprs); i++){
+		data->val = eval(VECTOR_ELT(data->exprs, i),data->env);
+	}
+	PROTECT(data->val);
+}
+
+static SEXP EvalExprs(SEXP exprs, SEXP env, int *error){
+    Rboolean ok;
+    ProtectedEvalData data;
+
+    data.exprs = exprs;
+    data.val = NULL;
+	data.env = env;
+
+    ok = R_ToplevelExec(protectedEval, &data);
+    if (error) {
+		*error = (ok == FALSE);
+    }
+    if (ok == FALSE)
+		data.val = NULL;
+    else
+		UNPROTECT(1);
+
+	return(data.val);
+}
+
+static void InitRApacheEnv(){
+	ParseStatus status;
+	SEXP cmd, expr, fun;
+	int i, errorOccurred;
+
+	R_PreserveObject(MR_RApacheEnv = NewEnv(R_GlobalEnv));
+	ExecRCode(MR_RApacheSource,MR_RApacheEnv);
+	R_LockEnvironment(MR_RApacheEnv, TRUE);
+
+	/* For debugging */
+	defineVar(install("RApacheEnv"),MR_RApacheEnv,R_GlobalEnv);
+	/* ExecRCode("gctorture()",R_GlobalEnv); */
+
+}
+
+static int OnStartupCallback(void *rec, const char *key, const char *value){
+	SEXP expr, val;
+	int error;
+
+	if (strcmp(key,"eval")==0){
+		if (!ExecRCode(value,R_GlobalEnv)){
+			fprintf(stderr,"Error evaluating '%s'\n",value);
+			exit(-1);
+		};
+	} else if (strcmp(key,"file")==0){
+		expr = ParseFile(value,MR_Pool,0);
+		error=1;
+		if (expr){
+			EvalExprs(expr,R_GlobalEnv,&error);
+		}
+		if (!expr || error){
+			fprintf(stderr,"Error executing file '%s'\n",value);
+			exit(-1);
+		}
+	} else if (strcmp(key,"package")==0){
+			fprintf(stderr,"Calling require(\"%s\",quietly=TRUE,warn.conflicts=FALSE,keep.source=FALSE,character.only=TRUE)\n",value);
+		error=1;
+		PROTECT(expr = allocVector(LANGSXP,6));
+		/* require() */
+		SETCAR(expr,MyfindFun(install("require"),R_GlobalEnv));
+		/* package */
+		SETCAR(CDR(expr),mkString(value));
+		/* quietly=TRUE */
+		SETCAR(CDR(CDR(expr)),NewLogical(TRUE));
+		SET_TAG(CDR(CDR(expr)),install("quietly"));
+		/* warn.conflicts=FALSE */
+		SETCAR(CDR(CDR(CDR(expr))),NewLogical(FALSE));
+		SET_TAG(CDR(CDR(CDR(expr))),install("warn.conflicts"));
+		/* keep.source=FALSE */
+		SETCAR(CDR(CDR(CDR(CDR(expr)))),NewLogical(FALSE));
+		SET_TAG(CDR(CDR(CDR(CDR(expr)))),install("keep.source"));
+		/* character.only=TRUE */
+		SETCAR(CDR(CDR(CDR(CDR(CDR(expr))))),NewLogical(TRUE));
+		SET_TAG(CDR(CDR(CDR(CDR(CDR(expr))))),install("character.only"));
+
+		val = R_tryEval(expr,R_GlobalEnv, &error);
+		UNPROTECT(1);
+		if (error){
+			fprintf(stderr,"Error calling require(\"%s\",quietly=TRUE,warn.conflicts=FALSE,keep.source=FALSE,character.only=TRUE)\n",value);
+			exit(-1);
+		}
+		if (isLogical(val)){
+		   	if (LOGICAL_DATA(val) == FALSE){
+			fprintf(stderr,"require(\"%s\",quietly=TRUE,warn.conflicts=FALSE,keep.source=FALSE,character.only=TRUE) returned FALSE!\n",value);
+			exit(-1);
+			} else {
+				fprintf(stderr,"Apparently %s loaded successfully\n",value);
+			}
+		} else {
+			fprintf(stderr,"TYEPOF(val) is %d\n",TYPEOF(val));
+			exit(-1);
+		}
+	}
+
+	return 1;
+}
+
+/* This one doesn't longjmp when function not found */
+static SEXP MyfindFun(SEXP symb, SEXP envir){
+	SEXP fun;
+	SEXPTYPE t;
+	fun = findVar(symb,envir);
+	t = TYPEOF(fun);
+
+	/* eval promise if need be */
+	if (t == PROMSXP){
+		int error=1;
+		fun = R_tryEval(fun,envir,&error);
+		if (error) return R_UnboundValue;
+		t = TYPEOF(fun);
+	}
+
+	if (t == CLOSXP || t == BUILTINSXP || t == BUILTINSXP || t == SPECIALSXP)
+		return fun;
+	return R_UnboundValue;
+}
+
+static int RApacheInfo()
+{
+}
+
+/*************************************************************************
+ *
+ * .Call functions: used from R code.
+ *
+ *************************************************************************/
+
+SEXP RApache_setHeader(SEXP header, SEXP value){
+	char *key = CHAR(STRING_PTR(header)[0]);
+	char *val;
+
+	if (!key) return NewLogical(FALSE);
+   
+	if (value == R_NilValue){
+		apr_table_unset(MR_Request->headers_out,key);
+	} else {
+		val = CHAR(STRING_PTR(value)[0]);
+		if (!val) return NewLogical(FALSE);
+		apr_table_set(MR_Request->headers_out,key,val);
+	}
+
+	return NewLogical(TRUE);
+}
+
+SEXP RApache_setContentType(SEXP stype){
+	char *ctype;
+	if (stype == R_NilValue) return NewLogical(FALSE);
+	ctype = CHAR(STRING_PTR(stype)[0]);
+	if (!ctype) return NewLogical(FALSE);
+	ap_set_content_type( MR_Request, apr_pstrdup(MR_Request->pool,ctype));
+	return NewLogical(TRUE);
+}
+
+SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP sdomain, SEXP therest){
+	char *name, *value, *cookie;
+	char strExpires[APR_RFC822_DATE_LEN];
+	apr_time_t texpires;
+
+	/* name */
+	if (sname == R_NilValue) return NewLogical(FALSE);
+	else name = CHAR(STRING_PTR(sname)[0]);
+
+	/* value */
+	if (svalue == R_NilValue || LENGTH(svalue) != 1)
+		value = "";
+	else value = CHAR(STRING_PTR(svalue)[0]);
+
+	cookie = apr_pstrcat(MR_Request->pool,name,"=",value);
+
+	/* expires */
+	if (sexpires != R_NilValue && inherits(sexpires,"POSIXt") ){
+		SEXP tmpExpires;
+		if (inherits(sexpires,"POSIXct")){
+			tmpExpires = sexpires;
+		} else if (inherits(sexpires,"POSIXlt")){
+			tmpExpires = ExecFun1Arg(MyfindFun(install("as.POSIXct"),R_GlobalEnv),sexpires);
+		}
+		apr_time_ansi_put(&texpires,(time_t)(REAL(tmpExpires)[0]));
+		apr_rfc822_date(strExpires, texpires);
+
+		cookie = apr_pstrcat(MR_Request->pool,cookie,";expires=",strExpires);
+	}
+
+	/* path */
+	if (spath != R_NilValue && isString(spath))
+		cookie = apr_pstrcat(MR_Request->pool,cookie,";path=",CHAR(STRING_PTR(spath)[0]));
+	/* domain */
+	if (sdomain != R_NilValue && isString(sdomain))
+		cookie = apr_pstrcat(MR_Request->pool,cookie,";domain=",CHAR(STRING_PTR(sdomain)[0]));
+	/* therest */
+	if (therest != R_NilValue && isString(therest) && CHAR(STRING_PTR(therest)[0])[0] != '\0'){
+		fprintf(stderr,"therest is <%s>\n",CHAR(STRING_PTR(therest)[0]));
+		cookie = apr_pstrcat(MR_Request->pool,cookie,";",CHAR(STRING_PTR(therest)[0]));
+	}
+
+	if (!apr_table_get(MR_Request->headers_out,"Cache-Control"))
+		apr_table_set(MR_Request->headers_out,"Cache-Control","nocache=\"set-cookie\"");
+
+	apr_table_set(MR_Request->headers_out,"Set-Cookie",cookie);
+
+	return NewLogical(TRUE);
+}
+
+/*************************************************************************
+ *
+ * Magic to allow mod_R to export C functions usable in .Call()
+ *
+ *************************************************************************/
+
+/* From Rdynpriv.h */
+
+typedef void *HINSTANCE;
+typedef struct {
+    char       *name;
+    DL_FUNC     fun;
+    int         numArgs;
+
+    R_NativePrimitiveArgType *types;
+    R_NativeArgStyle *styles;
+   
+} Rf_DotCSymbol;
+typedef Rf_DotCSymbol Rf_DotFortranSymbol;
+
+
+typedef struct {
+    char       *name;
+    DL_FUNC     fun;
+    int         numArgs;
+    R_NativeObjectArgType *types;
+
+    R_NativeArgStyle *styles;
+} Rf_DotCallSymbol;
+
+typedef Rf_DotCallSymbol Rf_DotExternalSymbol;
+
+struct _DllInfo {
+    char	   *path;
+    char	   *name;
+    HINSTANCE	   handle;
+    Rboolean       useDynamicLookup; 
+
+    int            numCSymbols;
+    Rf_DotCSymbol     *CSymbols;
+
+    int            numCallSymbols;
+    Rf_DotCallSymbol  *CallSymbols;
+
+    int              numFortranSymbols;
+    Rf_DotFortranSymbol *FortranSymbols;
+
+    int              numExternalSymbols;
+    Rf_DotExternalSymbol *ExternalSymbols;
+};
+
+/* The following was lifted from Mac-GUI-1.19. Original author is Simon Urbanek. Will change in R 2.6.0 */
+/*-- now, this is ugly, we use internals of Rdynload to squeeze our functions into base load table --*/
+
+static void R_addCallRoutine(DllInfo *info, const R_CallMethodDef * const croutine,
+                 Rf_DotCallSymbol *sym)
+{
+    sym->name = strdup(croutine->name);
+    sym->fun = croutine->fun;
+    sym->numArgs = croutine->numArgs > -1 ? croutine->numArgs : -1;
+}
+
+static void registerCall(DllInfo *info, const R_CallMethodDef * const callRoutines) {
+	int oldnum = info->numCallSymbols;
+	int num, i;
+	for(num=0; callRoutines[num].name != NULL; num++) {;}
+	info->CallSymbols =	(Rf_DotCallSymbol*)realloc(info->CallSymbols, (num+oldnum)*sizeof(Rf_DotCallSymbol));
+	info->numCallSymbols = num+oldnum;
+	for(i = 0; i < num; i++)
+		R_addCallRoutine(info, callRoutines+i, info->CallSymbols + i + oldnum);
+}
+
+static void RegisterCallSymbols() {
+	R_CallMethodDef callMethods[]  = {
+	{"RApache_setHeader", (DL_FUNC) &RApache_setHeader, 2},
+	{"RApache_setContentType", (DL_FUNC) &RApache_setContentType, 1},
+	{"RApache_setCookie",(DL_FUNC) &RApache_setCookie,6},
+	{NULL, NULL, 0}
+	};
+	/* we add those to the base as we have no specific entry (yet?) */
+	registerCall(R_getDllInfo("base"), callMethods);
 }
