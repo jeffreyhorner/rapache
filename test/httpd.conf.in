@@ -57,36 +57,45 @@ LockFile accept.lock
 
 Listen 8181
 
-LoadModule R_module           ../mod_R.so
+LoadModule R_module           ../.libs/mod_R.so
 
 DocumentRoot "@DOCROOT@"
 
 <Directory />
     Options FollowSymLinks
     AllowOverride None
-	Order allow,deny
-	Allow from all
+#	Order allow,deny
+#	Allow from all
 </Directory>
 
 # Output RApache messages to browser
 ROutputErrors
 
+<Location /RApacheInfo>
+	SetHandler r-info
+</Location>
+
 <Location /test/hello>
         SetHandler r-handler
-        RHandler hello @DOCROOT@/test.R TRUE
+        RFileHandler @DOCROOT@/helloworld.r
 </Location>
 
-<Location /test/R>
-        SetHandler r-handler
-        RHandler handler @DOCROOT@/test.R TRUE
-</Location>
+<Directory @DOCROOT@/brew>
+	SetHandler r-script
+	RHandler brew::brew
+</Directory>
 
-<Location /test/Rplot>
-        SetHandler r-handler
-        RHandler handler @DOCROOT@/plot.R TRUE
-</Location>
+#<Location /test/R>
+#        SetHandler r-handler
+#        RHandler handler @DOCROOT@/test.R TRUE
+#</Location>
+#
+#<Location /test/Rplot>
+#        SetHandler r-handler
+#        RHandler handler @DOCROOT@/plot.R TRUE
+#</Location>
 
-DirectoryIndex index.html
+# DirectoryIndex index.html
 
 DefaultType text/html
 
@@ -111,6 +120,8 @@ ServerTokens Full
 
 ServerSignature On
 
+<IfModule mod_mime.c>
+TypesConfig mime.types
 AddLanguage ca .ca
 AddLanguage cs .cz .cs
 AddLanguage da .dk
@@ -137,12 +148,16 @@ AddLanguage ru .ru
 AddLanguage sv .sv
 AddLanguage zh-CN .zh-cn
 AddLanguage zh-TW .zh-tw
+</IfModule>
 
+<IfModule mod_negotiation.c>
 LanguagePriority en ca cs da de el eo es et fr he hr it ja ko ltz nl nn no pl pt pt-BR ru sv zh-CN zh-TW
 
 #
 ForceLanguagePriority Prefer Fallback
+</IfModule>
 
+<IfModule mod_mime.c>
 AddDefaultCharset ISO-8859-1
 
 AddCharset ISO-8859-1  .iso8859-1  .latin1
@@ -183,5 +198,5 @@ AddCharset EUC-TW      .euc-tw
 AddCharset EUC-JP      .euc-jp
 AddCharset EUC-KR      .euc-kr
 AddCharset shift_jis   .sjis
+</IfModule>
 
-TypesConfig mime.types

@@ -1,0 +1,67 @@
+<% 
+class<-'e' 
+hrefify <- function(title){
+	gsub("[\\.()]",'_',title,perl=TRUE)
+}
+zebra <- function(title,l){
+	cat('<h2><a name="',hrefify(title),'"> </a>',title,'</h2><table><tbody>',sep='')
+	if (is.list(l)){
+		for (i in names(l)) { 
+			class <- ifelse(class=='e','o','e')
+			%><tr class="<%=class%>"><td class="l"><%=i%></td><td><%=as.character(l[[i]])%></td></tr><%
+		}
+	} else {
+		for (i in l) { 
+			class <- ifelse(class=='e','o','e')
+			%><tr class="<%=class%>"><td><%=as.character(i)%></tr><%
+		}
+	}
+	cat('</tbody></table>')
+}
+-%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
+<html><head>
+<style type="text/css">
+body { font-family: "lucida grande",verdana,sans-serif; margin-left: 210px; }
+table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }
+td { border-bottom:1px solid #d9d9d9; border-left:1px solid #d9d9d9; border-spacing: 0px; padding: 3px 8px; }
+td.l { font-weight: bold; width: 10%; }
+tr.e { background-color: #eeeeee; border-spacing: 0px; }
+tr.o { background-color: #fffff; border-spacing: 0px; }
+a { text-decoration: none; color: white; }
+a:hover { color: #8897be; background: white; }
+tr:hover { background: #8897be; color: white; }
+img.map { position: fixed; border: 0px; left: 50px; right: auto; top: 10px; }
+div.map { background: #8897be; font-weight: bold; color: white; position: fixed; bottom: 30px; height: auto; left: 15px; right: auto; top: 110px; width: 150px; padding: 0 13px; border: 1px solid black; text-align: right; font-size: 14pt; }
+div.map p { font-size: 10pt; font-family: serif; font-style: italic; }
+div.h { font-size: 20pt; font-weight: bold; }
+hr {/*width: 600px;*/ background-color: #cccccc; border: 0px; height: 1px; color: #000000;}
+</style>
+<title>RApacheInfo()</title>
+<meta name="ROBOTS" content="NOINDEX,NOFOLLOW,NOARCHIVE" />
+</head>
+<body>
+<a name="Top"> </a>
+<a href="http://www.r-project.org/"><img class="map" src="http://www.r-project.org/Rlogo.jpg"></a>
+<div class="h">RApache version 1.0</div>
+<div class="map">
+<p>jump to:</p>
+<a href="#Top">Top</a><br><hr>
+<a href="#<%=hrefify("R.version")%>">R.version</a><br>
+<a href="#<%=hrefify("search()")%>">search()</a><br>
+<a href="#<%=hrefify(".libPaths()")%>">.libPaths()</a><br>
+<a href="#<%=hrefify("options()")%>">options()</a><br>
+<a href="#<%=hrefify("Sys.getenv()")%>">Sys.getenv()</a><br>
+<a href="#<%=hrefify("Sys.info()")%>">Sys.info()</a><br>
+<a href="#<%=hrefify(".Machine")%>">.Machine</a><br>
+<a href="#<%=hrefify(".Machine")%>">.Platform</a><br>
+</div>
+<% zebra("R.version",R.version) %><br><hr>
+<% zebra("search()",search()) %><br><hr>
+<% zebra(".libPaths()",.libPaths()) %><br><hr>
+<% zebra("options()",options()) %><br><hr>
+<% zebra("Sys.getenv()",as.list(Sys.getenv())) %><br><hr>
+<% zebra("Sys.info()",as.list(Sys.info())) %><br><hr>
+<% zebra(".Machine",.Machine) %><br><hr>
+<% zebra(".Platform",.Platform) %><br><hr>
+</body></html>

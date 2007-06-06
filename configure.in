@@ -1,10 +1,13 @@
-AC_INIT(mod_R,0.1,jeff.horner@vanderbilt.edu)
+AC_INIT(mod_R,1.0,jeff.horner@vanderbilt.edu)
 AC_CONFIG_AUX_DIR([tools])
 # Automake initialization
-AM_INIT_AUTOMAKE(mod_R, 0.1)
+AM_INIT_AUTOMAKE( no-texinfo.tex foreign )
 
-AC_PROG_CC
+# We'll get compiler and libtool info from apxs2
+#AC_PROG_CC
 AC_PROG_LIBTOOL
+
+AC_CHECK_HEADERS( sys/types.h unistd.h )
 
 # --with-apache2-apxs
 AC_DEFUN([APACHE_APXS],[
@@ -16,31 +19,40 @@ AC_DEFUN([APACHE_APXS],[
             [with_apache2_apxs="no"]
     )
 
-    AC_MSG_CHECKING(for --with-apache2-apxs)
 
     if test "$with_apache2_apxs" = "no"; then
-        echo
-        echo
-        echo "Specify the path to apxs, the Apache2 build tool."
-        echo
-        AC_MSG_ERROR( aborting! )
+		AC_PATH_PROG([APACHEAPXS],[apxs2],[no])
+		if test "$APACHEAPXS" = "no"; then
+			echo
+			echo
+			echo "Specify the path to apxs, the Apache2 build tool."
+			echo
+			AC_MSG_ERROR( aborting! )
+		else
+            APXS=$APACHEAPXS
+			HTTPD="`$APXS -q bindir`/`$APXS -q progname`"; export HTTPD
+			if ! test -x $HTTPD; then 
+				HTTPD="`$APXS -q sbindir`/`$APXS -q progname`"; export HTTPD
+			fi
+		fi
     else
+		AC_MSG_CHECKING(for apxs2)
         # make sure that httpd was built with prefork
         HTTPD="`$with_apache2_apxs -q bindir`/`$with_apache2_apxs -q progname`"; export HTTPD
-	if ! test -x $HTTPD; then 
+		if ! test -x $HTTPD; then 
             HTTPD="`$with_apache2_apxs -q sbindir`/`$with_apache2_apxs -q progname`"; export HTTPD
-	    if ! test -x $HTTPD; then
-                echo
-                echo
-		echo "I cannot find your httpd binary with $with_apache2_apxs."
-		echo "Are you sure that's the correct apxs you should be using?"
-		echo
-		AC_MSG_ERROR( aborting! )
+			if ! test -x $HTTPD; then
+					echo
+					echo
+					echo "I cannot find your httpd binary with $with_apache2_apxs."
+					echo "Are you sure that's the correct apxs you should be using?"
+					echo
+					AC_MSG_ERROR( aborting! )
             fi
         fi
         if $HTTPD -l 2>/dev/null | grep 'prefork' >/dev/null; then
             APXS=$with_apache2_apxs
-            AC_MSG_RESULT(apxs found!)
+			AC_MSG_RESULT([$APXS])
         else
             echo
             echo
@@ -66,21 +78,41 @@ AC_DEFUN([R_PROG],[
             [with_R="no"]
     )
 
-    AC_MSG_CHECKING(for R Program)
 
     if test "$with_R" = "no"; then
-        echo
-        echo
-        echo "Specify the R program using --with-R (like /usr/local/bin/R)"
-        echo
-        AC_MSG_ERROR( aborting! )
+		AC_PATH_PROG([RPROGRAM],[R],[no])
+		if test "$RPROGRAM" = "no"; then
+			echo
+			echo
+			echo "Specify the R program using --with-R (like /usr/local/bin/R)"
+			echo
+			AC_MSG_ERROR( aborting! )
+		else
+			if $RPROGRAM CMD config --ldflags 2>/dev/null | grep -v 'R was not built as a shared library' >/dev/null; then
+					RPROG=$RPROGRAM
+					RHOME=`$RPROGRAM RHOME`
+					RINCLUDES=`$RPROG CMD config --cppflags`
+					RLINKLD=`$RPROG CMD config --ldflags`
+			else
+				echo
+				echo
+				echo "R was not built as a shared library"
+				echo
+				echo "Either build it with one, or use another install of R"
+				echo
+				AC_MSG_ERROR( aborting! )
+			fi
+		fi
     else
+		AC_MSG_CHECKING(for R Program)
         # make sure that a well known include file exists
         # and the libR.so
         if $with_R CMD config --ldflags 2>/dev/null | grep -v 'R was not built as a shared library' >/dev/null; then
                 RPROG=$with_R
                 RHOME=`$with_R RHOME`
-                AC_MSG_RESULT(R found!)
+				RINCLUDES=`$RPROG CMD config --cppflags`
+				RLINKLD=`$RPROG CMD config --ldflags`
+                AC_MSG_RESULT([$RPROG])
         else
             echo
             echo
@@ -104,26 +136,42 @@ AC_DEFUN([APREQ_CONFIG],[
             [with_apreq2_config="no"]
     )
 
-    AC_MSG_CHECKING(for apreq2-config)
 
     if test "$with_apreq2_config" = "no"; then
-        echo
-        echo
-        echo "Using libapreq2 that comes bundled with mod_R"
-        echo
-        APREQ=`pwd`/libapreq2/apreq2-config
-        APREQ_COMPILE="(cd libapreq2; make apreq2-config; cd library; make)"
-        APREQ_INSTALL="(cd libapreq2/library; make install)"
-        (cd libapreq2; ./configure --with-apache2-apxs=$APXS)
-		APREQ_LIB_DIR=`$APREQ --link-ld | sed -e 's/-L//;s/-lapreq2//;'`
+		AC_PATH_PROG([APREQCONFIG],[apreq2-config],[no])
+			if test "$APREQCONFIG" = "no"; then
+				echo
+				echo
+				echo "Using libapreq2 that comes bundled with mod_R"
+				echo
+				APREQ=`pwd`/libapreq2/apreq2-config
+				APREQ_COMPILE="(cd libapreq2; make apreq2-config; cd library; make)"
+				APREQ_INSTALL="(cd libapreq2/library; make install)"
+				APREQ_CLEAN="(cd libapreq2; make clean)"
+				(cd libapreq2; ./configure --with-apache2-apxs=$APXS)
+				APREQ_LIB_DIR=`$APREQ --link-ld | sed -e 's/-L//;s/-lapreq2//;s/ //g'`
+				APREQ_INCLUDES=`$APREQ --includes`
+				APREQ_LINKLD=`$APREQ --link-ld`
+			else
+                APREQ=$APREQCONFIG
+                APREQ_COMPILE=
+                APREQ_INSTALL=
+				APREQ_CLEAN=
+				APREQ_LIB_DIR=`$APREQ --link-ld | sed -e 's/-L//;s/-lapreq2//;s/ //g'`
+				APREQ_INCLUDES=`$APREQ --includes`
+				APREQ_LINKLD=`$APREQ --link-ld`
+			fi
     else
+		AC_MSG_CHECKING(for apreq2-config)
         # make sure that a well known include file exists
         if test -f `$with_apreq2_config --includedir`/apreq.h  ; then
                 APREQ=$with_apreq2_config
                 APREQ_COMPILE=
                 APREQ_INSTALL=
-				APREQ_LIB_DIR=`$APREQ --link-ld | sed -e 's/-L//;s/-lapreq2;'`
-                AC_MSG_RESULT(apreq2-config found!)
+				APREQ_CLEAN=
+				APREQ_LIB_DIR=`$APREQ --link-ld | sed -e 's/-L//;s/-lapreq2//;s/ //g'`
+				APREQ_INCLUDES=`$APREQ --includes`
+				APREQ_LINKLD=`$APREQ --link-ld`
         else
             echo
             echo
@@ -142,34 +190,26 @@ AC_DEFUN([SET_DOCROOT],[
         DOCROOT=`pwd`/test
 ])
 
-AC_PATH_PROG([GDLIBCONF],[gdlib-config],not found,[$PATH])
-
-if test "$GDLIBCONF" != "not found" -a -x "$GDLIBCONF"; then
-    GDCFLAGS="`$GDLIBCONF --cflags`  -DHAVE_GDLIB"
-    GDLDFLAGS="-L`$GDLIBCONF --libdir` -lgd `$GDLIBCONF --ldflags` `$GDLIBCONF --libs`"
-else
-    GDCFLAGS=""
-    GDLDFLAGS=""
-fi
-
-
 APACHE_APXS
 AC_SUBST(APXS)
 AC_SUBST(HTTPD)
 R_PROG
 AC_SUBST(RPROG)
 AC_SUBST(RHOME)
+AC_SUBST(RINCLUDES)
+AC_SUBST(RLINKLD)
 APREQ_CONFIG
 AC_SUBST(APREQ)
 AC_SUBST(APREQ_COMPILE)
 AC_SUBST(APREQ_INSTALL)
+AC_SUBST(APREQ_CLEAN)
 AC_SUBST(APREQ_LIB_DIR)
+AC_SUBST(APREQ_INCLUDES)
+AC_SUBST(APREQ_LINKLD)
 SET_DOCROOT
 AC_SUBST(DOCROOT)
-AC_SUBST(GDCFLAGS)
-AC_SUBST(GDLDFLAGS)
 
 SHLIBPATH_VAR=$shlibpath_var
 AC_SUBST(SHLIBPATH_VAR)
 
-AC_OUTPUT(Makefile mod_R.h RApache/src/Makevars test/httpd.conf)
+AC_OUTPUT(Makefile mod_R.h test/httpd.conf)

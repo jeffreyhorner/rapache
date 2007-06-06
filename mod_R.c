@@ -132,6 +132,7 @@ typedef enum {
 	R_SCRIPT,
 	R_INFO
 } RApacheHandlerType;
+
 typedef struct {
 	char *file;
 	char *function;
@@ -219,6 +220,7 @@ static void InitRApacheEnv();
 static void InitRApachePool();
 static int OnStartupCallback(void *rec, const char *key, const char *value);
 static SEXP MyfindFun(SEXP fun, SEXP envir);
+static SEXP MyfindFunInPackage(SEXP fun, char *package);
 static int RApacheInfo();
 
 /*************************************************************************
@@ -231,7 +233,7 @@ static const command_rec MR_cmds[] = {
 	AP_INIT_TAKE1("RHandler", AP_cmd_RHandler, NULL, OR_OPTIONS, "R function to handle request. "),
 	AP_INIT_TAKE1("RFileHandler", AP_cmd_RFileHandler, NULL, OR_OPTIONS, "File containing R code or function to handle request."),
 	AP_INIT_TAKE1("REvalOnStartup", AP_cmd_REvalOnStartup, NULL, OR_OPTIONS,"R expressions to evaluate on start."),
-	AP_INIT_TAKE1("RSourceOnStartup", AP_cmd_REvalOnStartup, NULL, OR_OPTIONS,"File containing R expressions to evaluate on start."),
+	AP_INIT_TAKE1("RSourceOnStartup", AP_cmd_RSourceOnStartup, NULL, OR_OPTIONS,"File containing R expressions to evaluate on start."),
 	AP_INIT_NO_ARGS("ROutputErrors", AP_cmd_ROutputErrors, NULL, OR_OPTIONS, "Option to print error messages to output."),
 	AP_INIT_NO_ARGS("RPreserveEnv", AP_cmd_RPreserveEnv, NULL, OR_OPTIONS, "Option to preserve handler environment across requests."),
 	{ NULL},
@@ -638,10 +640,6 @@ static void init_R(apr_pool_t *p){
 
 	Rf_initEmbeddedR(argc, argv);
 
-	R_Consolefile = NULL;
-	R_Outputfile = NULL;
-	ptr_R_WriteConsole = NULL;
-	ptr_R_WriteConsoleEx = WriteConsoleEx;
 
 	RegisterCallSymbols();
 
@@ -663,6 +661,12 @@ static void init_R(apr_pool_t *p){
 		fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_Pool!\n");
 		exit(-1);
 	}
+
+	/* Lastly, now redirect R's inputs and outputs */
+	R_Consolefile = NULL;
+	R_Outputfile = NULL;
+	ptr_R_WriteConsole = NULL;
+	ptr_R_WriteConsoleEx = WriteConsoleEx;
 }
 
 static int decode_return_value(SEXP ret)
@@ -957,12 +961,15 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 		}
 	} else {
 		if (!h->expr){
-			fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
+			if (h->directive->package)
+				fun = MyfindFunInPackage(install(h->directive->function),h->directive->package);
+			else
+				fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
 			if (fun ==  R_UnboundValue){
 				RApacheError(r,apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
 				return 0;
 			}
-			PROTECT(h->expr = allocVector(LANGSXP,veclen));
+			h->expr = allocVector(LANGSXP,veclen);
 			SETCAR(h->expr,fun);
 			R_PreserveObject(h->expr);
 		}
@@ -1031,60 +1038,49 @@ static void InitRApacheEnv(){
 }
 
 static int OnStartupCallback(void *rec, const char *key, const char *value){
-	SEXP expr, val;
+	SEXP e, val;
 	int error;
 
 	if (strcmp(key,"eval")==0){
 		if (!ExecRCode(value,R_GlobalEnv)){
-			fprintf(stderr,"Error evaluating '%s'\n",value);
+			printf("\nError evaluating '%s'! Check the error log.\n\n",value);
 			exit(-1);
 		};
 	} else if (strcmp(key,"file")==0){
-		expr = ParseFile(value,MR_Pool,0);
+		e = ParseFile(value,MR_Pool,0);
 		error=1;
-		if (expr){
-			EvalExprs(expr,R_GlobalEnv,&error);
+		if (e){
+			EvalExprs(e,R_GlobalEnv,&error);
 		}
-		if (!expr || error){
-			fprintf(stderr,"Error executing file '%s'\n",value);
+		if (!e || error){
+			printf("\nError evaluating %s! Check the error log.\n\n",value);
 			exit(-1);
 		}
 	} else if (strcmp(key,"package")==0){
-			fprintf(stderr,"Calling require(\"%s\",quietly=TRUE,warn.conflicts=FALSE,keep.source=FALSE,character.only=TRUE)\n",value);
 		error=1;
-		PROTECT(expr = allocVector(LANGSXP,6));
-		/* require() */
-		SETCAR(expr,MyfindFun(install("require"),R_GlobalEnv));
+		PROTECT(e = allocVector(LANGSXP,6));
+		/* library() */
+		SETCAR(e,findFun(install("require"),R_GlobalEnv));
 		/* package */
-		SETCAR(CDR(expr),mkString(value));
-		/* quietly=TRUE */
-		SETCAR(CDR(CDR(expr)),NewLogical(TRUE));
-		SET_TAG(CDR(CDR(expr)),install("quietly"));
-		/* warn.conflicts=FALSE */
-		SETCAR(CDR(CDR(CDR(expr))),NewLogical(FALSE));
-		SET_TAG(CDR(CDR(CDR(expr))),install("warn.conflicts"));
-		/* keep.source=FALSE */
-		SETCAR(CDR(CDR(CDR(CDR(expr)))),NewLogical(FALSE));
-		SET_TAG(CDR(CDR(CDR(CDR(expr)))),install("keep.source"));
+		SETCAR(CDR(e),mkString(value));
 		/* character.only=TRUE */
-		SETCAR(CDR(CDR(CDR(CDR(CDR(expr))))),NewLogical(TRUE));
-		SET_TAG(CDR(CDR(CDR(CDR(CDR(expr))))),install("character.only"));
+		SETCAR(CDR(CDR(e)),NewLogical(TRUE));
+		SET_TAG(CDR(CDR(e)),install("character.only"));
+		/* logical.return=TRUE */
+		SETCAR(CDR(CDR(CDR(e))),NewLogical(TRUE));
+		SET_TAG(CDR(CDR(CDR(e))),install("quietly"));
+		/* warn.conflicts=FALSE */
+		SETCAR(CDR(CDR(CDR(CDR(e)))),NewLogical(FALSE));
+		SET_TAG(CDR(CDR(CDR(CDR(e)))),install("warn.conflicts"));
+		/* keep.source=FALSE */
+		SETCAR(CDR(CDR(CDR(CDR(CDR(e))))),NewLogical(FALSE));
+		SET_TAG(CDR(CDR(CDR(CDR(CDR(e))))),install("keep.source"));
 
-		val = R_tryEval(expr,R_GlobalEnv, &error);
+		val = R_tryEval(e,R_GlobalEnv, &error);
 		UNPROTECT(1);
-		if (error){
-			fprintf(stderr,"Error calling require(\"%s\",quietly=TRUE,warn.conflicts=FALSE,keep.source=FALSE,character.only=TRUE)\n",value);
-			exit(-1);
-		}
-		if (isLogical(val)){
-		   	if (LOGICAL_DATA(val) == FALSE){
-			fprintf(stderr,"require(\"%s\",quietly=TRUE,warn.conflicts=FALSE,keep.source=FALSE,character.only=TRUE) returned FALSE!\n",value);
-			exit(-1);
-			} else {
-				fprintf(stderr,"Apparently %s loaded successfully\n",value);
-			}
-		} else {
-			fprintf(stderr,"TYEPOF(val) is %d\n",TYPEOF(val));
+		if (error || !isLogical(val) || (LOGICAL(val)[0] == FALSE)){
+			printf("\nError loading package %s! Check the error log.\n\n",value);
+			ExecRCode("cat(\".libPaths() returns\n\"); print(.libPaths())",R_GlobalEnv);
 			exit(-1);
 		}
 	}
@@ -1109,6 +1105,34 @@ static SEXP MyfindFun(SEXP symb, SEXP envir){
 
 	if (t == CLOSXP || t == BUILTINSXP || t == BUILTINSXP || t == SPECIALSXP)
 		return fun;
+	return R_UnboundValue;
+}
+
+static SEXP MyfindFunInPackage(SEXP symb, char *package){
+	SEXP rho, name, fun;
+	SEXPTYPE t;
+	SEXP nameSymbol = install("name");
+	char *nameptr;
+	for (rho = ENCLOS(R_GlobalEnv); rho != R_EmptyEnv; rho = ENCLOS(rho)){
+		if (rho == R_BaseEnv) return R_UnboundValue;
+		name = getAttrib(rho,nameSymbol);
+		if ((nameptr = ap_strchr(CHAR(STRING_ELT(name,0)),':'))){
+			if (strcmp(package,nameptr+1)==0){
+				fun = findVarInFrame3(rho,symb,TRUE);
+				t = TYPEOF(fun);
+				/* eval promise if need be */
+				if (t == PROMSXP){
+					int error=1;
+					fun = R_tryEval(fun,rho,&error);
+					if (error) return R_UnboundValue;
+					t = TYPEOF(fun);
+				}
+
+				if (t == CLOSXP || t == BUILTINSXP || t == BUILTINSXP || t == SPECIALSXP)
+					return fun;
+			}
+		}
+	}
 	return R_UnboundValue;
 }
 
