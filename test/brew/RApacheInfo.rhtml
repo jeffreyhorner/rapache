@@ -1,41 +1,46 @@
 <% 
-class<-'e' 
 hrefify <- function(title){
 	gsub("[\\.()]",'_',title,perl=TRUE)
 }
 zebra <- function(title,l){
+	cl<-'e' 
 	cat('<h2><a name="',hrefify(title),'"> </a>',title,'</h2><table><tbody>',sep='')
 	if (is.list(l)){
 		for (i in names(l)) { 
-			class <- ifelse(class=='e','o','e')
-			%><tr class="<%=class%>"><td class="l"><%=i%></td><td><%=as.character(l[[i]])%></td></tr><%
+			cl <- ifelse(cl=='e','o','e')
+			%><tr class="<%=cl%>"><td class="l"><%=i%></td><td><%=as.character(l[[i]])%></td></tr><%
 		}
 	} else {
 		for (i in l) { 
-			class <- ifelse(class=='e','o','e')
-			%><tr class="<%=class%>"><td><%=as.character(i)%></tr><%
+			cl <- ifelse(cl=='e','o','e')
+			%><tr class="<%=cl%>"><td><%=as.character(i)%></tr><%
 		}
 	}
 	cat('</tbody></table>')
 }
+zebrifyPackage <-function(package){
+	zebra(package,unclass(packageDescription(package)))
+	cat("<br><hr>\n")
+}
+setContentType("text/html")
 -%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
 <html><head>
 <style type="text/css">
-body { font-family: "lucida grande",verdana,sans-serif; margin-left: 210px; }
+body { font-family: "lucida grande",verdana,sans-serif; margin-left: 210px; margin-right: 18px; }
 table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }
 td { border-bottom:1px solid #d9d9d9; border-left:1px solid #d9d9d9; border-spacing: 0px; padding: 3px 8px; }
 td.l { font-weight: bold; width: 10%; }
 tr.e { background-color: #eeeeee; border-spacing: 0px; }
 tr.o { background-color: #fffff; border-spacing: 0px; }
-a { text-decoration: none; color: white; }
+div a { text-decoration: none; color: white; }
 a:hover { color: #8897be; background: white; }
 tr:hover { background: #8897be; color: white; }
 img.map { position: fixed; border: 0px; left: 50px; right: auto; top: 10px; }
-div.map { background: #8897be; font-weight: bold; color: white; position: fixed; bottom: 30px; height: auto; left: 15px; right: auto; top: 110px; width: 150px; padding: 0 13px; border: 1px solid black; text-align: right; font-size: 14pt; }
+div.map { background: #8897be; font-weight: bold; color: white; position: fixed; bottom: 30px; height: auto; left: 15px; right: auto; top: 110px; width: 150px; padding: 0 13px; border: 1px solid black; text-align: right; font-size: 12pt; }
 div.map p { font-size: 10pt; font-family: serif; font-style: italic; }
 div.h { font-size: 20pt; font-weight: bold; }
-hr {/*width: 600px;*/ background-color: #cccccc; border: 0px; height: 1px; color: #000000;}
+hr {background-color: #cccccc; border: 0px; height: 1px; color: #000000;}
 </style>
 <title>RApacheInfo()</title>
 <meta name="ROBOTS" content="NOINDEX,NOFOLLOW,NOARCHIVE" />
@@ -54,7 +59,11 @@ hr {/*width: 600px;*/ background-color: #cccccc; border: 0px; height: 1px; color
 <a href="#<%=hrefify("Sys.getenv()")%>">Sys.getenv()</a><br>
 <a href="#<%=hrefify("Sys.info()")%>">Sys.info()</a><br>
 <a href="#<%=hrefify(".Machine")%>">.Machine</a><br>
-<a href="#<%=hrefify(".Machine")%>">.Platform</a><br>
+<a href="#<%=hrefify(".Platform")%>">.Platform</a><br><hr>
+<a href="#Attached_Packages">Attached Packages</a><br><hr>
+<a href="#Installed_Packages">Installed Packages</a><br><hr>
+<a href="#License">License</a><br><hr>
+<a href="#People">People</a>
 </div>
 <% zebra("R.version",R.version) %><br><hr>
 <% zebra("search()",search()) %><br><hr>
@@ -64,4 +73,32 @@ hr {/*width: 600px;*/ background-color: #cccccc; border: 0px; height: 1px; color
 <% zebra("Sys.info()",as.list(Sys.info())) %><br><hr>
 <% zebra(".Machine",.Machine) %><br><hr>
 <% zebra(".Platform",.Platform) %><br><hr>
+<h1><a name="Attached_Packages"></a>Attached Packages</h1>
+<% lapply(sub("package:","",search()[grep("package:",search())]),zebrifyPackage) %>
+<h1><a name="Installed_Packages"></a>Installed Packages</h1>
+<% lapply(attr(installed.packages(),"dimnames")[[1]],zebrifyPackage) %>
+<h2><a name="License"></a>License</h2>
+<pre>
+Copyright 2005  The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  <a href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0"</a>
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+</pre><hr>
+<h2><a name="People"></a>People</h2>
+<p>Thanks to the following people for giving advice, noticing when things were broken, an such. If I've forgotten to mention you, please email me.</p>
+<pre>
+	Gregoire Thomas
+	Jan de Leeuw
+	Keven E. Thorpe
+	Jeremy Stephens
+</pre>
 </body></html>
