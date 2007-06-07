@@ -1,28 +1,34 @@
 <% 
 hrefify <- function(title){
-	gsub("[\\.()]",'_',title,perl=TRUE)
+	gsub('[\\.()]','_',title,perl=TRUE)
 }
+scrub <- function(str){
+	str <- gsub('&','&amp;',str)
+	str <- gsub('@','_at_',str)
+	str <- gsub('<','&lt;',str)
+	str <- gsub('>','&gt;',str)
+	str
+}
+cl<-'e' 
+zeblist <- function(i,l){
+	cl <<- ifelse(cl=='e','o','e')
+	cat('<tr class="',cl,'"><td class="l">',names(l)[i],'</td><td>',scrub(as.character(l[[i]])),'</td></tr>')
+}
+zebary <- function(i){
+	cl <<- ifelse(cl=='e','o','e')
+	cat('<tr class="',cl,'"><td>',as.character(i),'</td></tr>')
+}
+
 zebra <- function(title,l){
-	cl<-'e' 
 	cat('<h2><a name="',hrefify(title),'"> </a>',title,'</h2><table><tbody>',sep='')
-	if (is.list(l)){
-		for (i in names(l)) { 
-			cl <- ifelse(cl=='e','o','e')
-			%><tr class="<%=cl%>"><td class="l"><%=i%></td><td><%=as.character(l[[i]])%></td></tr><%
-		}
-	} else {
-		for (i in l) { 
-			cl <- ifelse(cl=='e','o','e')
-			%><tr class="<%=cl%>"><td><%=as.character(i)%></tr><%
-		}
-	}
+	ifelse(is.list(l), lapply(1:length(l),zeblist,l), lapply(l,zebary))
 	cat('</tbody></table>')
 }
 zebrifyPackage <-function(package){
 	zebra(package,unclass(packageDescription(package)))
-	cat("<br><hr>\n")
+	cat('<br/><hr/>\n')
 }
-setContentType("text/html")
+setContentType('text/html')
 -%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
 <html><head>
@@ -32,12 +38,12 @@ table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }
 td { border-bottom:1px solid #d9d9d9; border-left:1px solid #d9d9d9; border-spacing: 0px; padding: 3px 8px; }
 td.l { font-weight: bold; width: 10%; }
 tr.e { background-color: #eeeeee; border-spacing: 0px; }
-tr.o { background-color: #fffff; border-spacing: 0px; }
+tr.o { background-color: #ffffff; border-spacing: 0px; }
 div a { text-decoration: none; color: white; }
 a:hover { color: #8897be; background: white; }
 tr:hover { background: #8897be; color: white; }
 img.map { position: fixed; border: 0px; left: 50px; right: auto; top: 10px; }
-div.map { background: #8897be; font-weight: bold; color: white; position: fixed; bottom: 30px; height: auto; left: 15px; right: auto; top: 110px; width: 150px; padding: 0 13px; border: 1px solid black; text-align: right; font-size: 12pt; }
+div.map { background: #8897be; font-weight: bold; color: white; position: fixed; bottom: 30px; height: auto; left: 15px; right: auto; top: 110px; width: 150px; padding: 0 13px; text-align: right; font-size: 12pt; }
 div.map p { font-size: 10pt; font-family: serif; font-style: italic; }
 div.h { font-size: 20pt; font-weight: bold; }
 hr {background-color: #cccccc; border: 0px; height: 1px; color: #000000;}
@@ -47,36 +53,36 @@ hr {background-color: #cccccc; border: 0px; height: 1px; color: #000000;}
 </head>
 <body>
 <a name="Top"> </a>
-<a href="http://www.r-project.org/"><img class="map" src="http://www.r-project.org/Rlogo.jpg"></a>
+<a href="http://www.r-project.org/"><img class="map" alt="R Language Home Page" src="http://www.r-project.org/Rlogo.jpg"/></a>
 <div class="h">RApache version 1.0</div>
 <div class="map">
 <p>jump to:</p>
-<a href="#Top">Top</a><br><hr>
-<a href="#<%=hrefify("R.version")%>">R.version</a><br>
-<a href="#<%=hrefify("search()")%>">search()</a><br>
-<a href="#<%=hrefify(".libPaths()")%>">.libPaths()</a><br>
-<a href="#<%=hrefify("options()")%>">options()</a><br>
-<a href="#<%=hrefify("Sys.getenv()")%>">Sys.getenv()</a><br>
-<a href="#<%=hrefify("Sys.info()")%>">Sys.info()</a><br>
-<a href="#<%=hrefify(".Machine")%>">.Machine</a><br>
-<a href="#<%=hrefify(".Platform")%>">.Platform</a><br><hr>
-<a href="#Attached_Packages">Attached Packages</a><br><hr>
-<a href="#Installed_Packages">Installed Packages</a><br><hr>
-<a href="#License">License</a><br><hr>
+<a href="#Top">Top</a><br/><hr/>
+<a href="#<%=hrefify("R.version")%>">R.version</a><br/>
+<a href="#<%=hrefify("search()")%>">search()</a><br/>
+<a href="#<%=hrefify(".libPaths()")%>">.libPaths()</a><br/>
+<a href="#<%=hrefify("options()")%>">options()</a><br/>
+<a href="#<%=hrefify("Sys.getenv()")%>">Sys.getenv()</a><br/>
+<a href="#<%=hrefify("Sys.info()")%>">Sys.info()</a><br/>
+<a href="#<%=hrefify(".Machine")%>">.Machine</a><br/>
+<a href="#<%=hrefify(".Platform")%>">.Platform</a><br/><hr/>
+<a href="#Attached_Packages">Attached Packages</a><br/><hr/>
+<a href="#Installed_Packages">Installed Packages</a><br/><hr/>
+<a href="#License">License</a><br/><hr/>
 <a href="#People">People</a>
 </div>
-<% zebra("R.version",R.version) %><br><hr>
-<% zebra("search()",search()) %><br><hr>
-<% zebra(".libPaths()",.libPaths()) %><br><hr>
-<% zebra("options()",options()) %><br><hr>
-<% zebra("Sys.getenv()",as.list(Sys.getenv())) %><br><hr>
-<% zebra("Sys.info()",as.list(Sys.info())) %><br><hr>
-<% zebra(".Machine",.Machine) %><br><hr>
-<% zebra(".Platform",.Platform) %><br><hr>
+<% zebra('R.version',R.version) %><br/><hr/>
+<% zebra('search()',search()) %><br/><hr/>
+<% zebra('.libPaths()',.libPaths()) %><br/><hr/>
+<% zebra('options()',options()) %><br/><hr/>
+<% zebra('Sys.getenv()',as.list(Sys.getenv())) %><br/><hr/>
+<% zebra('Sys.info()',as.list(Sys.info())) %><br/><hr/>
+<% zebra('.Machine',.Machine) %><br/><hr/>
+<% zebra('.Platform',.Platform) %><br/><hr/>
 <h1><a name="Attached_Packages"></a>Attached Packages</h1>
-<% lapply(sub("package:","",search()[grep("package:",search())]),zebrifyPackage) %>
+<% lapply(sub('package:','',search()[grep('package:',search())]),zebrifyPackage) %>
 <h1><a name="Installed_Packages"></a>Installed Packages</h1>
-<% lapply(attr(installed.packages(),"dimnames")[[1]],zebrifyPackage) %>
+<% lapply(attr(installed.packages(),'dimnames')[[1]],zebrifyPackage) %>
 <h2><a name="License"></a>License</h2>
 <pre>
 Copyright 2005  The Apache Software Foundation
@@ -92,9 +98,9 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-</pre><hr>
+</pre><hr/>
 <h2><a name="People"></a>People</h2>
-<p>Thanks to the following people for giving advice, noticing when things were broken, an such. If I've forgotten to mention you, please email me.</p>
+<p>Thanks to the following people for their contributions, giving advice, noticing when things were broken and such. If I've forgotten to mention you, please email me.</p>
 <pre>
 	Gregoire Thomas
 	Jan de Leeuw

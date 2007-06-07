@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "mod_R/1.0.0"
+#define MOD_R_VERSION "1.0.0"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -52,6 +52,15 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include "apr_hash.h"
 
 /*
+ * libapreq headers
+ */
+#include "apreq.h"
+#include "apreq_cookie.h"
+#include "apreq_parser.h"
+#include "apreq_param.h"
+#include "apreq_util.h"
+
+/*
  * R headers
  */
 #include <R.h>
@@ -64,6 +73,7 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include <R_ext/Parse.h>
 #include <R_ext/Callbacks.h>
 #include <R_ext/Rdynload.h>
+#include <R_ext/Memory.h>
 
 /*************************************************************************
  *
@@ -114,13 +124,16 @@ static SEXP MR_RApacheEnv;
  * RApache code; evaluated in the above environment.
  */
 
-static char MR_RApacheSource[] = "\
+static const char const MR_RApacheSource[] = "\
 setHeader <- function(header,value) .Call('RApache_setHeader',header,value)\n\
 setContentType <- function(type) .Call('RApache_setContentType',type)\n\
 setCookie <- function(name=NULL,value='',expires=NULL,path=NULL,domain=NULL,...){\n\
 	args <- list(...)\n\
 	therest <- ifelse(length(args)>0,paste(paste(names(args),args,sep='='),collapse=';'),'')\n\
-	.Call('RApache_setCookie',name,value,expires,path,domain,therest)}";
+	.Call('RApache_setCookie',name,value,expires,path,domain,therest)}\n\
+entityEncode <- function(str) .Call('RApache_entityEnDecode',str,TRUE)\n\
+entityDecode <- function(str) .Call('RApache_entityEnDecode',str,FALSE)\n\
+RApacheInfo <- function() .Call('RApache_RApacheInfo')";
 
 /*************************************************************************
  *
@@ -208,7 +221,7 @@ static void WriteConsoleEx(char *, int, int);
 static void RegisterCallSymbols();
 static SEXP NewLogical(int tf);
 static SEXP NewEnv(SEXP enclos);
-static int ExecRCode(const char *code,SEXP env);
+static int ExecRCode(const char *code,SEXP env, int *error);
 static SEXP ExecFun1Arg(SEXP fun, SEXP arg);
 static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize);
 static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *fileParsed);
@@ -424,7 +437,7 @@ static const char *AP_cmd_RPreserveEnv(cmd_parms *cmd, void *conf){
  *************************************************************************/
 
 static int AP_hook_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s){
-	ap_add_version_component(pconf,MOD_R_VERSION);
+	ap_add_version_component(pconf,apr_psprintf(pconf,"mod_R/%s",MOD_R_VERSION));
 	ap_add_version_component(pconf,apr_psprintf(pconf,"R/%s.%s",R_MAJOR,R_MINOR));
 	return OK;
 }
@@ -447,10 +460,16 @@ static int AP_hook_request_handler (request_rec *r)
 	 */
 	if (strcmp(r->handler,"r-handler")==0) handlerType = R_HANDLER;
 	if (strcmp(r->handler,"r-script")==0) handlerType = R_SCRIPT;
-	if (strcmp(r->handler,"r-info")==0) return RApacheInfo();
+	if (strcmp(r->handler,"r-info")==0) handlerType = R_INFO;
 	if (!handlerType) return DECLINED;
 
 	SetUpIO(r);
+
+	if (handlerType == R_INFO){
+		int val = RApacheInfo();
+		TearDownIO();
+		return val;
+	}
 
 	/* Get cached handler object from request */
 	h = GetHandlerFromRequest(r);
@@ -662,6 +681,9 @@ static void init_R(apr_pool_t *p){
 		exit(-1);
 	}
 
+	/* Initialize libapreq2 */
+	apreq_initialize(MR_Pool);
+
 	/* Lastly, now redirect R's inputs and outputs */
 	R_Consolefile = NULL;
 	R_Outputfile = NULL;
@@ -797,20 +819,22 @@ static SEXP NewEnv(SEXP enclos){
 	return env;
 }
 
-static int ExecRCode(const char *code, SEXP env){
+static int ExecRCode(const char *code, SEXP env, int *error){
 	ParseStatus status;
 	SEXP cmd, expr, fun;
-	int i, errorOccurred, retval = 1;
+	int i, errorOccurred=1, retval = 1;
 
 	PROTECT(cmd = allocVector(STRSXP, 1));
 	SET_STRING_ELT(cmd, 0, mkChar(code));
 
+	/* fprintf(stderr,"ExecRCode(%s)\n",code); */
 	PROTECT(expr = R_ParseVector(cmd, -1, &status,R_NilValue));
 
 	switch (status){
 		case PARSE_OK:
 			for(i = 0; i < length(expr); i++){
 				R_tryEval(VECTOR_ELT(expr, i),env,&errorOccurred);
+				if (error) *error = errorOccurred;
 				if (errorOccurred){
 					retval=0;
 					break;
@@ -1025,24 +1049,29 @@ static SEXP EvalExprs(SEXP exprs, SEXP env, int *error){
 static void InitRApacheEnv(){
 	ParseStatus status;
 	SEXP cmd, expr, fun;
-	int i, errorOccurred;
+	int i, error=1;
 
 	R_PreserveObject(MR_RApacheEnv = NewEnv(R_GlobalEnv));
-	ExecRCode(MR_RApacheSource,MR_RApacheEnv);
+	ExecRCode(MR_RApacheSource,MR_RApacheEnv,&error);
+	if (error){
+		fprintf(stderr,"Error eval'ing MR_RApacheSource!\n\n");
+		exit(-1);
+	}
 	R_LockEnvironment(MR_RApacheEnv, TRUE);
 
 	/* For debugging */
 	defineVar(install("RApacheEnv"),MR_RApacheEnv,R_GlobalEnv);
-	/* ExecRCode("gctorture()",R_GlobalEnv); */
+	/* ExecRCode("gctorture()",R_GlobalEnv,&error); */
 
 }
 
 static int OnStartupCallback(void *rec, const char *key, const char *value){
 	SEXP e, val;
-	int error;
+	int error=1;
 
 	if (strcmp(key,"eval")==0){
-		if (!ExecRCode(value,R_GlobalEnv)){
+		ExecRCode(value,R_GlobalEnv,&error);
+		if (error){
 			printf("\nError evaluating '%s'! Check the error log.\n\n",value);
 			exit(-1);
 		};
@@ -1079,8 +1108,10 @@ static int OnStartupCallback(void *rec, const char *key, const char *value){
 		val = R_tryEval(e,R_GlobalEnv, &error);
 		UNPROTECT(1);
 		if (error || !isLogical(val) || (LOGICAL(val)[0] == FALSE)){
-			printf("\nError loading package %s! Check the error log.\n\n",value);
-			ExecRCode("cat(\".libPaths() returns\n\"); print(.libPaths())",R_GlobalEnv);
+			error=1;
+			printf("\nError loading package %s: ",value);
+			ExecRCode(apr_psprintf(MR_Pool,"if(\"%s\" %%in%% attributes(installed.packages())$dimnames[[1]]) cat('it is installed but a problem occurred when loading!\\n\\n') else cat('not installed!\\n\\n');",value,value),R_GlobalEnv,&error);
+			ExecRCode("cat(\"Library Paths:\n\"); print(.libPaths()); cat(\"\n\n\");",R_GlobalEnv,&error);
 			exit(-1);
 		}
 	}
@@ -1136,8 +1167,112 @@ static SEXP MyfindFunInPackage(SEXP symb, char *package){
 	return R_UnboundValue;
 }
 
+#define PUTS(s) ap_fputs(MR_Request->output_filters,MR_BBout,s)
+#define EXEC(s) ExecRCode(s,envir,&errorOccurred); if (errorOccurred) return RApacheError(MR_Request,NULL)
 static int RApacheInfo()
 {
+	SEXP envir = NewEnv(MR_RApacheEnv);
+	int errorOccurred=1;
+	ap_set_content_type( MR_Request, "text/html");
+
+EXEC("hrefify <- function(title) gsub('[\\\\.()]','_',title,perl=TRUE)");
+EXEC("scrub <- function(str){ str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); str }");
+EXEC("cl<-'e'");
+EXEC("zeblist <- function(i,l){ cl <<- ifelse(cl=='e','o','e'); cat('<tr class=\"',cl,'\"><td class=\"l\">',names(l)[i],'</td><td>',scrub(as.character(l[[i]])),'</td></tr>\\n',sep='') }");
+EXEC("zebary <- function(i){ cl <<- ifelse(cl=='e','o','e'); cat('<tr class=\"',cl,'\"><td>',as.character(i),'</td></tr>\\n',sep='') }");
+EXEC("zebra <- function(title,l){ cat('<h2><a name=\"',hrefify(title),'\"> </a>',title,'</h2>\\n<table><tbody>',sep=''); ifelse(is.list(l), lapply(1:length(l),zeblist,l), lapply(l,zebary)); cat('</tbody></table>\\n') }");
+EXEC(" zebrifyPackage <-function(package){ zebra(package,unclass(packageDescription(package))); cat('<br/><hr/>\\n') }");
+
+/* Header */
+PUTS("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"DTD/xhtml1-transitional.dtd\">");
+PUTS("<html><head>");
+PUTS("<style type=\"text/css\">");
+PUTS("body { font-family: \"lucida grande\",verdana,sans-serif; margin-left: 210px; margin-right: 18px; }");
+PUTS("table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }");
+PUTS("td { border-bottom:1px solid #d9d9d9; border-left:1px solid #d9d9d9; border-spacing: 0px; padding: 3px 8px; }");
+PUTS("td.l { font-weight: bold; width: 10%; }");
+PUTS("tr.e { background-color: #eeeeee; border-spacing: 0px; }");
+PUTS("tr.o { background-color: #ffffff; border-spacing: 0px; }");
+PUTS("div a { text-decoration: none; color: white; }");
+PUTS("a:hover { color: #8897be; background: white; }");
+PUTS("tr:hover { background: #8897be; color: white; }");
+PUTS("img.map { position: fixed; border: 0px; left: 50px; right: auto; top: 10px; }");
+PUTS("div.map { background: #8897be; font-weight: bold; color: white; position: fixed; bottom: 30px; height: auto; left: 15px; right: auto; top: 110px; width: 150px; padding: 0 13px; text-align: right; font-size: 12pt; }");
+PUTS("div.map p { font-size: 10pt; font-family: serif; font-style: italic; }");
+PUTS("div.h { font-size: 20pt; font-weight: bold; }");
+PUTS("hr {background-color: #cccccc; border: 0px; height: 1px; color: #000000;}");
+PUTS("</style>");
+PUTS("<title>RApacheInfo()</title>");
+PUTS("<meta name=\"ROBOTS\" content=\"NOINDEX,NOFOLLOW,NOARCHIVE\" />");
+PUTS("</head>");
+PUTS("<body>");
+PUTS("<a name=\"Top\"> </a>");
+PUTS("<a href=\"http://www.r-project.org/\"><img class=\"map\" alt=\"R Language Home Page\" src=\"http://www.r-project.org/Rlogo.jpg\"/></a>");
+
+/* RApache version info */
+PUTS("<div class=\"h\">RApache version "); PUTS(MOD_R_VERSION); PUTS("<br/>"); PUTS(SVNID); PUTS("</div>");
+
+PUTS("<div class=\"map\">");
+PUTS("<p>jump to:</p>");
+PUTS("<a href=\"#Top\">Top</a><br/><hr/>");
+
+PUTS("<a href=\"#"); EXEC("cat(hrefify('R.version'))"); PUTS("\">R.version</a><br/>");
+PUTS("<a href=\"#"); EXEC("cat(hrefify('search()'))"); PUTS("\">search()</a><br/>");
+PUTS("<a href=\"#"); EXEC("cat(hrefify('.libPaths()'))"); PUTS("\">.libPaths()</a><br/>");
+PUTS("<a href=\"#"); EXEC("cat(hrefify('options()'))"); PUTS("\">options()</a><br/>");
+PUTS("<a href=\"#"); EXEC("cat(hrefify('Sys.getenv()'))"); PUTS("\">Sys.getenv()</a><br/>");
+PUTS("<a href=\"#"); EXEC("cat(hrefify('Sys.info()'))"); PUTS("\">Sys.info()</a><br/>");
+PUTS("<a href=\"#"); EXEC("cat(hrefify('.Machine'))"); PUTS("\">.Machine</a><br/>");
+PUTS("<a href=\"#"); EXEC("cat(hrefify('.Platform'))"); PUTS("\">.Platform</a><br/><hr/>");
+
+PUTS("<a href=\"#Attached_Packages\">Attached Packages</a><br/><hr/>");
+PUTS("<a href=\"#Installed_Packages\">Installed Packages</a><br/><hr/>");
+PUTS("<a href=\"#License\">License</a><br/><hr/>");
+PUTS("<a href=\"#People\">People</a>");
+PUTS("</div>");
+
+EXEC("zebra('R.version',R.version)"); PUTS("<br/><hr/>");
+EXEC("zebra('search()',search())"); PUTS("<br/><hr/>");
+EXEC("zebra('.libPaths()',.libPaths())"); PUTS("<br/><hr/>");
+EXEC("zebra('options()',options())"); PUTS("<br/><hr/>");
+EXEC("zebra('Sys.getenv()',as.list(Sys.getenv()))"); PUTS("<br/><hr/>");
+EXEC("zebra('Sys.info()',as.list(Sys.info()))"); PUTS("<br/><hr/>");
+EXEC("zebra('.Machine',.Machine)"); PUTS("<br/><hr/>");
+EXEC("zebra('.Platform',.Platform)"); PUTS("<br/><hr/>");
+
+PUTS("<h1><a name=\"Attached_Packages\"></a>Attached Packages</h1>");
+EXEC("lapply(sub('package:','',search()[grep('package:',search())]),zebrifyPackage)");
+PUTS("<h1><a name=\"Installed_Packages\"></a>Installed Packages</h1>");
+EXEC("lapply(attr(installed.packages(),'dimnames')[[1]],zebrifyPackage)");
+
+/* Footer */
+PUTS("<h2><a name=\"License\"></a>License</h2>");
+PUTS("<pre>");
+PUTS("Copyright 2005  The Apache Software Foundation\n");
+PUTS("\n");
+PUTS("Licensed under the Apache License, Version 2.0 (the \"License\");\n");
+PUTS("you may not use this file except in compliance with the License.\n");
+PUTS("You may obtain a copy of the License at\n");
+PUTS("\n");
+PUTS("  <a href=\"http://www.apache.org/licenses/LICENSE-2.0\">http://www.apache.org/licenses/LICENSE-2.0\"</a>\n");
+PUTS("\n");
+PUTS("Unless required by applicable law or agreed to in writing, software\n");
+PUTS("distributed under the License is distributed on an \"AS IS\" BASIS,\n");
+PUTS("WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n");
+PUTS("See the License for the specific language governing permissions and\n");
+PUTS("limitations under the License.\n");
+PUTS("</pre><hr/>\n");
+PUTS("<h2><a name=\"People\"></a>People</h2>\n");
+PUTS("<p>Thanks to the following people for their contributions, giving advice, noticing when things were broken and such. If I've forgotten to mention you, please email me.</p>\n");
+PUTS("<pre>\n");
+PUTS("	Gregoire Thomas\n");
+PUTS("	Jan de Leeuw\n");
+PUTS("	Keven E. Thorpe\n");
+PUTS("	Jeremy Stephens\n");
+PUTS("</pre>");
+PUTS("</body></html>");
+
+return DONE;
 }
 
 /*************************************************************************
@@ -1222,6 +1357,74 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 	return NewLogical(TRUE);
 }
 
+/* HTML Entity en/decoding */
+static SEXP encode(char *str){
+	SEXP retstr;
+	char *buf;
+	int len;
+
+	len = strlen(str);
+	buf = R_alloc(3*len+1,sizeof(char));
+	if (!buf) return R_NilValue;
+
+	if (apreq_encode(buf,str,len)){
+		retstr = mkChar(buf);
+	} else {
+		retstr = R_NilValue;
+	}
+	/* free(buf); */
+
+	return retstr;
+}
+static SEXP decode(char *str){
+	SEXP retstr;
+	char *buf;
+	apr_size_t len, blen;
+
+	len = strlen(str);
+	buf = R_alloc(len,sizeof(char));
+	if (!buf) return R_NilValue;
+
+	if (apreq_decode(buf,&blen,str,len) == APR_SUCCESS){
+		retstr = mkChar(buf);
+	} else {
+		retstr = R_NilValue;
+	}
+	/* free(buf); */
+
+	return retstr;
+}
+
+SEXP RApache_entityEnDecode(SEXP str,SEXP enc){
+	int vlen, i;
+	SEXP new_str;
+	SEXP (*endecode)(char *str);
+
+	if (IS_LOGICAL(enc) && LOGICAL(enc)[0] == TRUE){
+		endecode = encode;
+	} else {
+		endecode = decode;
+	}
+
+	if (!IS_CHARACTER(str)){
+		warning("RApache_entityEnDecode called with a non-character object!");
+		return R_NilValue;
+	}
+	vlen = LENGTH(str);
+
+	PROTECT(new_str = NEW_STRING(vlen));
+	for (i = 0; i < vlen; i++)
+		CHARACTER_DATA(new_str)[i] = endecode(CHAR(STRING_PTR(str)[i]));
+	UNPROTECT(1);
+
+	return new_str;
+}
+
+SEXP RApache_RApacheInfo(){
+	RApacheInfo();
+	return R_NilValue;
+}
+
 /*************************************************************************
  *
  * Magic to allow mod_R to export C functions usable in .Call()
@@ -1299,6 +1502,8 @@ static void RegisterCallSymbols() {
 	{"RApache_setHeader", (DL_FUNC) &RApache_setHeader, 2},
 	{"RApache_setContentType", (DL_FUNC) &RApache_setContentType, 1},
 	{"RApache_setCookie",(DL_FUNC) &RApache_setCookie,6},
+	{"RApache_entityEnDecode",(DL_FUNC) &RApache_entityEnDecode,2},
+	{"RApache_RApacheInfo",(DL_FUNC) &RApache_RApacheInfo,0},
 	{NULL, NULL, 0}
 	};
 	/* we add those to the base as we have no specific entry (yet?) */
