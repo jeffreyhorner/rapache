@@ -1200,6 +1200,7 @@ PUTS("img.map { position: fixed; border: 0px; left: 50px; right: auto; top: 10px
 PUTS("div.map { background: #8897be; font-weight: bold; color: white; position: fixed; bottom: 30px; height: auto; left: 15px; right: auto; top: 110px; width: 150px; padding: 0 13px; text-align: right; font-size: 12pt; }");
 PUTS("div.map p { font-size: 10pt; font-family: serif; font-style: italic; }");
 PUTS("div.h { font-size: 20pt; font-weight: bold; }");
+PUTS("h4 { font-size: 10pt; font-weight: bold; color: grey;}");
 PUTS("hr {background-color: #cccccc; border: 0px; height: 1px; color: #000000;}");
 PUTS("</style>");
 PUTS("<title>RApacheInfo()</title>");
@@ -1210,7 +1211,7 @@ PUTS("<a name=\"Top\"> </a>");
 PUTS("<a href=\"http://www.r-project.org/\"><img class=\"map\" alt=\"R Language Home Page\" src=\"http://www.r-project.org/Rlogo.jpg\"/></a>");
 
 /* RApache version info */
-PUTS("<div class=\"h\">RApache version "); PUTS(MOD_R_VERSION); PUTS("<br/>"); PUTS(SVNID); PUTS("</div>");
+PUTS("<div class=\"h\">RApache version "); PUTS(MOD_R_VERSION); PUTS("<h4>"); PUTS(SVNID); PUTS("</h4></div>");
 
 PUTS("<div class=\"map\">");
 PUTS("<p>jump to:</p>");
