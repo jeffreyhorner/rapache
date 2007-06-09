@@ -75,6 +75,48 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include <R_ext/Rdynload.h>
 #include <R_ext/Memory.h>
 
+
+/*************************************************************************
+ *
+ * RApache types
+ *
+ *************************************************************************/
+typedef enum {
+	R_HANDLER = 1,
+	R_SCRIPT,
+	R_INFO
+} RApacheHandlerType;
+
+typedef struct {
+	char *file;
+	char *function;
+	char *package;
+	char *handlerKey;
+	int preserveEnv;
+} RApacheDirective;
+
+typedef struct {
+	SEXP exprs;
+	apr_time_t mtime;
+} RApacheParsedFile;
+
+typedef struct {
+	SEXP expr;
+	SEXP envir;
+	RApacheParsedFile *parsedFile;
+	RApacheDirective *directive;
+} RApacheHandler;
+
+typedef struct {
+	request_rec *r;
+	int parsedPost;
+	int readStart;
+	apr_table_t *argsTable;
+	apr_table_t *postTable;
+	apr_table_t *cookiesTable;
+	SEXP uploads;
+} RApacheRequest;
+
 /*************************************************************************
  *
  * Globals; prefixed with MR_ (if R ever becomes threaded, or can at least
@@ -83,12 +125,12 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
  *************************************************************************/
 
 /* Current request_rec */
-static request_rec *MR_Request = NULL;
+static RApacheRequest MR_Request = { NULL, 0, 0, NULL, NULL, NULL, NULL };
 
 /* Option to turn on errors in output */
 static int MR_OutputErrors = 0;
-static char *MR_ErrorPrefix = "<pre style=\"background-color:#eee; padding 10px; font-size: 11px\"><code>";
-static char *MR_ErrorSuffix = "</code></pre>";
+static const char MR_ErrorPrefix[] = "<pre style=\"background-color:#eee; padding 10px; font-size: 11px\"><code>";
+static const char MR_ErrorSuffix[] = "</code></pre>";
 
 /* Number of times apache has parsed config files; we'll do stuff on second pass */
 static int MR_ConfigPass = 1;
@@ -124,7 +166,7 @@ static SEXP MR_RApacheEnv;
  * RApache code; evaluated in the above environment.
  */
 
-static const char const MR_RApacheSource[] = "\
+static const char MR_RApacheSource[] = "\
 setHeader <- function(header,value) .Call('RApache_setHeader',header,value)\n\
 setContentType <- function(type) .Call('RApache_setContentType',type)\n\
 setCookie <- function(name=NULL,value='',expires=NULL,path=NULL,domain=NULL,...){\n\
@@ -135,36 +177,19 @@ entityEncode <- function(str) .Call('RApache_entityEnDecode',str,TRUE)\n\
 entityDecode <- function(str) .Call('RApache_entityEnDecode',str,FALSE)\n\
 RApacheInfo <- function() .Call('RApache_RApacheInfo')";
 
-/*************************************************************************
- *
- * RApache types
- *
- *************************************************************************/
-typedef enum {
-	R_HANDLER = 1,
-	R_SCRIPT,
-	R_INFO
-} RApacheHandlerType;
+/*
+ * Expression list to inject CGI vars into an environment
+ */
+static SEXP MR_CGIexprs;
 
-typedef struct {
-	char *file;
-	char *function;
-	char *package;
-	char *handlerKey;
-	int preserveEnv;
-} RApacheDirective;
-
-typedef struct {
-	SEXP exprs;
-	apr_time_t mtime;
-} RApacheParsedFile;
-
-typedef struct {
-	SEXP expr;
-	SEXP envir;
-	RApacheParsedFile *parsedFile;
-	RApacheDirective *directive;
-} RApacheHandler;
+static const char *MR_CGIvars[] = {
+	"GET", "RApache_parseGet",
+/*	"_COOKIES", "RApache_parseCookies",
+	"_POST", "RApache_parsePost",
+	"_SERVER", "RApache_parseRequest",
+	"_FILES", "RApache_parsePost", */
+	NULL
+};
 
 /*************************************************************************
  *
@@ -235,6 +260,9 @@ static int OnStartupCallback(void *rec, const char *key, const char *value);
 static SEXP MyfindFun(SEXP fun, SEXP envir);
 static SEXP MyfindFunInPackage(SEXP fun, char *package);
 static int RApacheInfo();
+static SEXP AprTableToList(apr_table_t *);
+static void InitCGIexprs();
+static void InjectCGIvars(SEXP env);
 
 /*************************************************************************
  *
@@ -482,6 +510,7 @@ static int AP_hook_request_handler (request_rec *r)
 	} else {
 	   h->envir = NewEnv(MR_RApacheEnv);
 	}
+	InjectCGIvars(h->envir);
 
 	/* Prepare file if needed */
 	if (h->directive->file){
@@ -586,7 +615,7 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
 
 static void SetUpIO(const request_rec *r){
 	/* Set current request_rec */
-	MR_Request = (request_rec *)r;
+	MR_Request.r = (request_rec *)r;
 
 	/* Init reading */
 	MR_BBin = NULL;
@@ -595,6 +624,7 @@ static void SetUpIO(const request_rec *r){
 	MR_BBout = apr_brigade_create(r->pool, r->connection->bucket_alloc);
 }
 
+/* No need to free any memory here since it was allocated out of the request pool */
 static void TearDownIO(){
 	/* Clean up reading */
 	if (MR_BBin){
@@ -605,13 +635,13 @@ static void TearDownIO(){
 	/* Clean up writing */
 	if (MR_BBout){
 		if(!APR_BRIGADE_EMPTY(MR_BBout)){
-			ap_filter_flush(MR_BBout,MR_Request->output_filters);
+			ap_filter_flush(MR_BBout,MR_Request.r->output_filters);
 		}
 		apr_brigade_cleanup(MR_BBout);
 		apr_brigade_destroy(MR_BBout);
 	}
 	MR_BBout = NULL;
-	MR_Request = NULL;
+	bzero(&MR_Request,sizeof(RApacheRequest));
 }
 
 /* Can be called with NULL msg to force proper request handler return
@@ -663,6 +693,8 @@ static void init_R(apr_pool_t *p){
 	RegisterCallSymbols();
 
 	InitRApacheEnv();
+
+	InitCGIexprs(); 
 
 	InitRApachePool(); /* possibly done already if REvalOnStartup or RSourceOnStartup set */
 
@@ -786,14 +818,14 @@ void InitTempDir(apr_pool_t *p)
 }
 
 void WriteConsoleEx(char *buf, int size, int error){
-	if (!error) ap_fwrite(MR_Request->output_filters,MR_BBout,buf,size);
+	if (!error) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
 	else if (MR_OutputErrors) {
-		ap_fputs(MR_Request->output_filters,MR_BBout,MR_ErrorPrefix);
-		ap_fwrite(MR_Request->output_filters,MR_BBout,buf,size);
-		ap_fputs(MR_Request->output_filters,MR_BBout,MR_ErrorSuffix);
+		ap_fputs(MR_Request.r->output_filters,MR_BBout,MR_ErrorPrefix);
+		ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
+		ap_fputs(MR_Request.r->output_filters,MR_BBout,MR_ErrorSuffix);
 	} else {
 		/* We assume that buf is null-terminated */
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request,"%s",buf);
+		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"%s",buf);
 	}
 }
 static SEXP NewLogical(int tf) {
@@ -1017,10 +1049,11 @@ typedef struct {
 } ProtectedEvalData;
 
 static void protectedEval(void *d){
-	int i;
+	int i, len;
 	ProtectedEvalData *data = (ProtectedEvalData *)d;
+	len = length(data->exprs);
 
-	for(i = 0; i < length(data->exprs); i++){
+	for(i = 0; i < len; i++){
 		data->val = eval(VECTOR_ELT(data->exprs, i),data->env);
 	}
 	PROTECT(data->val);
@@ -1167,13 +1200,13 @@ static SEXP MyfindFunInPackage(SEXP symb, char *package){
 	return R_UnboundValue;
 }
 
-#define PUTS(s) ap_fputs(MR_Request->output_filters,MR_BBout,s)
-#define EXEC(s) ExecRCode(s,envir,&errorOccurred); if (errorOccurred) return RApacheError(MR_Request,NULL)
+#define PUTS(s) ap_fputs(MR_Request.r->output_filters,MR_BBout,s)
+#define EXEC(s) ExecRCode(s,envir,&errorOccurred); if (errorOccurred) return RApacheError(MR_Request.r,NULL)
 static int RApacheInfo()
 {
 	SEXP envir = NewEnv(MR_RApacheEnv);
 	int errorOccurred=1;
-	ap_set_content_type( MR_Request, "text/html");
+	ap_set_content_type( MR_Request.r, "text/html");
 
 EXEC("hrefify <- function(title) gsub('[\\\\.()]','_',title,perl=TRUE)");
 EXEC("scrub <- function(str){ str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); str }");
@@ -1275,6 +1308,97 @@ PUTS("</body></html>");
 
 return DONE;
 }
+#undef PUTS
+#undef EXEC
+
+struct TableCtx {
+	SEXP list;
+	SEXP names;
+	int i;
+};
+
+static int TableCallback(void *datum,const char *n, const char *v){
+	struct TableCtx *ctx = (struct TableCtx *)datum;
+	SEXP value;
+
+	PROTECT(value = NEW_CHARACTER(1));
+	SET_ELEMENT(value,0,mkChar(v));
+
+	SET_ELEMENT(ctx->names,ctx->i,mkChar(n));
+	SET_ELEMENT(ctx->list,ctx->i,value);
+	UNPROTECT(1);
+	ctx->i += 1;
+}
+
+static SEXP AprTableToList(apr_table_t *t){
+	int len = apr_table_elts(t)->nelts;
+	struct TableCtx ctx;
+
+	if (!len) return R_NilValue;
+
+	PROTECT(ctx.list = NEW_LIST(len));
+	PROTECT(ctx.names = NEW_STRING(len));
+	ctx.i = 0;
+	apr_table_do(TableCallback,(void *)&ctx,t,NULL);
+	SET_NAMES(ctx.list,ctx.names);
+	UNPROTECT(2);
+	return ctx.list;
+}
+
+static void InitCGIexprs(){
+	int i, numVars=0;
+	SEXP symdA, symdC, expdA, expdC, str;
+
+	PROTECT(symdA = findFun(install("delayedAssign"),R_GlobalEnv));
+	PROTECT(symdC = findFun(install(".Call"),R_GlobalEnv));
+
+	for (i = 0; MR_CGIvars[i] ; i+=2){
+		numVars++;
+	}
+
+	PROTECT(MR_CGIexprs = allocVector(EXPRSXP,numVars));
+	numVars = 0;
+	for (i = 0; MR_CGIvars[i] ; i+=2){
+
+		/* create .Call('bar') expr */
+		PROTECT(str = NEW_STRING(1));
+		CHARACTER_DATA(str)[0] = mkChar(MR_CGIvars[i+1]);
+		PROTECT(expdC = allocVector(LANGSXP,2));
+		SETCAR(expdC,symdC);
+		SETCAR(CDR(expdC),str);
+
+		/* create delayedAssign('foo',.Call('bar'),NULL,NULL); */
+		PROTECT(str = NEW_STRING(1));
+		CHARACTER_DATA(str)[0] = mkChar(MR_CGIvars[i]);
+		PROTECT(expdA = allocVector(LANGSXP,5));
+		SETCAR(expdA,symdA);
+		SETCAR(CDR(expdA),str);
+		SETCAR(CDR(CDR(expdA)), expdC);
+		SETCAR(CDR(CDR(CDR(expdA))), R_NilValue);
+		SETCAR(CDR(CDR(CDR(CDR(expdA)))), R_NilValue);
+
+		SET_VECTOR_ELT(MR_CGIexprs,numVars++,expdA);
+	}
+	UNPROTECT(3 + (4 * numVars));
+	R_PreserveObject(MR_CGIexprs);
+}
+
+static void InjectCGIvars(SEXP env){
+	int i, error=1,len;
+	SEXP expr;
+	len = LENGTH(MR_CGIexprs);
+	for (i = 0; i < len; i++){
+		expr = VECTOR_ELT(MR_CGIexprs,i);
+		SETCAR(CDR(CDR(CDR(expr))), env);
+		SETCAR(CDR(CDR(CDR(CDR(expr)))), env);
+	}
+	PROTECT(env);
+	EvalExprs(MR_CGIexprs,env,&error);
+	UNPROTECT(1);
+	if (error){
+		fprintf(stderr,"Could not inject CGI VARS!!!!\n");
+	}
+}
 
 /*************************************************************************
  *
@@ -1289,11 +1413,11 @@ SEXP RApache_setHeader(SEXP header, SEXP value){
 	if (!key) return NewLogical(FALSE);
    
 	if (value == R_NilValue){
-		apr_table_unset(MR_Request->headers_out,key);
+		apr_table_unset(MR_Request.r->headers_out,key);
 	} else {
 		val = CHAR(STRING_PTR(value)[0]);
 		if (!val) return NewLogical(FALSE);
-		apr_table_set(MR_Request->headers_out,key,val);
+		apr_table_set(MR_Request.r->headers_out,key,val);
 	}
 
 	return NewLogical(TRUE);
@@ -1304,7 +1428,7 @@ SEXP RApache_setContentType(SEXP stype){
 	if (stype == R_NilValue) return NewLogical(FALSE);
 	ctype = CHAR(STRING_PTR(stype)[0]);
 	if (!ctype) return NewLogical(FALSE);
-	ap_set_content_type( MR_Request, apr_pstrdup(MR_Request->pool,ctype));
+	ap_set_content_type( MR_Request.r, apr_pstrdup(MR_Request.r->pool,ctype));
 	return NewLogical(TRUE);
 }
 
@@ -1322,7 +1446,7 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 		value = "";
 	else value = CHAR(STRING_PTR(svalue)[0]);
 
-	cookie = apr_pstrcat(MR_Request->pool,name,"=",value);
+	cookie = apr_pstrcat(MR_Request.r->pool,name,"=",value);
 
 	/* expires */
 	if (sexpires != R_NilValue && inherits(sexpires,"POSIXt") ){
@@ -1335,25 +1459,25 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 		apr_time_ansi_put(&texpires,(time_t)(REAL(tmpExpires)[0]));
 		apr_rfc822_date(strExpires, texpires);
 
-		cookie = apr_pstrcat(MR_Request->pool,cookie,";expires=",strExpires);
+		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";expires=",strExpires);
 	}
 
 	/* path */
 	if (spath != R_NilValue && isString(spath))
-		cookie = apr_pstrcat(MR_Request->pool,cookie,";path=",CHAR(STRING_PTR(spath)[0]));
+		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";path=",CHAR(STRING_PTR(spath)[0]));
 	/* domain */
 	if (sdomain != R_NilValue && isString(sdomain))
-		cookie = apr_pstrcat(MR_Request->pool,cookie,";domain=",CHAR(STRING_PTR(sdomain)[0]));
+		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";domain=",CHAR(STRING_PTR(sdomain)[0]));
 	/* therest */
 	if (therest != R_NilValue && isString(therest) && CHAR(STRING_PTR(therest)[0])[0] != '\0'){
 		fprintf(stderr,"therest is <%s>\n",CHAR(STRING_PTR(therest)[0]));
-		cookie = apr_pstrcat(MR_Request->pool,cookie,";",CHAR(STRING_PTR(therest)[0]));
+		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";",CHAR(STRING_PTR(therest)[0]));
 	}
 
-	if (!apr_table_get(MR_Request->headers_out,"Cache-Control"))
-		apr_table_set(MR_Request->headers_out,"Cache-Control","nocache=\"set-cookie\"");
+	if (!apr_table_get(MR_Request.r->headers_out,"Cache-Control"))
+		apr_table_set(MR_Request.r->headers_out,"Cache-Control","nocache=\"set-cookie\"");
 
-	apr_table_set(MR_Request->headers_out,"Set-Cookie",cookie);
+	apr_table_set(MR_Request.r->headers_out,"Set-Cookie",cookie);
 
 	return NewLogical(TRUE);
 }
@@ -1424,6 +1548,22 @@ SEXP RApache_entityEnDecode(SEXP str,SEXP enc){
 SEXP RApache_RApacheInfo(){
 	RApacheInfo();
 	return R_NilValue;
+}
+
+SEXP RApache_parseGet() {
+	/* If we've already made the table, just hand it out again */
+	if (MR_Request.argsTable) return AprTableToList(MR_Request.argsTable);
+
+	/* Don't parse if there aren't an GET variables to parse */
+	if(!MR_Request.r->args) return R_NilValue;
+
+	/* First call: parse and return */
+	MR_Request.argsTable = apr_table_make(MR_Request.r->pool,APREQ_DEFAULT_NELTS);
+	apreq_parse_query_string(MR_Request.r->pool,MR_Request.argsTable,MR_Request.r->args);
+
+	/* TODO: error checking of argsTable here */
+
+	return AprTableToList(MR_Request.argsTable);
 }
 
 /*************************************************************************
@@ -1505,6 +1645,7 @@ static void RegisterCallSymbols() {
 	{"RApache_setCookie",(DL_FUNC) &RApache_setCookie,6},
 	{"RApache_entityEnDecode",(DL_FUNC) &RApache_entityEnDecode,2},
 	{"RApache_RApacheInfo",(DL_FUNC) &RApache_RApacheInfo,0},
+	{"RApache_parseGet",(DL_FUNC) &RApache_parseGet,0},
 	{NULL, NULL, 0}
 	};
 	/* we add those to the base as we have no specific entry (yet?) */
