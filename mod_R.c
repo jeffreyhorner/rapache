@@ -109,8 +109,8 @@ typedef struct {
 
 typedef struct {
 	request_rec *r;
-	int parsedPost;
-	int readStart;
+	int postParsed;
+	int readStarted;
 	apr_table_t *argsTable;
 	apr_table_t *postTable;
 	apr_table_t *cookiesTable;
@@ -153,6 +153,7 @@ static apr_table_t *MR_OnStartup = NULL;
 
 /*
  * Bucket brigades for reading and writing to client
+ * TODO: stuff these into MR_Request
  */
 static apr_bucket_brigade *MR_BBin;
 static apr_bucket_brigade *MR_BBout;
@@ -173,8 +174,8 @@ setCookie <- function(name=NULL,value='',expires=NULL,path=NULL,domain=NULL,...)
 	args <- list(...)\n\
 	therest <- ifelse(length(args)>0,paste(paste(names(args),args,sep='='),collapse=';'),'')\n\
 	.Call('RApache_setCookie',name,value,expires,path,domain,therest)}\n\
-entityEncode <- function(str) .Call('RApache_entityEnDecode',str,TRUE)\n\
-entityDecode <- function(str) .Call('RApache_entityEnDecode',str,FALSE)\n\
+urlEncode <- function(str) .Call('RApache_urlEnDecode',str,TRUE)\n\
+urlDecode <- function(str) .Call('RApache_urlEnDecode',str,FALSE)\n\
 RApacheInfo <- function() .Call('RApache_RApacheInfo')";
 
 /*
@@ -184,10 +185,10 @@ static SEXP MR_CGIexprs;
 
 static const char *MR_CGIvars[] = {
 	"GET", "RApache_parseGet",
-/*	"_COOKIES", "RApache_parseCookies",
-	"_POST", "RApache_parsePost",
-	"_SERVER", "RApache_parseRequest",
-	"_FILES", "RApache_parsePost", */
+	"COOKIES", "RApache_parseCookies",
+	"POST", "RApache_parsePost",
+	"FILES", "RApache_parseFiles",
+	/* "_SERVER", "RApache_parseRequest", */
 	NULL
 };
 
@@ -219,7 +220,7 @@ static const char *AP_cmd_ROutputErrors(cmd_parms *cmd, void *mconfig);
 static const char *AP_cmd_RPreserveEnv(cmd_parms *cmd, void *mconfig);
 
 /*
- * Hook functions
+ * Module Hook functions
  */
 static int AP_hook_post_config(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s);
 static void AP_hook_child_init(apr_pool_t *p, server_rec *s);
@@ -231,6 +232,15 @@ static int AP_hook_request_handler (request_rec *r);
 static apr_status_t AP_child_exit(void *data);
 
 /*
+ * R Error and Warning hooks
+ */
+void R_SetErrorHook(void (*hook)(SEXP, char *));
+void R_SetWarningHook(void (*hook)(SEXP, char *));
+static void RApacheErrorHook(SEXP, char *);
+static void RApacheWarningHook(SEXP, char *);
+
+
+/*
  * The Rest.
  */
 static void init_config_pass(apr_pool_t *p);
@@ -240,7 +250,8 @@ static int decode_return_value(SEXP ret);
 static void SetUpIO(const request_rec *);
 static void TearDownIO();
 static RApacheHandler *GetHandlerFromRequest(const request_rec *r);
-static int RApacheError(const request_rec *r, char *msg);
+static int RApacheResponseError(char *msg);
+static void RApacheError(char *msg);
 static void InitTempDir(apr_pool_t *p);
 static void WriteConsoleEx(char *, int, int);
 static void RegisterCallSymbols();
@@ -248,7 +259,7 @@ static SEXP NewLogical(int tf);
 static SEXP NewEnv(SEXP enclos);
 static int ExecRCode(const char *code,SEXP env, int *error);
 static SEXP ExecFun1Arg(SEXP fun, SEXP arg);
-static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize);
+static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize, ParseStatus *);
 static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *fileParsed);
 static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType, int fileParsed);
 static SEXP EvalExprs(SEXP exprs, SEXP env, int *error); /* more than one expression evaluator*/
@@ -502,7 +513,7 @@ static int AP_hook_request_handler (request_rec *r)
 	/* Get cached handler object from request */
 	h = GetHandlerFromRequest(r);
 
-	if (!h) return RApacheError(r,NULL);
+	if (!h) return RApacheResponseError(NULL);
 
 	/* Prepare calling environment */
 	if (h->directive->preserveEnv){
@@ -515,7 +526,7 @@ static int AP_hook_request_handler (request_rec *r)
 	/* Prepare file if needed */
 	if (h->directive->file){
 		fileParsed = 1;
-		if (!PrepareFileExprs(h,r,&fileParsed)) return RApacheError(r,NULL);
+		if (!PrepareFileExprs(h,r,&fileParsed)) return RApacheResponseError(NULL);
 
 		/* Do we need to eval parsed file?
 		 * Yes, if env is not preserved.
@@ -528,7 +539,7 @@ static int AP_hook_request_handler (request_rec *r)
 			error = 1;
 			val = EvalExprs(h->parsedFile->exprs,h->envir,&error);
 			UNPROTECT(2);
-			if (error) return RApacheError(r,apr_psprintf(r->pool,"Error evaluating %s!\n",h->directive->file));
+			if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error evaluating %s!\n",h->directive->file));
 		}
 	}
 
@@ -536,18 +547,18 @@ static int AP_hook_request_handler (request_rec *r)
 	/* Load package if needed */
 	/*jif (h->directive->package)
 		if (!Require(h->directive->package))
-			return RApacheError(r,apr_psprintf(r->pool,"Error in require(%s)!\n",h->directive->package));*/
+			return RApacheResponseError(apr_psprintf(r->pool,"Error in require(%s)!\n",h->directive->package));*/
 
 
 	/* Eval handler expression if set */
 	if (h->directive->function){
-		if (!PrepareHandlerExpr(h,r,handlerType,fileParsed)) return RApacheError(r,NULL);
+		if (!PrepareHandlerExpr(h,r,handlerType,fileParsed)) return RApacheResponseError(NULL);
 		PROTECT(h->envir);
 		PROTECT(h->expr);
 		error=1;
 		val = R_tryEval(h->expr,h->envir,&error);
 		UNPROTECT(2);
-		if (error) return RApacheError(r,apr_psprintf(r->pool,"Error calling function %s!\n",h->directive->function));
+		if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error calling function %s!\n",h->directive->function));
 	}
 
 	TearDownIO();
@@ -590,7 +601,7 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
 	RApacheHandler *h;
 
 	if (d == NULL){
-		RApacheError(r,"RApache Directive is NULL");
+		RApacheError("RApache Directive is NULL");
 		return NULL;
 	}
    
@@ -603,8 +614,7 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
 	}
 
 	if (h == NULL || (d->file == NULL && d->function == NULL)){
-		RApacheError(r,
-				apr_psprintf(r->pool,"Invalid RApache Directive: %s",d->handlerKey));
+		RApacheError(apr_psprintf(r->pool,"Invalid RApache Directive: %s",d->handlerKey));
 		return NULL;
 	}
 
@@ -647,21 +657,21 @@ static void TearDownIO(){
 /* Can be called with NULL msg to force proper request handler return
  * value.
  */
-static int RApacheError(const request_rec *r, char *msg){
-	int retval;
-	if (MR_OutputErrors){
-		if (msg){
-			ap_fputs(r->output_filters,MR_BBout,MR_ErrorPrefix);
-			ap_fputs(r->output_filters,MR_BBout,msg);
-			ap_fputs(r->output_filters,MR_BBout,MR_ErrorSuffix);
-		}
-		retval =  DONE;
-	} else {
-		if (msg) ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,msg);
-		retval = HTTP_INTERNAL_SERVER_ERROR;
-	}
+static int RApacheResponseError(char *msg){
+	if (msg) RApacheError(msg);
 	TearDownIO();
-	return retval;
+	return (MR_OutputErrors)? DONE: HTTP_INTERNAL_SERVER_ERROR;
+}
+
+static void RApacheError(char *msg){
+	if (!msg) return;
+	if (MR_OutputErrors && MR_BBout){
+		ap_fputs(MR_Request.r->output_filters,MR_BBout,MR_ErrorPrefix);
+		ap_fputs(MR_Request.r->output_filters,MR_BBout,msg);
+		ap_fputs(MR_Request.r->output_filters,MR_BBout,MR_ErrorSuffix);
+	} else {
+		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,msg);
+	}
 }
 
 static void init_R(apr_pool_t *p){
@@ -721,6 +731,8 @@ static void init_R(apr_pool_t *p){
 	R_Outputfile = NULL;
 	ptr_R_WriteConsole = NULL;
 	ptr_R_WriteConsoleEx = WriteConsoleEx;
+	R_SetErrorHook(RApacheErrorHook);
+	R_SetWarningHook(RApacheWarningHook);
 }
 
 static int decode_return_value(SEXP ret)
@@ -927,13 +939,12 @@ static void StopRprof(){
 	UNPROTECT(2);
 }
 
-static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize){
+static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize, ParseStatus *status){
 	apr_file_t *fd;
 	apr_size_t bufsize;
 	void *buf;
 	apr_finfo_t finfo;
-	SEXP cmd, expr;
-	ParseStatus status;
+	SEXP cmd, expr, srcfile;
 
 	apr_file_open(&fd,file,APR_READ,APR_OS_DEFAULT,pool);
 	if (!fsize){
@@ -949,19 +960,23 @@ static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize){
 	PROTECT(cmd = allocVector(STRSXP, 1));
 	SET_STRING_ELT(cmd, 0, mkChar(buf));
 
-	expr = R_ParseVector(cmd,-1,&status,R_NilValue);
-	UNPROTECT(1);
+	PROTECT(srcfile = NEW_STRING(1));
+	SET_STRING_ELT(srcfile, 0, mkChar(file));
 
-	if (status == PARSE_OK) return expr;
+	expr = R_ParseVector(cmd,-1,status,srcfile);
+	UNPROTECT(2);
+
+	if (*status == PARSE_OK) return expr;
 
 	return NULL;
 }
 
 static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *fileParsed){
 	RApacheParsedFile *parsedFile;
+	ParseStatus status;
 	apr_finfo_t finfo;
 	if (apr_stat(&finfo,h->directive->file,APR_FINFO_MTIME|APR_FINFO_SIZE,r->pool) != APR_SUCCESS){
-		RApacheError(r, apr_psprintf(r->pool,
+		RApacheResponseError(apr_psprintf(r->pool,
 					"From RApache Directive: %s\n\tInvalid file: %s\n",
 					h->directive->handlerKey,h->directive->file));
 		return 0;
@@ -987,8 +1002,8 @@ static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *filePa
 		/* Release old parse file expressions for gc */
 		if (parsedFile->exprs) R_ReleaseObject(parsedFile->exprs);
 
-		if ((parsedFile->exprs = ParseFile(h->directive->file,r->pool,finfo.size)) == NULL){
-			RApacheError(r,apr_psprintf(r->pool,"ParsedFile(%s) failed!",h->directive->file));
+		if ((parsedFile->exprs = ParseFile(h->directive->file,r->pool,finfo.size,&status)) == NULL){
+			RApacheError(apr_psprintf(r->pool,"ParsedFile(%s) failed!",h->directive->file));
 			return 0;
 		} else {
 			R_PreserveObject(parsedFile->exprs);
@@ -1009,7 +1024,7 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 			if (h->expr) R_ReleaseObject(h->expr);
 			fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
 			if (fun ==  R_UnboundValue){
-				RApacheError(r,apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
+				RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
 				return 0;
 			}
 			R_PreserveObject(h->expr = allocVector(LANGSXP,veclen));
@@ -1022,7 +1037,7 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 			else
 				fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
 			if (fun ==  R_UnboundValue){
-				RApacheError(r,apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
+				RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
 				return 0;
 			}
 			h->expr = allocVector(LANGSXP,veclen);
@@ -1100,6 +1115,7 @@ static void InitRApacheEnv(){
 
 static int OnStartupCallback(void *rec, const char *key, const char *value){
 	SEXP e, val;
+	ParseStatus status;
 	int error=1;
 
 	if (strcmp(key,"eval")==0){
@@ -1109,17 +1125,17 @@ static int OnStartupCallback(void *rec, const char *key, const char *value){
 			exit(-1);
 		};
 	} else if (strcmp(key,"file")==0){
-		e = ParseFile(value,MR_Pool,0);
-		error=1;
-		if (e){
-			EvalExprs(e,R_GlobalEnv,&error);
+		e = ParseFile(value,MR_Pool,0,&status);
+		if (!e){
+			printf("\nError parsing %s! Check the error log.\n\n",value);
+			exit(-1);
 		}
-		if (!e || error){
+		EvalExprs(e,R_GlobalEnv,&error);
+		if (error){
 			printf("\nError evaluating %s! Check the error log.\n\n",value);
 			exit(-1);
 		}
 	} else if (strcmp(key,"package")==0){
-		error=1;
 		PROTECT(e = allocVector(LANGSXP,6));
 		/* library() */
 		SETCAR(e,findFun(install("require"),R_GlobalEnv));
@@ -1201,7 +1217,7 @@ static SEXP MyfindFunInPackage(SEXP symb, char *package){
 }
 
 #define PUTS(s) ap_fputs(MR_Request.r->output_filters,MR_BBout,s)
-#define EXEC(s) ExecRCode(s,envir,&errorOccurred); if (errorOccurred) return RApacheError(MR_Request.r,NULL)
+#define EXEC(s) ExecRCode(s,envir,&errorOccurred); if (errorOccurred) return RApacheResponseError(NULL)
 static int RApacheInfo()
 {
 	SEXP envir = NewEnv(MR_RApacheEnv);
@@ -1331,9 +1347,11 @@ static int TableCallback(void *datum,const char *n, const char *v){
 }
 
 static SEXP AprTableToList(apr_table_t *t){
-	int len = apr_table_elts(t)->nelts;
+	int len; 
 	struct TableCtx ctx;
 
+	if (!t) return R_NilValue;
+	len = apr_table_elts(t)->nelts;
 	if (!len) return R_NilValue;
 
 	PROTECT(ctx.list = NEW_LIST(len));
@@ -1400,6 +1418,15 @@ static void InjectCGIvars(SEXP env){
 	}
 }
 
+static void RApacheErrorHook(SEXP s, char *msg){
+	RApacheError("ERROR! ");
+	RApacheError(msg);
+}
+static void RApacheWarningHook(SEXP s, char *msg){
+	RApacheError("WARNING! ");
+	RApacheError(msg);
+}
+
 /*************************************************************************
  *
  * .Call functions: used from R code.
@@ -1444,7 +1471,10 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 	/* value */
 	if (svalue == R_NilValue || LENGTH(svalue) != 1)
 		value = "";
-	else value = CHAR(STRING_PTR(svalue)[0]);
+	else {
+		svalue = coerceVector(svalue,STRSXP);
+		value = (svalue != NA_STRING)? CHAR(STRING_PTR(svalue)[0]): "";
+	}
 
 	cookie = apr_pstrcat(MR_Request.r->pool,name,"=",value);
 
@@ -1501,6 +1531,7 @@ static SEXP encode(char *str){
 
 	return retstr;
 }
+
 static SEXP decode(char *str){
 	SEXP retstr;
 	char *buf;
@@ -1520,7 +1551,7 @@ static SEXP decode(char *str){
 	return retstr;
 }
 
-SEXP RApache_entityEnDecode(SEXP str,SEXP enc){
+SEXP RApache_urlEnDecode(SEXP str,SEXP enc){
 	int vlen, i;
 	SEXP new_str;
 	SEXP (*endecode)(char *str);
@@ -1532,7 +1563,7 @@ SEXP RApache_entityEnDecode(SEXP str,SEXP enc){
 	}
 
 	if (!IS_CHARACTER(str)){
-		warning("RApache_entityEnDecode called with a non-character object!");
+		warning("RApache_urlEnDecode called with a non-character object!");
 		return R_NilValue;
 	}
 	vlen = LENGTH(str);
@@ -1553,18 +1584,157 @@ SEXP RApache_RApacheInfo(){
 SEXP RApache_parseGet() {
 	/* If we've already made the table, just hand it out again */
 	if (MR_Request.argsTable) return AprTableToList(MR_Request.argsTable);
-
 	/* Don't parse if there aren't an GET variables to parse */
 	if(!MR_Request.r->args) return R_NilValue;
-
 	/* First call: parse and return */
 	MR_Request.argsTable = apr_table_make(MR_Request.r->pool,APREQ_DEFAULT_NELTS);
 	apreq_parse_query_string(MR_Request.r->pool,MR_Request.argsTable,MR_Request.r->args);
-
 	/* TODO: error checking of argsTable here */
-
 	return AprTableToList(MR_Request.argsTable);
 }
+
+typedef struct {
+	SEXP files;
+	SEXP names;
+	int i;
+} RApacheFileUploads;
+
+static int FileUploadsCallback(void *ft,const char *key, const char *val){
+	RApacheFileUploads  *pf = (RApacheFileUploads *)ft;
+	apreq_param_t *p = apreq_value_to_param(val);
+	apr_file_t *f;
+	apr_finfo_t finfo;
+	const char *filename;
+	SEXP file_elem, name_elem, str1, str2;
+
+	f = apreq_brigade_spoolfile(p->upload);
+
+	/* shouldn't ever happen, but... */
+	if (f == NULL){
+		filename = "";
+	} else {
+		apr_file_info_get(&finfo,APR_FINFO_SIZE,f);
+
+		/* Only set tmp_name to the real tmp file location if
+		 * its size is non-zero.
+		 */
+		filename = (finfo.size > 0)? finfo.fname : "";
+	}
+
+	PROTECT(file_elem = NEW_LIST(2));
+	PROTECT(name_elem = NEW_STRING(2));
+	PROTECT(str1 = NEW_STRING(1));
+	PROTECT(str2 = NEW_STRING(1));
+
+	SET_ELEMENT(str1,0,COPY_TO_USER_STRING(val));
+	SET_ELEMENT(str2,0,COPY_TO_USER_STRING(filename));
+
+	SET_ELEMENT(file_elem,0,str1);
+	SET_ELEMENT(file_elem,1,str2);
+
+	SET_ELEMENT(name_elem,0,COPY_TO_USER_STRING("name"));
+	SET_ELEMENT(name_elem,1,COPY_TO_USER_STRING("tmp_name"));
+
+	SET_NAMES(file_elem,name_elem);
+
+	SET_ELEMENT(pf->files,pf->i,file_elem);
+	SET_ELEMENT(pf->names,pf->i,COPY_TO_USER_STRING(key));
+
+	pf->i += 1;
+
+	UNPROTECT(4);
+
+	return 1;
+}
+static SEXP parsePost(int returnPost) {
+	apreq_parser_t *psr;
+	apr_bucket_brigade *bb;
+	const char *tmpdir;
+	apr_status_t s;
+	const apr_table_t *uploads;
+	SEXP filenames;
+	int nfiles;
+
+	if (MR_Request.readStarted) {
+		/* If we've already started reading with R then don't try to parse at all. */
+		RApacheError("Oops! R has already started reading the request.");
+		return R_NilValue;
+	} else if (MR_Request.postParsed){
+		/* We've already parsed the input, just hand out the result */
+		return (returnPost)?AprTableToList(MR_Request.postTable):MR_Request.uploads;
+	}
+
+	/* Don't parse if not a POST */
+	if (strcmp(MR_Request.r->method,"POST") != 0) {
+		MR_Request.postTable = NULL;
+		MR_Request.uploads = R_NilValue;
+		return R_NilValue;
+	}
+
+	/* Start parse */
+	MR_Request.postParsed=1;
+
+	MR_Request.postTable = apr_table_make(MR_Request.r->pool, APREQ_DEFAULT_NELTS);
+	apr_temp_dir_get(&tmpdir,MR_Request.r->pool);
+	psr = apreq_parser_make(
+			MR_Request.r->pool,
+			MR_Request.r->connection->bucket_alloc,
+			apr_table_get(MR_Request.r->headers_in,"Content-Type"),
+			apreq_parser(apr_table_get(MR_Request.r->headers_in,"Content-Type")),
+			0, /* brigade_limit */
+			tmpdir,
+			NULL,
+			NULL);
+	bb = apr_brigade_create(MR_Request.r->pool,MR_Request.r->connection->bucket_alloc);
+	while((s = ap_get_brigade(MR_Request.r->input_filters,bb,AP_MODE_READBYTES,APR_BLOCK_READ,HUGE_STRING_LEN)) == APR_SUCCESS){ 
+		apreq_parser_run(psr,MR_Request.postTable,bb);
+		if (APR_BUCKET_IS_EOS(APR_BRIGADE_LAST(bb))) break;
+		apr_brigade_cleanup(bb);
+	}
+	apr_brigade_cleanup(bb);
+
+	/* Now go ahead and set MR_Request.uploads*/
+	uploads = apreq_uploads(MR_Request.postTable,MR_Request.r->pool);
+	nfiles = apr_table_elts(uploads)->nelts;
+
+	if (nfiles){
+		RApacheFileUploads fu;
+		PROTECT(MR_Request.uploads = NEW_LIST(nfiles));
+		PROTECT(filenames = NEW_STRING(nfiles));
+
+		fu.files = MR_Request.uploads;
+		fu.names = filenames;
+		fu.i = 0;
+		apr_table_do(FileUploadsCallback,(void *)&fu,uploads,NULL);
+		SET_NAMES(MR_Request.uploads,filenames);
+		UNPROTECT(2);
+	} else {
+		MR_Request.uploads = R_NilValue;
+	}
+
+	return (returnPost)?AprTableToList(MR_Request.postTable):MR_Request.uploads;
+}
+
+SEXP RApache_parsePost(){ return parsePost(1); }
+
+SEXP RApache_parseFiles(){ return parsePost(0); }
+
+SEXP RApache_parseCookies(SEXP sreq){
+	const char *cookies;
+
+	if (MR_Request.cookiesTable) 
+		return AprTableToList(MR_Request.cookiesTable);
+
+	cookies = apr_table_get(MR_Request.r->headers_in, "Cookie");
+
+	if (cookies == NULL) return R_NilValue;
+
+	MR_Request.cookiesTable = apr_table_make(MR_Request.r->pool,APREQ_DEFAULT_NELTS);
+	apreq_parse_cookie_header(MR_Request.r->pool,MR_Request.cookiesTable,cookies);
+
+	return AprTableToList(MR_Request.cookiesTable);
+}
+
 
 /*************************************************************************
  *
@@ -1643,9 +1813,12 @@ static void RegisterCallSymbols() {
 	{"RApache_setHeader", (DL_FUNC) &RApache_setHeader, 2},
 	{"RApache_setContentType", (DL_FUNC) &RApache_setContentType, 1},
 	{"RApache_setCookie",(DL_FUNC) &RApache_setCookie,6},
-	{"RApache_entityEnDecode",(DL_FUNC) &RApache_entityEnDecode,2},
+	{"RApache_urlEnDecode",(DL_FUNC) &RApache_urlEnDecode,2},
 	{"RApache_RApacheInfo",(DL_FUNC) &RApache_RApacheInfo,0},
 	{"RApache_parseGet",(DL_FUNC) &RApache_parseGet,0},
+	{"RApache_parsePost",(DL_FUNC) &RApache_parsePost,0},
+	{"RApache_parseFiles",(DL_FUNC) &RApache_parseFiles,0},
+	{"RApache_parseCookies",(DL_FUNC) &RApache_parseCookies,0},
 	{NULL, NULL, 0}
 	};
 	/* we add those to the base as we have no specific entry (yet?) */

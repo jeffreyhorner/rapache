@@ -85,10 +85,11 @@ ROutputErrors
 	RHandler brew::brew
 </Directory>
 
-#<Location /test/R>
-#        SetHandler r-handler
-#        RHandler handler @DOCROOT@/test.R TRUE
-#</Location>
+<Location /test/R>
+        SetHandler r-handler
+        RFileHandler @DOCROOT@/test.R
+</Location>
+
 #
 #<Location /test/Rplot>
 #        SetHandler r-handler
