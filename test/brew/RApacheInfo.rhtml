@@ -1,28 +1,31 @@
 <% 
-hrefify <- function(title){
-	gsub('[\\.()]','_',title,perl=TRUE)
-}
-scrub <- function(str){
-	str <- gsub('&','&amp;',str)
-	str <- gsub('@','_at_',str)
-	str <- gsub('<','&lt;',str)
-	str <- gsub('>','&gt;',str)
+hrefify <- function(title) gsub('[\\.()]','_',title,perl=TRUE)
+scrub <- function(str){ 
+	if (is.null(str)) return('NULL')
+	if (length(str) == 0) return ('length 0 string')
+	str <- as.character(str)
+	str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); 
+	str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); 
+	if (length(str) == 0 || is.null(str) || str == '')
+		str <- '&nbsp;' 
 	str
 }
 cl<-'e' 
-zeblist <- function(i,l){
+zebelem <- function(n,v) {
 	cl <<- ifelse(cl=='e','o','e')
-	cat('<tr class="',cl,'"><td class="l">',names(l)[i],'</td><td>',scrub(as.character(l[[i]])),'</td></tr>')
+	cat('<tr class="',cl,'">')
+	if(!is.na(n)) cat('<td class="l">',n,'</td>')
+	cat('<td>');
+	if (length(v)>1) zebra(NULL,v)
+	else cat(scrub(v))
+	cat('</td></tr>\n');
 }
-zebary <- function(i){
-	cl <<- ifelse(cl=='e','o','e')
-	cat('<tr class="',cl,'"><td>',as.character(i),'</td></tr>')
-}
-
 zebra <- function(title,l){
-	cat('<h2><a name="',hrefify(title),'"> </a>',title,'</h2><table><tbody>',sep='')
-	ifelse(is.list(l), lapply(1:length(l),zeblist,l), lapply(l,zebary))
-	cat('</tbody></table>')
+	if (!is.null(title)) cat('<h2><a name="',hrefify(title),'"> </a>',title,'</h2>',sep='')
+	cat('<table><tbody>',sep='')
+	n <- names(l)
+	mapply(zebelem,if(is.null(n)) rep(NA,length(l)) else n, l)
+	cat('</tbody></table>\n')
 }
 zebrifyPackage <-function(package){
 	zebra(package,unclass(packageDescription(package)))
@@ -32,6 +35,7 @@ setContentType('text/html')
 -%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
 <html><head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <style type="text/css">
 body { font-family: "lucida grande",verdana,sans-serif; margin-left: 210px; margin-right: 18px; }
 table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }
@@ -41,7 +45,7 @@ tr.e { background-color: #eeeeee; border-spacing: 0px; }
 tr.o { background-color: #ffffff; border-spacing: 0px; }
 div a { text-decoration: none; color: white; }
 a:hover { color: #8897be; background: white; }
-tr:hover { background: #8897be; color: white; }
+tr:hover { background: #8897be; /* color: white;*/ }
 img.map { position: fixed; border: 0px; left: 50px; right: auto; top: 10px; }
 div.map { background: #8897be; font-weight: bold; color: white; position: fixed; bottom: 30px; height: auto; left: 15px; right: auto; top: 110px; width: 150px; padding: 0 13px; text-align: right; font-size: 12pt; }
 div.map p { font-size: 10pt; font-family: serif; font-style: italic; }

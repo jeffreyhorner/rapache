@@ -1,22 +1,39 @@
 # Canonical Test
 hrefify <- function(title) gsub('[\\.()]','_',title,perl=TRUE)
 scrub <- function(str){ 
+	if (is.null(str)) return('NULL')
+	if (length(str) == 0) return('length 0 string')
+	cat("\n<!-- before as.character: (",str,")-->\n",sep='')
+	str <- as.character(str)
+	cat("\n<!-- after as.character: (",str,")-->\n",sep='')
 	str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); 
 	str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); 
-	str 
+	if (length(str) == 0 || is.null(str) || str == '')
+		str <- '&nbsp;' 
+	str
 }
 cl<-'e'
 zebary <- function(i){ 
 	cl <<- ifelse(cl=='e','o','e')
-	cat('<tr class="',cl,'"><td>',as.character(i),'</td></tr>\n',sep='')
+	cat('<tr class="',cl,'"><td>',scrub(i),'</td></tr>\n',sep='')
 }
 zeblist <- function(i,l){ 
 	cl <<- ifelse(cl=='e','o','e')
-	 cat('<tr class="',cl,'"><td class="l">',names(l)[i],'</td><td>',scrub(as.character(l[[i]])),'</td></tr>\n',sep='')
+	 cat('<tr class="',cl,'"><td class="l">',names(l)[i],'</td><td>')
+	if(is.list(l[[i]]))
+		zebra(names(l)[i],l[[i]])
+	else {
+		if (length(l[[i]]) > 1)
+			zebary(l[[i]])
+		else
+			cat(scrub(l[[i]]))
+	}
+		
+	cat('</td></tr>\n',sep='')
 }
 zebra <- function(title,l){ 
 	cat('<h2><a name="',hrefify(title),'"> </a>',title,'</h2>\n<table><tbody>',sep='')
-	ifelse(is.list(l), lapply(1:length(l),zeblist,l), lapply(l,zebary))
+	ifelse(is.list(l),lapply(1:length(l),zeblist,l), lapply(l,zebary))
 	cat('</tbody></table>\n<br/><hr/>') 
 }
 
@@ -49,13 +66,13 @@ cat("<hr>\n")
 zebra('CGI GET Data',GET)
 zebra('CGI POST Data',POST)
 zebra('Cookies',COOKIES)
-cat('<h2>Files Uploaded in POST Data</h2>\n')
 if (!is.null(FILES)){
+	cat('<h2>Files Uploaded in POST Data</h2>\n')
 	for (n in names(FILES)){
 		zebra(paste("Form Variable",n),FILES[[n]])
 	}
 }
-#zebra('SERVER data',SERVER)
+zebra("SERVER Variables",SERVER)
 cat("</BODY></HTML>\n")
 
 # -2 is DONE. Still haven't exported response codes.

@@ -114,7 +114,8 @@ typedef struct {
 	apr_table_t *argsTable;
 	apr_table_t *postTable;
 	apr_table_t *cookiesTable;
-	SEXP uploads;
+	SEXP filesVar;
+	SEXP serverVar;
 } RApacheRequest;
 
 /*************************************************************************
@@ -129,8 +130,8 @@ static RApacheRequest MR_Request = { NULL, 0, 0, NULL, NULL, NULL, NULL };
 
 /* Option to turn on errors in output */
 static int MR_OutputErrors = 0;
-static const char MR_ErrorPrefix[] = "<pre style=\"background-color:#eee; padding 10px; font-size: 11px\"><code>";
-static const char MR_ErrorSuffix[] = "</code></pre>";
+static const char MR_ErrorPrefix[] = "<div style=\"background-color:#eee; padding: 20px 20px 20px 20px; font-size: 14pt; border: 1px solid red;\"><code>";
+static const char MR_ErrorSuffix[] = "</code></div>";
 
 /* Number of times apache has parsed config files; we'll do stuff on second pass */
 static int MR_ConfigPass = 1;
@@ -179,7 +180,7 @@ urlDecode <- function(str) .Call('RApache_urlEnDecode',str,FALSE)\n\
 RApacheInfo <- function() .Call('RApache_RApacheInfo')";
 
 /*
- * Expression list to inject CGI vars into an environment
+ * Expression list for injecting CGI vars into an environment
  */
 static SEXP MR_CGIexprs;
 
@@ -188,7 +189,7 @@ static const char *MR_CGIvars[] = {
 	"COOKIES", "RApache_parseCookies",
 	"POST", "RApache_parsePost",
 	"FILES", "RApache_parseFiles",
-	/* "_SERVER", "RApache_parseRequest", */
+	"SERVER", "RApache_getServer",
 	NULL
 };
 
@@ -232,13 +233,19 @@ static int AP_hook_request_handler (request_rec *r);
 static apr_status_t AP_child_exit(void *data);
 
 /*
- * R Error and Warning hooks
+ * R interface callbacks
  */
-void R_SetErrorHook(void (*hook)(SEXP, char *));
-void R_SetWarningHook(void (*hook)(SEXP, char *));
-static void RApacheErrorHook(SEXP, char *);
-static void RApacheWarningHook(SEXP, char *);
-
+static void Suicide(char *s){ };
+static void ShowMessage(char *s){ };
+static int ReadConsole(char *, unsigned char *, int, int);
+static void WriteConsoleEx(char *, int, int);
+static void NoOpConsole(){ };
+static void NoOpBusy(int i) { };
+static void NoOpCleanUp(SA_TYPE s, int i, int j){ };
+static int NoOpShowFiles(int i, char **j, char **k, char *l, Rboolean b, char *c){ return 1;};
+static int NoOpChooseFile(int i, char *b,int s){ return 0;};
+static int NoOpEditFile(char *f){ return 0;};
+static void NoOpHistoryFun(SEXP a, SEXP b, SEXP c, SEXP d){ };
 
 /*
  * The Rest.
@@ -253,7 +260,6 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r);
 static int RApacheResponseError(char *msg);
 static void RApacheError(char *msg);
 static void InitTempDir(apr_pool_t *p);
-static void WriteConsoleEx(char *, int, int);
 static void RegisterCallSymbols();
 static SEXP NewLogical(int tf);
 static SEXP NewEnv(SEXP enclos);
@@ -592,6 +598,76 @@ static apr_status_t AP_child_exit(void *data){
 
 /*************************************************************************
  *
+ * R interface callbacks
+ *
+ *************************************************************************/
+static void WriteConsoleEx(char *buf, int size, int error){
+	if (MR_Request.r){
+		if (!error) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
+		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
+	} else {
+		fprintf(stderr,"NULL Apache request record in WriteConsoleEx()! exiting...\n");
+		exit(-1);
+	}
+}
+
+static int ReadConsole(char *prompt, unsigned char *buf, int size, int addHist){
+	apr_size_t len, bpos=0, blen;
+	apr_status_t rv;
+	SEXP str;
+	apr_bucket *bucket;
+	const char *data;
+
+	if (!MR_Request.r){
+		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"Can't read with R since MR_Request.r is NULL!");
+		return 0;
+	}
+
+	if (MR_Request.postParsed){
+		RApacheError("Can't read with R since libapreq already started!");
+		return 0;
+	}
+
+	MR_Request.readStarted = 1;
+
+	if (MR_BBin == NULL){
+		MR_BBin = apr_brigade_create(MR_Request.r->pool, MR_Request.r->connection->bucket_alloc);
+	}
+	rv = ap_get_brigade(MR_Request.r->input_filters, MR_BBin, AP_MODE_READBYTES,
+			APR_BLOCK_READ, size);
+
+	if (rv != APR_SUCCESS) {
+		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"ReadConsole() returned an error!");
+		return 0;
+	}
+	for (bucket = APR_BRIGADE_FIRST(MR_BBin); bucket != APR_BRIGADE_SENTINEL(MR_BBin); bucket = APR_BUCKET_NEXT(bucket)) {
+		if (APR_BUCKET_IS_EOS(bucket)) {
+			if (bpos == 0) { /* end of stream and no data , so return NULL */
+				apr_brigade_cleanup(MR_BBin);
+				return 0;
+			} else { /* We've read some data, so go ahead and return it */
+				break;
+			}
+		}
+
+		/* We can't do much with this. */
+		if (APR_BUCKET_IS_FLUSH(bucket)) {
+			continue;
+		}
+
+		/* read */
+		apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
+		memcpy(buf+bpos,data,len);
+		bpos += len;
+	}
+	apr_brigade_cleanup(MR_BBin);
+
+	buf[bpos] = '\0';
+	return (int)bpos;
+}
+
+/*************************************************************************
+ *
  * Helper functions
  *
  *************************************************************************/
@@ -667,6 +743,7 @@ static void RApacheError(char *msg){
 	if (!msg) return;
 	if (MR_OutputErrors && MR_BBout){
 		ap_fputs(MR_Request.r->output_filters,MR_BBout,MR_ErrorPrefix);
+		ap_fputs(MR_Request.r->output_filters,MR_BBout,"RApache Error!!!<br><br>");
 		ap_fputs(MR_Request.r->output_filters,MR_BBout,msg);
 		ap_fputs(MR_Request.r->output_filters,MR_BBout,MR_ErrorSuffix);
 	} else {
@@ -699,7 +776,6 @@ static void init_R(apr_pool_t *p){
 
 	Rf_initEmbeddedR(argc, argv);
 
-
 	RegisterCallSymbols();
 
 	InitRApacheEnv();
@@ -729,10 +805,18 @@ static void init_R(apr_pool_t *p){
 	/* Lastly, now redirect R's inputs and outputs */
 	R_Consolefile = NULL;
 	R_Outputfile = NULL;
+	ptr_R_Suicide = Suicide;
+	ptr_R_ShowMessage = ShowMessage;
 	ptr_R_WriteConsole = NULL;
 	ptr_R_WriteConsoleEx = WriteConsoleEx;
-	R_SetErrorHook(RApacheErrorHook);
-	R_SetWarningHook(RApacheWarningHook);
+	ptr_R_ReadConsole = ReadConsole;
+	ptr_R_ResetConsole = ptr_R_FlushConsole = ptr_R_ClearerrConsole = NoOpConsole;
+	ptr_R_Busy = NoOpBusy;
+	ptr_R_CleanUp = NoOpCleanUp;
+	ptr_R_ShowFiles = NoOpShowFiles;
+	ptr_R_ChooseFile = NoOpChooseFile;
+	ptr_R_EditFile = NoOpEditFile;
+	ptr_R_loadhistory = ptr_R_savehistory = ptr_R_addhistory = NoOpHistoryFun;
 }
 
 static int decode_return_value(SEXP ret)
@@ -829,17 +913,7 @@ void InitTempDir(apr_pool_t *p)
 	}
 }
 
-void WriteConsoleEx(char *buf, int size, int error){
-	if (!error) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
-	else if (MR_OutputErrors) {
-		ap_fputs(MR_Request.r->output_filters,MR_BBout,MR_ErrorPrefix);
-		ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
-		ap_fputs(MR_Request.r->output_filters,MR_BBout,MR_ErrorSuffix);
-	} else {
-		/* We assume that buf is null-terminated */
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"%s",buf);
-	}
-}
+
 static SEXP NewLogical(int tf) {
 	SEXP stf;
 	PROTECT(stf = NEW_LOGICAL(1));
@@ -1225,16 +1299,16 @@ static int RApacheInfo()
 	ap_set_content_type( MR_Request.r, "text/html");
 
 EXEC("hrefify <- function(title) gsub('[\\\\.()]','_',title,perl=TRUE)");
-EXEC("scrub <- function(str){ str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); str }");
 EXEC("cl<-'e'");
-EXEC("zeblist <- function(i,l){ cl <<- ifelse(cl=='e','o','e'); cat('<tr class=\"',cl,'\"><td class=\"l\">',names(l)[i],'</td><td>',scrub(as.character(l[[i]])),'</td></tr>\\n',sep='') }");
-EXEC("zebary <- function(i){ cl <<- ifelse(cl=='e','o','e'); cat('<tr class=\"',cl,'\"><td>',as.character(i),'</td></tr>\\n',sep='') }");
-EXEC("zebra <- function(title,l){ cat('<h2><a name=\"',hrefify(title),'\"> </a>',title,'</h2>\\n<table><tbody>',sep=''); ifelse(is.list(l), lapply(1:length(l),zeblist,l), lapply(l,zebary)); cat('</tbody></table>\\n') }");
+EXEC("scrub <- function(str){ if (is.null(str)) return('null'); if (length(str) == 0) return ('length 0 string'); str <- as.character(str); str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); if (length(str) == 0 || is.null(str) || str == '') str <- '&nbsp;'; str }");
+EXEC("zebelem <- function(n,v) { cl <<- ifelse(cl=='e','o','e'); cat('<tr class=\"',cl,'\">'); if(!is.na(n)) cat('<td class=\"l\">',n,'</td>'); cat('<td>'); if (length(v)>1) zebra(NULL,v) else cat(scrub(v)); cat('</td></tr>\n'); }");
+EXEC("zebra <- function(title,l){ if (!is.null(title)) cat('<h2><a name=\"',hrefify(title),'\"> </a>',title,'</h2>',sep=''); cat('<table><tbody>',sep=''); n <- names(l); mapply(zebelem,if(is.null(n)) rep(NA,length(l)) else n, l); cat('</tbody></table>\n') }");
 EXEC(" zebrifyPackage <-function(package){ zebra(package,unclass(packageDescription(package))); cat('<br/><hr/>\\n') }");
 
 /* Header */
-PUTS("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"DTD/xhtml1-transitional.dtd\">");
+PUTS(DOCTYPE_XHTML_1_0T);
 PUTS("<html><head>");
+PUTS("<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />");
 PUTS("<style type=\"text/css\">");
 PUTS("body { font-family: \"lucida grande\",verdana,sans-serif; margin-left: 210px; margin-right: 18px; }");
 PUTS("table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }");
@@ -1244,7 +1318,7 @@ PUTS("tr.e { background-color: #eeeeee; border-spacing: 0px; }");
 PUTS("tr.o { background-color: #ffffff; border-spacing: 0px; }");
 PUTS("div a { text-decoration: none; color: white; }");
 PUTS("a:hover { color: #8897be; background: white; }");
-PUTS("tr:hover { background: #8897be; color: white; }");
+PUTS("tr:hover { background: #8897be; }");
 PUTS("img.map { position: fixed; border: 0px; left: 50px; right: auto; top: 10px; }");
 PUTS("div.map { background: #8897be; font-weight: bold; color: white; position: fixed; bottom: 30px; height: auto; left: 15px; right: auto; top: 110px; width: 150px; padding: 0 13px; text-align: right; font-size: 12pt; }");
 PUTS("div.map p { font-size: 10pt; font-family: serif; font-style: italic; }");
@@ -1337,12 +1411,15 @@ static int TableCallback(void *datum,const char *n, const char *v){
 	struct TableCtx *ctx = (struct TableCtx *)datum;
 	SEXP value;
 
-	PROTECT(value = NEW_CHARACTER(1));
-	SET_ELEMENT(value,0,mkChar(v));
+	if (!v || !strcmp(v,"")){
+		value = R_NilValue;
+	} else {
+		value = NEW_CHARACTER(1);
+		SET_ELEMENT(value,0,mkChar(v));
+	}
 
 	SET_ELEMENT(ctx->names,ctx->i,mkChar(n));
 	SET_ELEMENT(ctx->list,ctx->i,value);
-	UNPROTECT(1);
 	ctx->i += 1;
 }
 
@@ -1416,15 +1493,6 @@ static void InjectCGIvars(SEXP env){
 	if (error){
 		fprintf(stderr,"Could not inject CGI VARS!!!!\n");
 	}
-}
-
-static void RApacheErrorHook(SEXP s, char *msg){
-	RApacheError("ERROR! ");
-	RApacheError(msg);
-}
-static void RApacheWarningHook(SEXP s, char *msg){
-	RApacheError("WARNING! ");
-	RApacheError(msg);
 }
 
 /*************************************************************************
@@ -1609,43 +1677,39 @@ static int FileUploadsCallback(void *ft,const char *key, const char *val){
 
 	f = apreq_brigade_spoolfile(p->upload);
 
-	/* shouldn't ever happen, but... */
-	if (f == NULL){
-		filename = "";
+	/* No file upload */
+	if (f == NULL || (apr_file_info_get(&finfo,APR_FINFO_SIZE,f) != APR_SUCCESS) || finfo.size <= 0 ){
+		SET_ELEMENT(pf->files,pf->i,R_NilValue);
+		SET_ELEMENT(pf->names,pf->i,mkChar(key));
 	} else {
-		apr_file_info_get(&finfo,APR_FINFO_SIZE,f);
+		filename = finfo.fname;
 
-		/* Only set tmp_name to the real tmp file location if
-		 * its size is non-zero.
-		 */
-		filename = (finfo.size > 0)? finfo.fname : "";
+		PROTECT(file_elem = NEW_LIST(2));
+		PROTECT(name_elem = NEW_STRING(2));
+		PROTECT(str1 = NEW_STRING(1));
+		PROTECT(str2 = NEW_STRING(1));
+
+		SET_ELEMENT(str1,0,COPY_TO_USER_STRING(val));
+		SET_ELEMENT(str2,0,COPY_TO_USER_STRING(filename));
+
+		SET_ELEMENT(file_elem,0,str1);
+		SET_ELEMENT(file_elem,1,str2);
+
+		SET_ELEMENT(name_elem,0,COPY_TO_USER_STRING("name"));
+		SET_ELEMENT(name_elem,1,COPY_TO_USER_STRING("tmp_name"));
+
+		SET_NAMES(file_elem,name_elem);
+
+		SET_ELEMENT(pf->files,pf->i,file_elem);
+		SET_ELEMENT(pf->names,pf->i,COPY_TO_USER_STRING(key));
+
+		UNPROTECT(4);
 	}
-
-	PROTECT(file_elem = NEW_LIST(2));
-	PROTECT(name_elem = NEW_STRING(2));
-	PROTECT(str1 = NEW_STRING(1));
-	PROTECT(str2 = NEW_STRING(1));
-
-	SET_ELEMENT(str1,0,COPY_TO_USER_STRING(val));
-	SET_ELEMENT(str2,0,COPY_TO_USER_STRING(filename));
-
-	SET_ELEMENT(file_elem,0,str1);
-	SET_ELEMENT(file_elem,1,str2);
-
-	SET_ELEMENT(name_elem,0,COPY_TO_USER_STRING("name"));
-	SET_ELEMENT(name_elem,1,COPY_TO_USER_STRING("tmp_name"));
-
-	SET_NAMES(file_elem,name_elem);
-
-	SET_ELEMENT(pf->files,pf->i,file_elem);
-	SET_ELEMENT(pf->names,pf->i,COPY_TO_USER_STRING(key));
-
-	pf->i += 1;
-
-	UNPROTECT(4);
+		pf->i += 1;
 
 	return 1;
 }
+
 static SEXP parsePost(int returnPost) {
 	apreq_parser_t *psr;
 	apr_bucket_brigade *bb;
@@ -1657,17 +1721,17 @@ static SEXP parsePost(int returnPost) {
 
 	if (MR_Request.readStarted) {
 		/* If we've already started reading with R then don't try to parse at all. */
-		RApacheError("Oops! R has already started reading the request.");
+		RApacheError("Oops! Your R code has already started reading the request.");
 		return R_NilValue;
 	} else if (MR_Request.postParsed){
 		/* We've already parsed the input, just hand out the result */
-		return (returnPost)?AprTableToList(MR_Request.postTable):MR_Request.uploads;
+		return (returnPost)?AprTableToList(MR_Request.postTable):MR_Request.filesVar;
 	}
 
 	/* Don't parse if not a POST */
 	if (strcmp(MR_Request.r->method,"POST") != 0) {
 		MR_Request.postTable = NULL;
-		MR_Request.uploads = R_NilValue;
+		MR_Request.filesVar = R_NilValue;
 		return R_NilValue;
 	}
 
@@ -1693,26 +1757,26 @@ static SEXP parsePost(int returnPost) {
 	}
 	apr_brigade_cleanup(bb);
 
-	/* Now go ahead and set MR_Request.uploads*/
+	/* Now go ahead and set MR_Request.filesVar*/
 	uploads = apreq_uploads(MR_Request.postTable,MR_Request.r->pool);
 	nfiles = apr_table_elts(uploads)->nelts;
 
 	if (nfiles){
 		RApacheFileUploads fu;
-		PROTECT(MR_Request.uploads = NEW_LIST(nfiles));
+		PROTECT(MR_Request.filesVar = NEW_LIST(nfiles));
 		PROTECT(filenames = NEW_STRING(nfiles));
 
-		fu.files = MR_Request.uploads;
+		fu.files = MR_Request.filesVar;
 		fu.names = filenames;
 		fu.i = 0;
 		apr_table_do(FileUploadsCallback,(void *)&fu,uploads,NULL);
-		SET_NAMES(MR_Request.uploads,filenames);
+		SET_NAMES(MR_Request.filesVar,filenames);
 		UNPROTECT(2);
 	} else {
-		MR_Request.uploads = R_NilValue;
+		MR_Request.filesVar = R_NilValue;
 	}
 
-	return (returnPost)?AprTableToList(MR_Request.postTable):MR_Request.uploads;
+	return (returnPost)?AprTableToList(MR_Request.postTable):MR_Request.filesVar;
 }
 
 SEXP RApache_parsePost(){ return parsePost(1); }
@@ -1733,6 +1797,57 @@ SEXP RApache_parseCookies(SEXP sreq){
 	apreq_parse_cookie_header(MR_Request.r->pool,MR_Request.cookiesTable,cookies);
 
 	return AprTableToList(MR_Request.cookiesTable);
+}
+
+#define TABMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); SET_ELEMENT(MR_Request.serverVar,i++,AprTableToList(v))
+#define INTMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_INTEGER(1); INTEGER_DATA(val)[0] = v; SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define STRMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); if (v){ val = NEW_STRING(1); STRING_PTR(val)[0] = mkChar(v);} else { val = R_NilValue;}; SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define LGLMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); SET_ELEMENT(MR_Request.serverVar,i++,NewLogical(v));
+#define OFFMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define TIMMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[0] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
+SEXP RApache_getServer(){
+	int len = 30, i = 0;
+	SEXP names, val, class;
+	if (!MR_Request.r) return R_NilValue;
+	if (MR_Request.serverVar) return MR_Request.serverVar;
+
+	PROTECT(MR_Request.serverVar = NEW_LIST(len));
+	PROTECT(names = NEW_STRING(len));
+
+	TABMBR("headers_in",MR_Request.r->headers_in);
+	INTMBR("proto_num",MR_Request.r->proto_num);
+	STRMBR("protocol",MR_Request.r->protocol);
+	STRMBR("unparsed_uri",MR_Request.r->unparsed_uri);
+	STRMBR("uri",MR_Request.r->uri);
+	STRMBR("canonical_filename",MR_Request.r->canonical_filename);
+	STRMBR("path_info",MR_Request.r->path_info);
+	STRMBR("args",MR_Request.r->args);
+	STRMBR("content_type",MR_Request.r->content_type);
+	STRMBR("handler",MR_Request.r->handler);
+	STRMBR("content_encoding",MR_Request.r->content_encoding);
+	STRMBR("range",MR_Request.r->range);
+	STRMBR("hostname",MR_Request.r->hostname);
+	STRMBR("user",MR_Request.r->user);
+	LGLMBR("header_only",MR_Request.r->header_only);
+	LGLMBR("no_cache",MR_Request.r->no_cache);
+	LGLMBR("no_local_copy",MR_Request.r->no_local_copy);
+	LGLMBR("assbackwards",MR_Request.r->assbackwards);
+	INTMBR("status",MR_Request.r->status);
+	INTMBR("method_number",MR_Request.r->method_number);
+	LGLMBR("eos_sent",MR_Request.r->eos_sent);
+	STRMBR("the_request",MR_Request.r->the_request);
+	STRMBR("method",MR_Request.r->method);
+	STRMBR("status_line",MR_Request.r->status_line);
+	OFFMBR("bytes_sent",MR_Request.r->bytes_sent);
+	OFFMBR("clength",MR_Request.r->clength);
+	OFFMBR("remaining",MR_Request.r->remaining);
+	OFFMBR("read_length",MR_Request.r->read_length);
+	TIMMBR("request_time",MR_Request.r->request_time);
+	TIMMBR("mtime",MR_Request.r->mtime);
+
+	SET_NAMES(MR_Request.serverVar,names);
+	UNPROTECT(2);
+	return MR_Request.serverVar;
 }
 
 
@@ -1819,6 +1934,7 @@ static void RegisterCallSymbols() {
 	{"RApache_parsePost",(DL_FUNC) &RApache_parsePost,0},
 	{"RApache_parseFiles",(DL_FUNC) &RApache_parseFiles,0},
 	{"RApache_parseCookies",(DL_FUNC) &RApache_parseCookies,0},
+	{"RApache_getServer",(DL_FUNC) &RApache_getServer,0},
 	{NULL, NULL, 0}
 	};
 	/* we add those to the base as we have no specific entry (yet?) */

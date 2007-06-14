@@ -7,7 +7,7 @@ AM_INIT_AUTOMAKE( no-texinfo.tex foreign )
 #AC_PROG_CC
 AC_PROG_LIBTOOL
 
-AC_CHECK_HEADERS( sys/types.h unistd.h )
+AC_CHECK_HEADERS( sys/types.h unistd.h stdlib.h )
 
 # --with-apache2-apxs
 AC_DEFUN([APACHE_APXS],[
