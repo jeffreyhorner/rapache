@@ -1096,7 +1096,7 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 	if (h->directive->file){
 	   	if (fileParsed || !h->expr){
 			if (h->expr) R_ReleaseObject(h->expr);
-			fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
+			fun = MyfindFun(install(h->directive->function),h->envir);
 			if (fun ==  R_UnboundValue){
 				RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
 				return 0;
