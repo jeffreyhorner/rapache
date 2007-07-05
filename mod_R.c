@@ -180,10 +180,14 @@ urlDecode <- function(str) .Call('RApache_urlEnDecode',str,FALSE)\n\
 RApacheInfo <- function() .Call('RApache_RApacheInfo')";
 
 /*
- * Expression list for injecting CGI vars into an environment
+ * CGI Expression list. These are evaluated in the RApache environment before every request.
  */
 static SEXP MR_CGIexprs;
 
+/*
+ * CGI Variables. Each tuple is passed to delayedAssign() and evaluated in the RApache environment
+ * before every request.
+ */
 static const char *MR_CGIvars[] = {
 	"GET", "RApache_parseGet",
 	"COOKIES", "RApache_parseCookies",
@@ -262,6 +266,7 @@ static void RApacheError(char *msg);
 static void InitTempDir(apr_pool_t *p);
 static void RegisterCallSymbols();
 static SEXP NewLogical(int tf);
+static SEXP NewInteger(int tf);
 static SEXP NewEnv(SEXP enclos);
 static int ExecRCode(const char *code,SEXP env, int *error);
 static SEXP ExecFun1Arg(SEXP fun, SEXP arg);
@@ -922,6 +927,14 @@ static SEXP NewLogical(int tf) {
 	return stf;
 }
 
+static SEXP NewInteger(int i){
+	SEXP val;
+	PROTECT(val = NEW_INTEGER(1));
+	INTEGER_DATA(val)[0] = i;
+	UNPROTECT(1);
+	return val;
+}
+
 static SEXP NewEnv(SEXP enclos){
 	SEXP env;
 	PROTECT(env = allocSExp(ENVSXP));
@@ -1179,12 +1192,65 @@ static void InitRApacheEnv(){
 		fprintf(stderr,"Error eval'ing MR_RApacheSource!\n\n");
 		exit(-1);
 	}
+
+	defineVar(install("DONE"),NewInteger(-2),MR_RApacheEnv);
+	defineVar(install("DECLINED"),NewInteger(-1),MR_RApacheEnv);
+	defineVar(install("OK"),NewInteger(0),MR_RApacheEnv);
+	defineVar(install("HTTP_CONTINUE"),NewInteger(100),MR_RApacheEnv);
+	defineVar(install("HTTP_SWITCHING_PROTOCOLS"),NewInteger(101),MR_RApacheEnv);
+	defineVar(install("HTTP_PROCESSING"),NewInteger(102),MR_RApacheEnv);
+	defineVar(install("HTTP_OK"),NewInteger(200),MR_RApacheEnv);
+	defineVar(install("HTTP_CREATED"),NewInteger(201),MR_RApacheEnv);
+	defineVar(install("HTTP_ACCEPTED"),NewInteger(202),MR_RApacheEnv);
+	defineVar(install("HTTP_NON_AUTHORITATIVE"),NewInteger(203),MR_RApacheEnv);
+	defineVar(install("HTTP_NO_CONTENT"),NewInteger(204),MR_RApacheEnv);
+	defineVar(install("HTTP_RESET_CONTENT"),NewInteger(205),MR_RApacheEnv);
+	defineVar(install("HTTP_PARTIAL_CONTENT"),NewInteger(206),MR_RApacheEnv);
+	defineVar(install("HTTP_MULTI_STATUS"),NewInteger(207),MR_RApacheEnv);
+	defineVar(install("HTTP_MULTIPLE_CHOICES"),NewInteger(300),MR_RApacheEnv);
+	defineVar(install("HTTP_MOVED_PERMANENTLY"),NewInteger(301),MR_RApacheEnv);
+	defineVar(install("HTTP_MOVED_TEMPORARILY"),NewInteger(302),MR_RApacheEnv);
+	defineVar(install("HTTP_SEE_OTHER"),NewInteger(303),MR_RApacheEnv);
+	defineVar(install("HTTP_NOT_MODIFIED"),NewInteger(304),MR_RApacheEnv);
+	defineVar(install("HTTP_USE_PROXY"),NewInteger(305),MR_RApacheEnv);
+	defineVar(install("HTTP_TEMPORARY_REDIRECT"),NewInteger(307),MR_RApacheEnv);
+	defineVar(install("HTTP_BAD_REQUEST"),NewInteger(400),MR_RApacheEnv);
+	defineVar(install("HTTP_UNAUTHORIZED"),NewInteger(401),MR_RApacheEnv);
+	defineVar(install("HTTP_PAYMENT_REQUIRED"),NewInteger(402),MR_RApacheEnv);
+	defineVar(install("HTTP_FORBIDDEN"),NewInteger(403),MR_RApacheEnv);
+	defineVar(install("HTTP_NOT_FOUND"),NewInteger(404),MR_RApacheEnv);
+	defineVar(install("HTTP_METHOD_NOT_ALLOWED"),NewInteger(405),MR_RApacheEnv);
+	defineVar(install("HTTP_NOT_ACCEPTABLE"),NewInteger(406),MR_RApacheEnv);
+	defineVar(install("HTTP_PROXY_AUTHENTICATION_REQUIRED"),NewInteger(407),MR_RApacheEnv);
+	defineVar(install("HTTP_REQUEST_TIME_OUT"),NewInteger(408),MR_RApacheEnv);
+	defineVar(install("HTTP_CONFLICT"),NewInteger(409),MR_RApacheEnv);
+	defineVar(install("HTTP_GONE"),NewInteger(410),MR_RApacheEnv);
+	defineVar(install("HTTP_LENGTH_REQUIRED"),NewInteger(411),MR_RApacheEnv);
+	defineVar(install("HTTP_PRECONDITION_FAILED"),NewInteger(412),MR_RApacheEnv);
+	defineVar(install("HTTP_REQUEST_ENTITY_TOO_LARGE"),NewInteger(413),MR_RApacheEnv);
+	defineVar(install("HTTP_REQUEST_URI_TOO_LARGE"),NewInteger(414),MR_RApacheEnv);
+	defineVar(install("HTTP_UNSUPPORTED_MEDIA_TYPE"),NewInteger(415),MR_RApacheEnv);
+	defineVar(install("HTTP_RANGE_NOT_SATISFIABLE"),NewInteger(416),MR_RApacheEnv);
+	defineVar(install("HTTP_EXPECTATION_FAILED"),NewInteger(417),MR_RApacheEnv);
+	defineVar(install("HTTP_UNPROCESSABLE_ENTITY"),NewInteger(422),MR_RApacheEnv);
+	defineVar(install("HTTP_LOCKED"),NewInteger(423),MR_RApacheEnv);
+	defineVar(install("HTTP_FAILED_DEPENDENCY"),NewInteger(424),MR_RApacheEnv);
+	defineVar(install("HTTP_UPGRADE_REQUIRED"),NewInteger(426),MR_RApacheEnv);
+	defineVar(install("HTTP_INTERNAL_SERVER_ERROR"),NewInteger(500),MR_RApacheEnv);
+	defineVar(install("HTTP_NOT_IMPLEMENTED"),NewInteger(501),MR_RApacheEnv);
+	defineVar(install("HTTP_BAD_GATEWAY"),NewInteger(502),MR_RApacheEnv);
+	defineVar(install("HTTP_SERVICE_UNAVAILABLE"),NewInteger(503),MR_RApacheEnv);
+	defineVar(install("HTTP_GATEWAY_TIME_OUT"),NewInteger(504),MR_RApacheEnv);
+	defineVar(install("HTTP_VERSION_NOT_SUPPORTED"),NewInteger(505),MR_RApacheEnv);
+	defineVar(install("HTTP_VARIANT_ALSO_VARIES"),NewInteger(506),MR_RApacheEnv);
+	defineVar(install("HTTP_INSUFFICIENT_STORAGE"),NewInteger(507),MR_RApacheEnv);
+	defineVar(install("HTTP_NOT_EXTENDED"),NewInteger(510),MR_RApacheEnv);
+
 	R_LockEnvironment(MR_RApacheEnv, TRUE);
 
 	/* For debugging */
-	defineVar(install("RApacheEnv"),MR_RApacheEnv,R_GlobalEnv);
+	/* defineVar(install("RApacheEnv"),MR_RApacheEnv,R_GlobalEnv); */
 	/* ExecRCode("gctorture()",R_GlobalEnv,&error); */
-
 }
 
 static int OnStartupCallback(void *rec, const char *key, const char *value){
@@ -1492,6 +1558,7 @@ static void InjectCGIvars(SEXP env){
 	UNPROTECT(1);
 	if (error){
 		fprintf(stderr,"Could not inject CGI VARS!!!!\n");
+		return;
 	}
 }
 
