@@ -38,6 +38,7 @@ dynlex <- function() {
 	listFrames()
 	cat("</pre> <H1>Enclosures</H1> <pre>")
 	listEnclosures(sys.frame(sys.nframe()))
-	cat("</pre> </BODY> </HTML>")
-	-2 
+	cat("</pre> ")
+	cat("returning",OK,"</BODY> </HTML>")
+	OK
 }

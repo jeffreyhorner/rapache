@@ -1,19 +1,20 @@
+<% setContentType('text/html') %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
-<head><title>Brewing with Rapache: useR2007 example</title>
+<head><title>Brewing with Rapache: useR2007 example with Hmisc</title>
 <link rel="stylesheet" type="text/css" href="/useR2007.css" />
 <script src="/prototype.js" type="text/javascript"></script>
 <script src="/useR2007.js" type="text/javascript"></script>
 </head>
 <body>
-<h2>Power and Sample Size Calculations with SPOWER from Hmisc</h2>
+<h2>Power and Sample Size Calculations with spower from Hmisc</h2>
 <div id="mainwrapper">
 <div id="threecolwrap"><!--holds the left col background-->
 <div id="twocolwrap"><!-- encloses the left and center columns-->
 <div id="leftcol"><!-- the left column-->
 <p>The following example<b>[1]</b> demonstrates the flexibility of spower and
-related functions. We simulate a 2-arm (350 subjects/arm) 5-year follow-up
+related functions from <b>Hmisc</b>. We simulate a 2-arm (350 subjects/arm) 5-year follow-up
 study for wich the control group's survival distribution is Weibull with 1-year
 survival of .95 and 3-year survival of .7. All subjects are followed at least
 one year, and patients enter the study with linearly increasing probability
@@ -38,6 +39,7 @@ Characteristics of control and intervention groups with a lag in the treatment e
 <form method="get" name="spower" action="#">
 <div class="clearfix"><label>1-year Survival Rate:</label><input type="text" name="p1" value="<%=p1%>"></input></div>
 <div class="clearfix"><label>3-year Survival Rate:</label><input type="text" name="p2" value="<%=p2%>"></input>
+<div class="clearfix"><label>Treatment Effect Start Month:</label><input type="text" name="mo" value="<%=mo%>"></input>
 <input type="button" onclick="RePlot()" value="Re-plot"></input></div>
 <div class="clearfix">
 <input type="button" onclick="ReSimulate()" value="Power Estimate:"></input>
