@@ -4,13 +4,10 @@
   What is it?
   -----------
   R/Apache is a project dedicated to embedding the R interpreter inside
-  the Apache 2.0 (and beyond) web server. It's composed of three parts:
+  the Apache 2.0 (and beyond) web server. It's composed of two parts:
 
   mod_R: the Apache 2.0 module that implements the glue to load the
   R interpreter.
-
-  RApache: the R package that provides the API for programming web
-  applications in R.
 
   libapreq 2.0.4: an Apache sponsored project for parsing request input.
   If you don't want to compile and install this version, then you can
@@ -22,12 +19,12 @@
   Details of the latest version can be found at the R/Apache
   project page:
 
-	http://biostat.mc.vanderbilt.edu/RApacheProject
+	http://biostat.mc.vanderbilt.edu/rapache
 
   Prerequisites
   -------------
-  This release has been tested under Debian Linux with Apache 2.0.55,
-  R 2.2.1, and libapreq 2.0.4.  Apache2 _MUST_ be compiled with the
+  This release has been tested under Debian Linux with Apache 2.2.4,
+  R 2.5.1, and libapreq 2.0.4.  Apache2 _MUST_ be compiled with the
   prefork MPM to compile mod_R. Also, R must have been compiled with
   the --enable-R-shlib configure flag.
 
@@ -49,18 +46,29 @@
 
   Configuration
   -------------
-  In order to use mod_R and RApache, you must configure apache to find
-  it. Type help("directives",package="RApache") once mod_R is installed
-  for a little more detail. Add something similar to this to the apache
-  config file:
+  Add something similar to this to the apache config file:
 
     LoadModule R_module /path/to/mod_R.so
 
-    <Location /URL>
-       SetHandler r-handler
-       Rsource /path/to/R/code.R
-       RreqHandler function-name
-       Rlibrary library-name
+    # Output R errors and warnings to the browser
+    ROutputErrors
+
+    # Displays information about rapache and R
+    <Location /RApacheInfo>
+        SetHandler r-info
+    </Location>
+
+    # Process all files under /path/to/brew/scripts with
+    # package brew and function brew
+    <Directory /path/to/brew/scripts>
+        SetHandler r-script
+        RHandler brew::brew
+    </Directory>
+
+    # This url will run the file /path/to/r/script.R
+    <Location /made/up/url/name>
+        SetHandler r-handler
+        RFileHandler /path/to/r/script.R
     </Location>
 
   Also, libR.so _MUST_ be found in the shared library path as it is
@@ -80,51 +88,9 @@
 
   Documentation
   -------------
-  All of the documentation is currently in the RApache package. Once
-  you install mod_R, start R and load the RApache package. You'll get
-  a warning that you're currently not running the R interpreter within
-  Apache; just don't try to run any of the code. Sample session:
-
-   > library(RApache)
-   Warning message:
-
-   RApache is only useful within the Apache web server.
-   It is loaded now for informational purposes only
-
-    in: firstlib(which.lib.loc, package)
-   > help(package="RApache")
-
-                   Information on package 'RApache'
-
-   Description:
-
-   Package:       RApache
-   Version:       0.1-1
-   Date:          2005-08-02
-   Title:         An R interface to the Apache 2.0 web server
-   Author:        Jeffrey Horner
-   Maintainer:    Jeffrey Horner <jeff.horner@vanderbilt.edu>
-   License:       Apache License, Version 2.0
-   Description:   RApache allows web applications to be written in R and
-   executed within the Apache 2.0 web server.
-   Built:         R 2.1.0; i386-pc-linux-gnu; 2005-08-02 01:06:26; unix
-
-   Index:
-
-   IO                      IO in RApache
-   apache.add_cookie       Adding Cookies to Outgoing Headers
-   apache.add_header       Adding HTTP headers
-   apache.allow_methods    RApache Methods
-   apache.log_error        Logging Errors to the Apache error log
-   apache.set_content_type
-   Setting the Content Type header
-   apr_table               Structure of the apr_table type in RApache
-   as.html                 Converting RApache objects to HTML
-   directives              RApache directives used in Apace config file
-   intro                   Introduction to RApache
-   request_rec             Structure of the RApache request record
-   return_codes            RApache handler return codes
-
+  
+  Forthcoming. See http://biostat.mc.vanderbilt.edu/rapache/manual.html
+  for ongoing updates.
 
   Licensing
   ---------
