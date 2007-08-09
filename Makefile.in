@@ -45,7 +45,7 @@ install: all
 
 itest: all
 	@echo
-	@echo Point your browser to http://localhost:8181/
+	@echo Point your browser to http://localhost:8181/index.html
 	@echo
 	$(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(HTTPD) -X -f $(DOCROOT)/httpd.conf
 

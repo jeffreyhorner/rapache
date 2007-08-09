@@ -96,7 +96,7 @@ ROutputErrors
 #        RHandler handler @DOCROOT@/plot.R TRUE
 #</Location>
 
-# DirectoryIndex index.html
+DirectoryIndex index.html
 
 DefaultType text/html
 

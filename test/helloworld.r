@@ -10,9 +10,6 @@ print(search())
 cat("\n.GlobalEnv:\n")
 print(ls(globalenv()))
 
-cat("\nRApacheEnv:\n")
-print(ls(RApacheEnv))
-
 assign("gfoo","gbar",.GlobalEnv)
 if (exists("foo")){
 	foo <- foo + 1
@@ -33,12 +30,6 @@ if (!is.null(GET)){
 	cat("\nGET is NULL.\n")
 }
 
-#cat("\nSys.getenv():\n")
-#envs <- Sys.getenv()
-#for (i in 1:length(envs) ){
-#	cat("\t",names(envs)[i],":",envs[i],"\n")
-#}
-cat("\njeff\n")
 cat("</pre>")
 cat("</body></html>")
 DONE

@@ -1,9 +1,9 @@
 
-               The R/Apache Integration Project
+               The Rapache Project
 
   What is it?
   -----------
-  R/Apache is a project dedicated to embedding the R interpreter inside
+  Rapache is a project dedicated to embedding the R interpreter inside
   the Apache 2.0 (and beyond) web server. It's composed of two parts:
 
   mod_R: the Apache 2.0 module that implements the glue to load the
@@ -19,7 +19,7 @@
   Details of the latest version can be found at the R/Apache
   project page:
 
-	http://biostat.mc.vanderbilt.edu/rapache
+	http://biostat.mc.vanderbilt.edu/rapache/
 
   Prerequisites
   -------------
@@ -30,19 +30,20 @@
 
   Installation
   ------------
-  The following is the preferred way to compile and install mod_R:
+  The following is the preferred way to compile and install rapache:
 
-    $ ./configure --with-apache2-apxs=/path/to/apxs --with-R=/path/to/R
+    $ ./configure
     $ make
     $ make install
 
-  Both --with-apache2-apxs and --with-R _MUST_ be specified.  Otherwise,
-  trying to figure out the dependencies between the sources and headers
-  and library paths becomes quite complex.
+  configure will try to find the needed programs to compile rapache,
+  but if it fails to locate them or if you have installed the
+  prerequisites in non-standard places, then you can specify their
+  locations with the following flags:
 
-  If you don't want to compile and install the bundled libapreq2 version,
-  then add --with-apreq2-config=/path/to/apreq2-config. The version _MUST_
-  be equal to or greater than 2.0.4.
+    --with-apache2-apxs=/path/to/apxs
+    --with-R=/path/to/R
+    --with-apreq2-config=/path/to/apreq2-config
 
   Configuration
   -------------
