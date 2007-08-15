@@ -1871,7 +1871,7 @@ SEXP RApache_parseCookies(SEXP sreq){
 #define STRMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); if (v){ val = NEW_STRING(1); STRING_PTR(val)[0] = mkChar(v);} else { val = R_NilValue;}; SET_ELEMENT(MR_Request.serverVar,i++,val)
 #define LGLMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); SET_ELEMENT(MR_Request.serverVar,i++,NewLogical(v));
 #define OFFMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
-#define TIMMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[0] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define TIMMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[1] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
 SEXP RApache_getServer(){
 	int len = 30, i = 0;
 	SEXP names, val, class;
