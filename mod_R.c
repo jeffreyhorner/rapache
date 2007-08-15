@@ -1886,6 +1886,7 @@ SEXP RApache_getServer(){
 	STRMBR("protocol",MR_Request.r->protocol);
 	STRMBR("unparsed_uri",MR_Request.r->unparsed_uri);
 	STRMBR("uri",MR_Request.r->uri);
+	STRMBR("filename",MR_Request.r->filename);
 	STRMBR("canonical_filename",MR_Request.r->canonical_filename);
 	STRMBR("path_info",MR_Request.r->path_info);
 	STRMBR("args",MR_Request.r->args);
