@@ -31,7 +31,6 @@ zebrifyPackage <-function(package){
 	zebra(package,unclass(packageDescription(package)))
 	cat('<br/><hr/>\n')
 }
-setContentType('text/html')
 -%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "DTD/xhtml1-transitional.dtd">
 <html><head>
@@ -52,13 +51,12 @@ div.map p { font-size: 10pt; font-family: serif; font-style: italic; }
 div.h { font-size: 20pt; font-weight: bold; }
 hr {background-color: #cccccc; border: 0px; height: 1px; color: #000000;}
 </style>
-<title>RApacheInfo()</title>
-<meta name="ROBOTS" content="NOINDEX,NOFOLLOW,NOARCHIVE" />
+<title>Everything You Wanted To Know About Your R Session</title>
 </head>
 <body>
 <a name="Top"> </a>
 <a href="http://www.r-project.org/"><img class="map" alt="R Language Home Page" src="http://www.r-project.org/Rlogo.jpg"/></a>
-<div class="h">RApache version 1.0</div>
+<div class="h">Everything You Wanted To Know About Your R Session</div>
 <div class="map">
 <p>jump to:</p>
 <a href="#Top">Top</a><br/><hr/>
@@ -72,8 +70,6 @@ hr {background-color: #cccccc; border: 0px; height: 1px; color: #000000;}
 <a href="#<%=hrefify(".Platform")%>">.Platform</a><br/><hr/>
 <a href="#Attached_Packages">Attached Packages</a><br/><hr/>
 <a href="#Installed_Packages">Installed Packages</a><br/><hr/>
-<a href="#License">License</a><br/><hr/>
-<a href="#People">People</a>
 </div>
 <% zebra('R.version',R.version) %><br/><hr/>
 <% zebra('search()',search()) %><br/><hr/>
@@ -87,28 +83,4 @@ hr {background-color: #cccccc; border: 0px; height: 1px; color: #000000;}
 <% lapply(sub('package:','',search()[grep('package:',search())]),zebrifyPackage) %>
 <h1><a name="Installed_Packages"></a>Installed Packages</h1>
 <% lapply(attr(installed.packages(),'dimnames')[[1]],zebrifyPackage) %>
-<h2><a name="License"></a>License</h2>
-<pre>
-Copyright 2005  The Apache Software Foundation
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-  <a href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0"</a>
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-</pre><hr/>
-<h2><a name="People"></a>People</h2>
-<p>Thanks to the following people for their contributions, giving advice, noticing when things were broken and such. If I've forgotten to mention you, please email me.</p>
-<pre>
-	Gregoire Thomas
-	Jan de Leeuw
-	Keven E. Thorpe
-	Jeremy Stephens
-</pre>
 </body></html>
