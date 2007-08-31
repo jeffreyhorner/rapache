@@ -272,7 +272,7 @@ static int ExecRCode(const char *code,SEXP env, int *error);
 static SEXP ExecFun1Arg(SEXP fun, SEXP arg);
 static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize, ParseStatus *);
 static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *fileParsed);
-static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType, int fileParsed);
+static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType);
 static SEXP EvalExprs(SEXP exprs, SEXP env, int *error); /* more than one expression evaluator*/
 static void StartRprof();
 static void StopRprof();
@@ -563,7 +563,7 @@ static int AP_hook_request_handler (request_rec *r)
 
 	/* Eval handler expression if set */
 	if (h->directive->function){
-		if (!PrepareHandlerExpr(h,r,handlerType,fileParsed)) return RApacheResponseError(NULL);
+		if (!PrepareHandlerExpr(h,r,handlerType)) return RApacheResponseError(NULL);
 		PROTECT(h->envir);
 		PROTECT(h->expr);
 		error=1;
@@ -1103,35 +1103,29 @@ static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *filePa
 	return 1;
 }
 
-static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType, int fileParsed){
+static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType){
 	SEXP fun;
 	int veclen = (handlerType == R_SCRIPT)? 3 : 1;
 	if (h->directive->file){
-	   	if (fileParsed || !h->expr){
-			if (h->expr) R_ReleaseObject(h->expr);
-			fun = MyfindFun(install(h->directive->function),h->envir);
-			if (fun ==  R_UnboundValue){
-				RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
-				return 0;
-			}
-			R_PreserveObject(h->expr = allocVector(LANGSXP,veclen));
-			SETCAR(h->expr,fun);
+		fun = MyfindFun(install(h->directive->function),h->envir);
+		if (fun ==  R_UnboundValue){
+			RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
+			return 0;
 		}
 	} else {
-		if (!h->expr){
-			if (h->directive->package)
-				fun = MyfindFunInPackage(install(h->directive->function),h->directive->package);
-			else
-				fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
-			if (fun ==  R_UnboundValue){
-				RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
-				return 0;
-			}
-			h->expr = allocVector(LANGSXP,veclen);
-			SETCAR(h->expr,fun);
-			R_PreserveObject(h->expr);
+		if (h->directive->package)
+			fun = MyfindFunInPackage(install(h->directive->function),h->directive->package);
+		else
+			fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
+		if (fun ==  R_UnboundValue){
+			RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
+			return 0;
 		}
 	}
+
+	if (h->expr) R_ReleaseObject(h->expr);
+	R_PreserveObject(h->expr = allocVector(LANGSXP,veclen));
+	SETCAR(h->expr,fun);
 
 	if (handlerType == R_SCRIPT){
 		SETCAR(CDR(h->expr),mkString(r->filename));
