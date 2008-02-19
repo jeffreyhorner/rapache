@@ -5,7 +5,7 @@ AM_INIT_AUTOMAKE( no-texinfo.tex foreign )
 
 # We'll get compiler and libtool info from apxs2
 #AC_PROG_CC
-AC_PROG_LIBTOOL
+#AC_PROG_LIBTOOL
 
 AC_CHECK_HEADERS( sys/types.h unistd.h stdlib.h )
 
@@ -190,6 +190,16 @@ AC_DEFUN([SET_DOCROOT],[
         DOCROOT=`pwd`/test
 ])
 
+AC_PATH_PROG(UNAME,uname)
+
+AC_DEFUN([WITH_RPATH],[
+	if test "${UNAME}" != ""; then
+		if test "`${UNAME}`" = "Linux"; then
+			RPATH=-Wl,-rpath,${RHOME}/lib
+		fi
+	fi
+])
+
 APACHE_APXS
 AC_SUBST(APXS)
 AC_SUBST(HTTPD)
@@ -208,6 +218,8 @@ AC_SUBST(APREQ_INCLUDES)
 AC_SUBST(APREQ_LINKLD)
 SET_DOCROOT
 AC_SUBST(DOCROOT)
+WITH_RPATH
+AC_SUBST(RPATH)
 
 SHLIBPATH_VAR=$shlibpath_var
 AC_SUBST(SHLIBPATH_VAR)

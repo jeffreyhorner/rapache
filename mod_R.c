@@ -608,8 +608,9 @@ static apr_status_t AP_child_exit(void *data){
  *************************************************************************/
 static void WriteConsoleEx(char *buf, int size, int error){
 	if (MR_Request.r){
-		if (!error) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
-		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
+		/*if (!error) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
+		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));*/
+		fprintf(stderr,"caught WriteConsoleEx(%x,%d,%d)\n",buf,size,error);
 	} else {
 		fprintf(stderr,"NULL Apache request record in WriteConsoleEx()! exiting...\n");
 		exit(-1);
@@ -1563,8 +1564,8 @@ static void InjectCGIvars(SEXP env){
  *************************************************************************/
 
 SEXP RApache_setHeader(SEXP header, SEXP value){
-	char *key = CHAR(STRING_PTR(header)[0]);
-	char *val;
+	const char *key = CHAR(STRING_PTR(header)[0]);
+	const char *val;
 
 	if (!key) return NewLogical(FALSE);
    
@@ -1580,7 +1581,7 @@ SEXP RApache_setHeader(SEXP header, SEXP value){
 }
 
 SEXP RApache_setContentType(SEXP stype){
-	char *ctype;
+	const char *ctype;
 	if (stype == R_NilValue) return NewLogical(FALSE);
 	ctype = CHAR(STRING_PTR(stype)[0]);
 	if (!ctype) return NewLogical(FALSE);
@@ -1589,7 +1590,7 @@ SEXP RApache_setContentType(SEXP stype){
 }
 
 SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP sdomain, SEXP therest){
-	char *name, *value, *cookie;
+	const char *name, *value, *cookie;
 	char strExpires[APR_RFC822_DATE_LEN];
 	apr_time_t texpires;
 
@@ -1642,7 +1643,7 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 }
 
 /* HTML Entity en/decoding */
-static SEXP encode(char *str){
+static SEXP encode(const char *str){
 	SEXP retstr;
 	char *buf;
 	int len;
@@ -1661,7 +1662,7 @@ static SEXP encode(char *str){
 	return retstr;
 }
 
-static SEXP decode(char *str){
+static SEXP decode(const char *str){
 	SEXP retstr;
 	char *buf;
 	apr_size_t len, blen;
@@ -1683,7 +1684,7 @@ static SEXP decode(char *str){
 SEXP RApache_urlEnDecode(SEXP str,SEXP enc){
 	int vlen, i;
 	SEXP new_str;
-	SEXP (*endecode)(char *str);
+	SEXP (*endecode)(const char *str);
 
 	if (IS_LOGICAL(enc) && LOGICAL(enc)[0] == TRUE){
 		endecode = encode;
