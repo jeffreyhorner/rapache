@@ -29,7 +29,7 @@ div#header {
 	float:left;
 	width:175px;
 	display:inline; /* stops IE doubling  margin on float*/
-	/* border: 1px solid black; */
+	border: 1px solid black;
 }
 #content {
 	width:600px;

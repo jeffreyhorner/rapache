@@ -608,9 +608,9 @@ static apr_status_t AP_child_exit(void *data){
  *************************************************************************/
 static void WriteConsoleEx(char *buf, int size, int error){
 	if (MR_Request.r){
-		/*if (!error) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
-		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));*/
-		fprintf(stderr,"caught WriteConsoleEx(%x,%d,%d)\n",buf,size,error);
+		if (!error) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
+		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
+		/* fprintf(stderr,"caught WriteConsoleEx(%x,%d,%d)\n",buf,size,error); */
 	} else {
 		fprintf(stderr,"NULL Apache request record in WriteConsoleEx()! exiting...\n");
 		exit(-1);
