@@ -15,6 +15,7 @@ APREQ_INCLUDES=@APREQ_INCLUDES@
 APREQ_LINKLD=@APREQ_LINKLD@
 
 RPROG=@RPROG@
+RPROGBATCH=R_DEFAULT_PACKAGES=NULL @RPROG@ --vanilla --no-readline --slave -f
 R_HOME = `$(RPROG) RHOME`
 R_LD_LIBRARY_PATH = $(R_HOME)/lib
 RINCLUDES=@RINCLUDES@
@@ -44,11 +45,16 @@ install: all
 	$(APXS) -i -n R mod_R.la
 	$(APREQ_INSTALL)
 
-itest: all
+$(DOCROOT)/httpd.conf: $(DOCROOT)/httpd.conf.in
+	$(RPROGBATCH) tools/config_http.R
+
+itest: all $(DOCROOT)/httpd.conf
 	@echo
 	@echo Point your browser to http://localhost:8181/index.html
 	@echo
 	$(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(HTTPD) -X -f $(DOCROOT)/httpd.conf
+
+test: all $(DOCROOT)/httpd.conf
 
 stop: all
 	$(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(HTTPD) -X -f $(DOCROOT)/httpd.conf -k stop

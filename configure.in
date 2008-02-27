@@ -1,7 +1,7 @@
 AC_INIT(mod_R,1.0,jeff.horner@vanderbilt.edu)
 AC_CONFIG_AUX_DIR([tools])
 # Automake initialization
-AM_INIT_AUTOMAKE( no-texinfo.tex foreign )
+AM_INIT_AUTOMAKE( foreign no-texinfo.tex no-dependencies no-dist no-installinfo no-installman no-exeext )
 
 # We'll get compiler and libtool info from apxs2
 #AC_PROG_CC
@@ -224,4 +224,4 @@ AC_SUBST(RPATH)
 SHLIBPATH_VAR=$shlibpath_var
 AC_SUBST(SHLIBPATH_VAR)
 
-AC_OUTPUT(Makefile mod_R.h test/httpd.conf)
+AC_OUTPUT(Makefile mod_R.h)

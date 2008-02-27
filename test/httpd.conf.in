@@ -55,7 +55,7 @@ LockFile accept.lock
 #
 #Listen 12.34.56.78:80
 
-Listen 8181
+Listen @PORT@
 
 LoadModule R_module           ../.libs/mod_R.so
 
@@ -98,7 +98,7 @@ ROutputErrors
 
 #DirectoryIndex index.html
 
-DefaultType text/html
+DefaultType text/plain
 
 HostnameLookups Off
 
