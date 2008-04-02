@@ -3,6 +3,10 @@ AC_CONFIG_AUX_DIR([tools])
 # Automake initialization
 AM_INIT_AUTOMAKE( foreign no-texinfo.tex no-dependencies no-dist no-installinfo no-installman no-exeext )
 
+# This macro turns off maintainer mode by default. use "configure --enable-mainainer-mode"
+# to enable
+AM_MAINTAINER_MODE
+
 # We'll get compiler and libtool info from apxs2
 #AC_PROG_CC
 AC_PROG_LIBTOOL

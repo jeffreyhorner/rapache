@@ -98,7 +98,7 @@ ROutputErrors
 
 #DirectoryIndex index.html
 
-DefaultType text/plain
+DefaultType text/html
 
 HostnameLookups Off
 
