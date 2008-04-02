@@ -1,3 +1,15 @@
+2008-04-02 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.0.3
+
+	* Added ChangeLog file
+
+	* Added maintainer mode flag to configure.
+
+	* test/test.R: Fixed form url; points to 'test/R'.
+
+	* tools/config_http.R: added to dist to find HTTP for testing.
+
 2008-02-20 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.0.2 (skipped 1.0.1)
