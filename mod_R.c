@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.0.3"
+#define MOD_R_VERSION "1.0.4"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -239,16 +239,16 @@ static apr_status_t AP_child_exit(void *data);
 /*
  * R interface callbacks
  */
-static void Suicide(char *s){ };
-static void ShowMessage(char *s){ };
-static int ReadConsole(char *, unsigned char *, int, int);
-static void WriteConsoleEx(char *, int, int);
+static void Suicide(const char *s){ };
+static void ShowMessage(const char *s){ };
+static int ReadConsole(const char *, unsigned char *, int, int);
+static void WriteConsoleEx(const char *, int, int);
 static void NoOpConsole(){ };
 static void NoOpBusy(int i) { };
 static void NoOpCleanUp(SA_TYPE s, int i, int j){ };
-static int NoOpShowFiles(int i, char **j, char **k, char *l, Rboolean b, char *c){ return 1;};
+static int NoOpShowFiles(int i, const char **j, const char **k, const char *l, Rboolean b, const char *c){ return 1;};
 static int NoOpChooseFile(int i, char *b,int s){ return 0;};
-static int NoOpEditFile(char *f){ return 0;};
+static int NoOpEditFile(const char *f){ return 0;};
 static void NoOpHistoryFun(SEXP a, SEXP b, SEXP c, SEXP d){ };
 
 /*
@@ -606,7 +606,7 @@ static apr_status_t AP_child_exit(void *data){
  * R interface callbacks
  *
  *************************************************************************/
-static void WriteConsoleEx(char *buf, int size, int error){
+static void WriteConsoleEx(const char *buf, int size, int error){
 	if (MR_Request.r){
 		if (!error) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
 		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
@@ -617,7 +617,7 @@ static void WriteConsoleEx(char *buf, int size, int error){
 	}
 }
 
-static int ReadConsole(char *prompt, unsigned char *buf, int size, int addHist){
+static int ReadConsole(const char *prompt, unsigned char *buf, int size, int addHist){
 	apr_size_t len, bpos=0, blen;
 	apr_status_t rv;
 	SEXP str;
