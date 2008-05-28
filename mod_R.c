@@ -773,14 +773,14 @@ static void init_R(apr_pool_t *p){
 	/* Don't let R set up its own signal handlers */
 	R_SignalHandlers = 0;
 
+	InitTempDir(p);
+
+	Rf_initEmbeddedR(argc, argv);
+
 	#ifdef CSTACK_DEFNS
 	/* Don't do any stack checking */
 	R_CStackLimit = -1;
 	#endif
-
-	InitTempDir(p);
-
-	Rf_initEmbeddedR(argc, argv);
 
 	RegisterCallSymbols();
 
