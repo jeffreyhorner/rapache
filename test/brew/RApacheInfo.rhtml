@@ -3,6 +3,7 @@ hrefify <- function(title) gsub('[\\.()]','_',title,perl=TRUE)
 scrub <- function(str){ 
 	if (is.null(str)) return('NULL')
 	if (length(str) == 0) return ('length 0 string')
+	if (is.na(str)) return('NA')
 	str <- as.character(str)
 	str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); 
 	str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); 

@@ -1361,7 +1361,7 @@ static int RApacheInfo()
 
 EXEC("hrefify <- function(title) gsub('[\\\\.()]','_',title,perl=TRUE)");
 EXEC("cl<-'e'");
-EXEC("scrub <- function(str){ if (is.null(str)) return('null'); if (length(str) == 0) return ('length 0 string'); str <- as.character(str); str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); if (length(str) == 0 || is.null(str) || str == '') str <- '&nbsp;'; str }");
+EXEC("scrub <- function(str){ if (is.null(str)) return('null'); if (is.na(str)) return('NA'); if (length(str) == 0) return ('length 0 string'); str <- as.character(str); str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); if (length(str) == 0 || is.null(str) || str == '') str <- '&nbsp;'; str }");
 EXEC("zebelem <- function(n,v) { cl <<- ifelse(cl=='e','o','e'); cat('<tr class=\"',cl,'\">'); if(!is.na(n)) cat('<td class=\"l\">',n,'</td>'); cat('<td>'); if (length(v)>1) zebra(NULL,v) else cat(scrub(v)); cat('</td></tr>\n'); }");
 EXEC("zebra <- function(title,l){ if (!is.null(title)) cat('<h2><a name=\"',hrefify(title),'\"> </a>',title,'</h2>',sep=''); cat('<table><tbody>',sep=''); n <- names(l); mapply(zebelem,if(is.null(n)) rep(NA,length(l)) else n, l); cat('</tbody></table>\n') }");
 EXEC(" zebrifyPackage <-function(package){ zebra(package,unclass(packageDescription(package))); cat('<br/><hr/>\\n') }");
@@ -1408,7 +1408,8 @@ PUTS("<a href=\"#"); EXEC("cat(hrefify('options()'))"); PUTS("\">options()</a><b
 PUTS("<a href=\"#"); EXEC("cat(hrefify('Sys.getenv()'))"); PUTS("\">Sys.getenv()</a><br/>");
 PUTS("<a href=\"#"); EXEC("cat(hrefify('Sys.info()'))"); PUTS("\">Sys.info()</a><br/>");
 PUTS("<a href=\"#"); EXEC("cat(hrefify('.Machine'))"); PUTS("\">.Machine</a><br/>");
-PUTS("<a href=\"#"); EXEC("cat(hrefify('.Platform'))"); PUTS("\">.Platform</a><br/><hr/>");
+PUTS("<a href=\"#"); EXEC("cat(hrefify('.Platform'))"); PUTS("\">.Platform</a><br/>");
+PUTS("<a href=\"#"); EXEC("cat(hrefify('Cstack_info()'))"); PUTS("\">Cstack_info()</a><br/><hr/>");
 
 PUTS("<a href=\"#Attached_Packages\">Attached Packages</a><br/><hr/>");
 PUTS("<a href=\"#Installed_Packages\">Installed Packages</a><br/><hr/>");
@@ -1424,6 +1425,7 @@ EXEC("zebra('Sys.getenv()',as.list(Sys.getenv()))"); PUTS("<br/><hr/>");
 EXEC("zebra('Sys.info()',as.list(Sys.info()))"); PUTS("<br/><hr/>");
 EXEC("zebra('.Machine',.Machine)"); PUTS("<br/><hr/>");
 EXEC("zebra('.Platform',.Platform)"); PUTS("<br/><hr/>");
+EXEC("zebra('Cstack_info()',as.list(Cstack_info()))"); PUTS("<br/><hr/>");
 
 PUTS("<h1><a name=\"Attached_Packages\"></a>Attached Packages</h1>");
 EXEC("lapply(sub('package:','',search()[grep('package:',search())]),zebrifyPackage)");
