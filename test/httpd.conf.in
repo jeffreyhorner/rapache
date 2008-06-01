@@ -80,6 +80,11 @@ ROutputErrors
         RFileHandler @DOCROOT@/helloworld.r
 </Location>
 
+<Location /test/sendBin>
+        SetHandler r-handler
+        RFileHandler @DOCROOT@/sendBin.r
+</Location>
+
 <Directory @DOCROOT@/brew>
 	SetHandler r-script
 	RHandler brew::brew
