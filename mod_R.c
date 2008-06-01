@@ -26,6 +26,7 @@
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
+
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -60,6 +61,7 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include "apreq_param.h"
 #include "apreq_util.h"
 
+
 /*
  * R headers
  */
@@ -67,14 +69,23 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include <Rversion.h>
 #include <Rinternals.h>
 #include <Rdefines.h>
+
+
 #define R_INTERFACE_PTRS
+#define CSTACK_DEFNS
+/* 
+ * APR pulls in stdint.h which defines uintptr_t, so we need to tell R
+ * headers that. R defines uintptr_t slightly differently than 
+ * stdint.h, although they *should* be the same size
+ */
+#define HAVE_UINTPTR_T
 #include <Rinterface.h>
+
 #include <Rembedded.h>
 #include <R_ext/Parse.h>
 #include <R_ext/Callbacks.h>
 #include <R_ext/Rdynload.h>
 #include <R_ext/Memory.h>
-
 
 /*************************************************************************
  *

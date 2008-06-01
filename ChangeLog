@@ -1,3 +1,11 @@
+2008-06-01 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* configure now properly detects if apache was installed
+	with prefork mpm.
+
+	* HAVE_UINTPTR_T is defined to satisfy Rinterface.h
+	to properly export C stack variables.
+
 2008-05-28 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 	* Release 1.0.6
 

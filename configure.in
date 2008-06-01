@@ -33,7 +33,7 @@ AC_DEFUN([APACHE_APXS],[
 			echo
 			AC_MSG_ERROR( aborting! )
 		else
-            APXS=$APACHEAPXS
+			APXS=$APACHEAPXS
 			HTTPD="`$APXS -q bindir`/`$APXS -q progname`"; export HTTPD
 			if ! test -x $HTTPD; then 
 				HTTPD="`$APXS -q sbindir`/`$APXS -q progname`"; export HTTPD
@@ -42,33 +42,33 @@ AC_DEFUN([APACHE_APXS],[
     else
 		AC_MSG_CHECKING(for apxs2)
         # make sure that httpd was built with prefork
-        HTTPD="`$with_apache2_apxs -q bindir`/`$with_apache2_apxs -q progname`"; export HTTPD
+		APXS=$with_apache2_apxs
+		HTTPD="`$with_apache2_apxs -q bindir`/`$with_apache2_apxs -q progname`"; export HTTPD
 		if ! test -x $HTTPD; then 
-            HTTPD="`$with_apache2_apxs -q sbindir`/`$with_apache2_apxs -q progname`"; export HTTPD
+			HTTPD="`$with_apache2_apxs -q sbindir`/`$with_apache2_apxs -q progname`"; export HTTPD
 			if ! test -x $HTTPD; then
-					echo
-					echo
-					echo "I cannot find your httpd binary with $with_apache2_apxs."
-					echo "Are you sure that's the correct apxs you should be using?"
-					echo
-					AC_MSG_ERROR( aborting! )
+				echo
+				echo
+				echo "I cannot find your httpd binary with $with_apache2_apxs."
+				echo "Are you sure that's the correct apxs you should be using?"
+				echo
+				AC_MSG_ERROR( aborting! )
             fi
         fi
-        if $HTTPD -l 2>/dev/null | grep 'prefork' >/dev/null; then
-            APXS=$with_apache2_apxs
-			AC_MSG_RESULT([$APXS])
-        else
-            echo
-            echo
-            echo "Apache not built with prefork MPM module."
-            echo
-            echo "Since R is not threaded, mod_R must be built with an install of Apache"
-            echo "that doesn't utilize threads. Apache must be built with the prefork MPM module."
-            echo "Either recompile Apache with prefork, or find another Apache install."
-            echo
-            AC_MSG_ERROR( aborting! )
-        fi
     fi
+	if $HTTPD -l 2>/dev/null | grep 'prefork' >/dev/null; then
+		AC_MSG_RESULT([$APXS])
+	else
+		echo
+		echo
+		echo "Apache not built with prefork MPM module."
+		echo
+		echo "Since R is not threaded, mod_R must be built with an install of Apache"
+		echo "that doesn't utilize threads. Apache must be built with the prefork MPM module."
+		echo "Either recompile Apache with prefork, or find another Apache install."
+		echo
+		AC_MSG_ERROR( aborting! )
+	fi
 
 ])
 

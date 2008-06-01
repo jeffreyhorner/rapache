@@ -19403,7 +19403,7 @@ fi
 echo "$as_me: error: aborting! " >&2;}
    { (exit 1); exit 1; }; }
 		else
-            APXS=$APACHEAPXS
+			APXS=$APACHEAPXS
 			HTTPD="`$APXS -q bindir`/`$APXS -q progname`"; export HTTPD
 			if ! test -x $HTTPD; then
 				HTTPD="`$APXS -q sbindir`/`$APXS -q progname`"; export HTTPD
@@ -19413,38 +19413,38 @@ echo "$as_me: error: aborting! " >&2;}
 		{ echo "$as_me:$LINENO: checking for apxs2" >&5
 echo $ECHO_N "checking for apxs2... $ECHO_C" >&6; }
         # make sure that httpd was built with prefork
-        HTTPD="`$with_apache2_apxs -q bindir`/`$with_apache2_apxs -q progname`"; export HTTPD
+		APXS=$with_apache2_apxs
+		HTTPD="`$with_apache2_apxs -q bindir`/`$with_apache2_apxs -q progname`"; export HTTPD
 		if ! test -x $HTTPD; then
-            HTTPD="`$with_apache2_apxs -q sbindir`/`$with_apache2_apxs -q progname`"; export HTTPD
+			HTTPD="`$with_apache2_apxs -q sbindir`/`$with_apache2_apxs -q progname`"; export HTTPD
 			if ! test -x $HTTPD; then
-					echo
-					echo
-					echo "I cannot find your httpd binary with $with_apache2_apxs."
-					echo "Are you sure that's the correct apxs you should be using?"
-					echo
-					{ { echo "$as_me:$LINENO: error: aborting! " >&5
+				echo
+				echo
+				echo "I cannot find your httpd binary with $with_apache2_apxs."
+				echo "Are you sure that's the correct apxs you should be using?"
+				echo
+				{ { echo "$as_me:$LINENO: error: aborting! " >&5
 echo "$as_me: error: aborting! " >&2;}
    { (exit 1); exit 1; }; }
             fi
         fi
-        if $HTTPD -l 2>/dev/null | grep 'prefork' >/dev/null; then
-            APXS=$with_apache2_apxs
-			{ echo "$as_me:$LINENO: result: $APXS" >&5
+    fi
+	if $HTTPD -l 2>/dev/null | grep 'prefork' >/dev/null; then
+		{ echo "$as_me:$LINENO: result: $APXS" >&5
 echo "${ECHO_T}$APXS" >&6; }
-        else
-            echo
-            echo
-            echo "Apache not built with prefork MPM module."
-            echo
-            echo "Since R is not threaded, mod_R must be built with an install of Apache"
-            echo "that doesn't utilize threads. Apache must be built with the prefork MPM module."
-            echo "Either recompile Apache with prefork, or find another Apache install."
-            echo
-            { { echo "$as_me:$LINENO: error: aborting! " >&5
+	else
+		echo
+		echo
+		echo "Apache not built with prefork MPM module."
+		echo
+		echo "Since R is not threaded, mod_R must be built with an install of Apache"
+		echo "that doesn't utilize threads. Apache must be built with the prefork MPM module."
+		echo "Either recompile Apache with prefork, or find another Apache install."
+		echo
+		{ { echo "$as_me:$LINENO: error: aborting! " >&5
 echo "$as_me: error: aborting! " >&2;}
    { (exit 1); exit 1; }; }
-        fi
-    fi
+	fi
 
 
 
