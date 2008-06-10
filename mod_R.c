@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.0.6"
+#define MOD_R_VERSION "1.0.7"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -1471,6 +1471,7 @@ PUTS("	Gregoire Thomas\n");
 PUTS("	Jan de Leeuw\n");
 PUTS("	Keven E. Thorpe\n");
 PUTS("	Jeremy Stephens\n");
+PUTS("	Aleksander Wawer\n");
 PUTS("</pre>");
 PUTS("</body></html>");
 
@@ -1623,7 +1624,7 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 		value = (svalue != NA_STRING)? CHAR(STRING_PTR(svalue)[0]): "";
 	}
 
-	cookie = apr_pstrcat(MR_Request.r->pool,name,"=",value);
+	cookie = apr_pstrcat(MR_Request.r->pool,name,"=",value,NULL);
 
 	/* expires */
 	if (sexpires != R_NilValue && inherits(sexpires,"POSIXt") ){
@@ -1636,19 +1637,19 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 		apr_time_ansi_put(&texpires,(time_t)(REAL(tmpExpires)[0]));
 		apr_rfc822_date(strExpires, texpires);
 
-		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";expires=",strExpires);
+		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";expires=",strExpires,NULL);
 	}
 
 	/* path */
 	if (spath != R_NilValue && isString(spath))
-		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";path=",CHAR(STRING_PTR(spath)[0]));
+		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";path=",CHAR(STRING_PTR(spath)[0]),NULL);
 	/* domain */
 	if (sdomain != R_NilValue && isString(sdomain))
-		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";domain=",CHAR(STRING_PTR(sdomain)[0]));
+		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";domain=",CHAR(STRING_PTR(sdomain)[0]),NULL);
 	/* therest */
 	if (therest != R_NilValue && isString(therest) && CHAR(STRING_PTR(therest)[0])[0] != '\0'){
 		fprintf(stderr,"therest is <%s>\n",CHAR(STRING_PTR(therest)[0]));
-		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";",CHAR(STRING_PTR(therest)[0]));
+		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";",CHAR(STRING_PTR(therest)[0]),NULL);
 	}
 
 	if (!apr_table_get(MR_Request.r->headers_out,"Cache-Control"))

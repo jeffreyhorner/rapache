@@ -1,3 +1,9 @@
+2008-06-10 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+	* Release 1.0.7
+
+	* apr_pstrcat was missing final argument of NULL. Thanks
+	to Aleksander Wawer.
+
 2008-06-01 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* configure now properly detects if apache was installed
