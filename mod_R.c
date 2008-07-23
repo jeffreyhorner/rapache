@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.0.7"
+#define MOD_R_VERSION "1.0.8"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -344,7 +344,6 @@ static void *AP_create_dir_cfg(apr_pool_t *p, char *dir){
 	cfg = (RApacheDirective *)apr_pcalloc(p,sizeof(RApacheDirective));
 	return (void *)cfg;
 }
-
 /*
 void print_cfg(char *fname, char *cname1, RApacheDirective *c1, char *cname2, RApacheDirective *c2){
 	printf("CALLED %s\n",fname);
@@ -697,8 +696,8 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
 	RApacheDirective *d =  ap_get_module_config(r->per_dir_config,&R_module);
 	RApacheHandler *h;
 
-	if (d == NULL){
-		RApacheError("RApache Directive is NULL");
+	if (d == NULL || d->handlerKey == NULL){
+		RApacheError(apr_psprintf(r->pool,"No RApache Directive specified for 'SetHandler %s'",r->handler));
 		return NULL;
 	}
    
