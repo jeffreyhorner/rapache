@@ -26,7 +26,7 @@ LDFLAGS = $(RLINKLD) $(APREQ_LINKLD)
 LD_LIBRARY_PATH=$(R_LD_LIBRARY_PATH):$(APREQ_LIB_DIR)
 RPATH=@RPATH@
 
-all: mod_R.so
+all: mod_R.so $(DOCROOT)/httpd.conf
 
 mod_R.so: .apreq-config mod_R.c mod_R.h
 	@echo
@@ -48,7 +48,7 @@ install: all
 $(DOCROOT)/httpd.conf: $(DOCROOT)/httpd.conf.in
 	$(RPROGBATCH) tools/config_http.R
 
-itest: all $(DOCROOT)/httpd.conf
+itest: all
 	@echo
 	@echo Point your browser to http://localhost:8181/index.html
 	@echo

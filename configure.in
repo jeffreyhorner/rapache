@@ -56,20 +56,6 @@ AC_DEFUN([APACHE_APXS],[
             fi
         fi
     fi
-	if $HTTPD -l 2>/dev/null | grep 'prefork' >/dev/null; then
-		AC_MSG_RESULT([$APXS])
-	else
-		echo
-		echo
-		echo "Apache not built with prefork MPM module."
-		echo
-		echo "Since R is not threaded, mod_R must be built with an install of Apache"
-		echo "that doesn't utilize threads. Apache must be built with the prefork MPM module."
-		echo "Either recompile Apache with prefork, or find another Apache install."
-		echo
-		AC_MSG_ERROR( aborting! )
-	fi
-
 ])
 
 # --with-R

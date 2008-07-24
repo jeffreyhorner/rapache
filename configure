@@ -19429,23 +19429,6 @@ echo "$as_me: error: aborting! " >&2;}
             fi
         fi
     fi
-	if $HTTPD -l 2>/dev/null | grep 'prefork' >/dev/null; then
-		{ echo "$as_me:$LINENO: result: $APXS" >&5
-echo "${ECHO_T}$APXS" >&6; }
-	else
-		echo
-		echo
-		echo "Apache not built with prefork MPM module."
-		echo
-		echo "Since R is not threaded, mod_R must be built with an install of Apache"
-		echo "that doesn't utilize threads. Apache must be built with the prefork MPM module."
-		echo "Either recompile Apache with prefork, or find another Apache install."
-		echo
-		{ { echo "$as_me:$LINENO: error: aborting! " >&5
-echo "$as_me: error: aborting! " >&2;}
-   { (exit 1); exit 1; }; }
-	fi
-
 
 
 

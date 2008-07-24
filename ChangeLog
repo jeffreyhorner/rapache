@@ -1,4 +1,14 @@
-2008-07-23Jeffrey Horner <jeff.horner@vanderbilt.edu>
+2008-07-24 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.0
+
+	* Support for threaded mpm's.
+
+	* Set the response content type to html when R*Handler
+	directive is missing to force proper rendering of error
+	message.
+
+2008-07-23 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.0.8
 

@@ -22,10 +22,9 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.0.8"
+#define MOD_R_VERSION "1.1.0"
 #define SVNID "$Id$"
 #include "mod_R.h" 
-
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -39,7 +38,7 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #endif
 
 /*
- * Apache headers
+ * Apache Server headers
  */ 
 #include "httpd.h"
 #include "http_log.h"
@@ -47,10 +46,18 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include "http_protocol.h"
 #include "util_filter.h"
 #include "util_script.h"
+#include "ap_mpm.h"
+
+/*
+ * Apache Portable Runtime
+ */
+#include "apr.h"
+#include "apr_errno.h"
 #include "apr_strings.h"
 #include "apr_env.h"
 #include "apr_pools.h"
 #include "apr_hash.h"
+#include "apr_thread_mutex.h"
 
 /*
  * libapreq headers
@@ -212,6 +219,11 @@ static const char *MR_CGIvars[] = {
 	NULL
 };
 
+/*
+ * Global Thread Mutex
+ */
+static apr_thread_mutex_t *MR_mutex = NULL;
+
 /*************************************************************************
  *
  * Function declarations
@@ -273,8 +285,8 @@ static void init_config_pass(apr_pool_t *p);
 static void init_R(apr_pool_t *);
 static int call_fun1str( char *funstr, char *argstr);
 static int decode_return_value(SEXP ret);
-static void SetUpIO(const request_rec *);
-static void TearDownIO();
+static int SetUpRequest(const request_rec *);
+static void TearDownRequest();
 static RApacheHandler *GetHandlerFromRequest(const request_rec *r);
 static int RApacheResponseError(char *msg);
 static void RApacheError(char *msg);
@@ -381,6 +393,7 @@ void *AP_merge_dir_cfg(apr_pool_t *pool, void *parent, void *new){
 	return (void *)c;
 }
 
+/* first mod_R.c function called when apache starts */
 void *AP_create_srv_cfg(apr_pool_t *p, server_rec *s){
 	RApacheDirective *c;
 
@@ -518,20 +531,19 @@ static int AP_hook_request_handler (request_rec *r)
 	RApacheHandler *h;
 	SEXP val;
 	int error=1,fileParsed=1;
+	apr_status_t rv;
 
-	/* Only handle if correct handler
-	 * We work on r-handler and r-script
-	 */
+	/* Only handle our handlers */
 	if (strcmp(r->handler,"r-handler")==0) handlerType = R_HANDLER;
-	if (strcmp(r->handler,"r-script")==0) handlerType = R_SCRIPT;
-	if (strcmp(r->handler,"r-info")==0) handlerType = R_INFO;
-	if (!handlerType) return DECLINED;
+	else if (strcmp(r->handler,"r-script")==0) handlerType = R_SCRIPT;
+	else if (strcmp(r->handler,"r-info")==0) handlerType = R_INFO;
+	else return DECLINED;
 
-	SetUpIO(r);
+	if (!SetUpRequest(r)) return HTTP_INTERNAL_SERVER_ERROR;
 
 	if (handlerType == R_INFO){
 		int val = RApacheInfo();
-		TearDownIO();
+		TearDownRequest();
 		return val;
 	}
 
@@ -586,7 +598,7 @@ static int AP_hook_request_handler (request_rec *r)
 		if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error calling function %s!\n",h->directive->function));
 	}
 
-	TearDownIO();
+	TearDownRequest();
 
 	return decode_return_value(val);
 }
@@ -697,6 +709,7 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
 	RApacheHandler *h;
 
 	if (d == NULL || d->handlerKey == NULL){
+		ap_set_content_type((request_rec *)r,"text/html");
 		RApacheError(apr_psprintf(r->pool,"No RApache Directive specified for 'SetHandler %s'",r->handler));
 		return NULL;
 	}
@@ -710,6 +723,7 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
 	}
 
 	if (h == NULL || (d->file == NULL && d->function == NULL)){
+		ap_set_content_type((request_rec *)r,"text/html");
 		RApacheError(apr_psprintf(r->pool,"Invalid RApache Directive: %s",d->handlerKey));
 		return NULL;
 	}
@@ -719,7 +733,14 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
 	return(h);
 }
 
-static void SetUpIO(const request_rec *r){
+static int SetUpRequest(const request_rec *r){
+
+	/* Acquire R mutex */
+    if (MR_mutex != NULL && apr_thread_mutex_lock(MR_mutex) != APR_SUCCESS) {
+		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"RApache Mutex error!");
+		return 0;
+	}
+
 	/* Set current request_rec */
 	MR_Request.r = (request_rec *)r;
 
@@ -727,11 +748,17 @@ static void SetUpIO(const request_rec *r){
 	MR_BBin = NULL;
 
 	/* Set output brigade */
-	MR_BBout = apr_brigade_create(r->pool, r->connection->bucket_alloc);
+	if ((MR_BBout = apr_brigade_create(r->pool, r->connection->bucket_alloc)) == NULL){
+		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"RApache MR_BBout error!");
+		if (MR_mutex != NULL) apr_thread_mutex_unlock(MR_mutex);
+	   	return 0;
+	}
+
+	return 1;
 }
 
 /* No need to free any memory here since it was allocated out of the request pool */
-static void TearDownIO(){
+static void TearDownRequest(){
 	/* Clean up reading */
 	if (MR_BBin){
 		apr_brigade_cleanup(MR_BBin);
@@ -748,6 +775,8 @@ static void TearDownIO(){
 	}
 	MR_BBout = NULL;
 	bzero(&MR_Request,sizeof(RApacheRequest));
+
+    if (MR_mutex != NULL) apr_thread_mutex_unlock(MR_mutex);
 }
 
 /* Can be called with NULL msg to force proper request handler return
@@ -755,7 +784,7 @@ static void TearDownIO(){
  */
 static int RApacheResponseError(char *msg){
 	if (msg) RApacheError(msg);
-	TearDownIO();
+	TearDownRequest();
 	return (MR_OutputErrors)? DONE: HTTP_INTERNAL_SERVER_ERROR;
 }
 
@@ -774,10 +803,29 @@ static void RApacheError(char *msg){
 static void init_R(apr_pool_t *p){
 	char *argv[] = {"mod_R", "--gui=none", "--slave", "--silent", "--vanilla","--no-readline"};
 	int argc = sizeof(argv)/sizeof(argv[0]);
+	int threaded;
+	apr_status_t rv;
 
 	if (MR_InitStatus != 0) return;
 
 	MR_InitStatus = 1;
+
+	InitRApachePool(); /* possibly done already if REvalOnStartup or RSourceOnStartup set */
+
+	/* Setup thread mutex if we're running in a threaded server.*/
+	rv = ap_mpm_query(AP_MPMQ_IS_THREADED,&threaded);
+	if (rv != APR_SUCCESS){
+		fprintf(stderr,"Fatal Error: Can't query the server to dermine if it's threaded!\n");
+		exit(-1);
+	}
+
+	if (threaded){
+		rv = apr_thread_mutex_create(&MR_mutex,APR_THREAD_MUTEX_DEFAULT,MR_Pool);
+		if (rv != APR_SUCCESS){
+			fprintf(stderr,"Fatal Error: unable to create R mutex!\n");
+			exit(-1);
+		}
+	}
 
 	if (apr_env_set("R_HOME",R_HOME,p) != APR_SUCCESS){
 		fprintf(stderr,"Fatal Error: could not set R_HOME from init!\n");
@@ -802,7 +850,6 @@ static void init_R(apr_pool_t *p){
 
 	InitCGIexprs(); 
 
-	InitRApachePool(); /* possibly done already if REvalOnStartup or RSourceOnStartup set */
 
 	/* Execute all *OnStartup code */
 	apr_table_do(OnStartupCallback,NULL,MR_OnStartup,NULL);
@@ -1471,6 +1518,7 @@ PUTS("	Jan de Leeuw\n");
 PUTS("	Keven E. Thorpe\n");
 PUTS("	Jeremy Stephens\n");
 PUTS("	Aleksander Wawer\n");
+PUTS("	David Konerding\n");
 PUTS("</pre>");
 PUTS("</body></html>");
 
