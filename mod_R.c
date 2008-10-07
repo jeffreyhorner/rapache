@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.0"
+#define MOD_R_VERSION "1.1.1"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -134,6 +134,9 @@ typedef struct {
 	apr_table_t *cookiesTable;
 	SEXP filesVar;
 	SEXP serverVar;
+	int outputErrors;
+	char *errorPrefix;
+	char *errorSuffix;
 } RApacheRequest;
 
 /*************************************************************************
@@ -144,12 +147,12 @@ typedef struct {
  *************************************************************************/
 
 /* Current request_rec */
-static RApacheRequest MR_Request = { NULL, 0, 0, NULL, NULL, NULL, NULL };
+static RApacheRequest MR_Request = { NULL, 0, 0, NULL, NULL, NULL, NULL , NULL, -1, NULL, NULL};
 
 /* Option to turn on errors in output */
 static int MR_OutputErrors = 0;
-static const char MR_ErrorPrefix[] = "<div style=\"background-color:#eee; padding: 20px 20px 20px 20px; font-size: 14pt; border: 1px solid red;\"><code>";
-static const char MR_ErrorSuffix[] = "</code></div>";
+static const char *MR_ErrorPrefix = "<div style=\"background-color:#eee; padding: 20px 20px 20px 20px; font-size: 14pt; border: 1px solid red;\"><code>";
+static const char *MR_ErrorSuffix = "</code></div>";
 
 /* Number of times apache has parsed config files; we'll do stuff on second pass */
 static int MR_ConfigPass = 1;
@@ -200,7 +203,7 @@ sendBin <- function(object, con=stdout(), size=NA_integer_, endian=.Platform$end
 	swap <- endian != .Platform$endian\n\
 	if (!is.vector(object) || mode(object) == 'list') stop('can only write vector objects')\n\
 	.Call('RApache_sendBin',object,size,swap)}\n\
-RApacheOutputErrors <- function(status=TRUE) .Call('RApache_outputErrors',status)";
+RApacheOutputErrors <- function(status=TRUE,prefix=NULL,suffix=NULL) .Call('RApache_outputErrors',status,prefix,suffix)";
 
 /*
  * CGI Expression list. These are evaluated in the RApache environment before every request.
@@ -287,7 +290,8 @@ static void init_R(apr_pool_t *);
 static int call_fun1str( char *funstr, char *argstr);
 static int decode_return_value(SEXP ret);
 static int SetUpRequest(const request_rec *);
-static void TearDownRequest();
+static void EmptyRequest(void);
+static void TearDownRequest(int flush);
 static RApacheHandler *GetHandlerFromRequest(const request_rec *r);
 static int RApacheResponseError(char *msg);
 static void RApacheError(char *msg);
@@ -544,7 +548,7 @@ static int AP_hook_request_handler (request_rec *r)
 
 	if (handlerType == R_INFO){
 		int val = RApacheInfo();
-		TearDownRequest();
+		TearDownRequest(1);
 		return val;
 	}
 
@@ -599,7 +603,7 @@ static int AP_hook_request_handler (request_rec *r)
 		if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error calling function %s!\n",h->directive->function));
 	}
 
-	TearDownRequest();
+	TearDownRequest(1);
 
 	return decode_return_value(val);
 }
@@ -758,8 +762,12 @@ static int SetUpRequest(const request_rec *r){
 	return 1;
 }
 
+static void EmptyRequest(void){
+	apr_brigade_cleanup(MR_BBout);
+}
+
 /* No need to free any memory here since it was allocated out of the request pool */
-static void TearDownRequest(){
+static void TearDownRequest(int flush){
 	/* Clean up reading */
 	if (MR_BBin){
 		apr_brigade_cleanup(MR_BBin);
@@ -768,7 +776,11 @@ static void TearDownRequest(){
 	MR_BBin = NULL;
 	/* Clean up writing */
 	if (MR_BBout){
-		if(!APR_BRIGADE_EMPTY(MR_BBout)){
+
+		/* A reason not to flush when the brigade is not empty is to
+		 * preserve error conditons
+		 */
+		if(!APR_BRIGADE_EMPTY(MR_BBout) && flush){
 			ap_filter_flush(MR_BBout,MR_Request.r->output_filters);
 		}
 		apr_brigade_cleanup(MR_BBout);
@@ -784,18 +796,45 @@ static void TearDownRequest(){
  * value.
  */
 static int RApacheResponseError(char *msg){
+	int output;
+	if (MR_Request.outputErrors==-1){
+		/* Module-wide config */
+		output = MR_OutputErrors;
+	} else {
+		/* Per-request config */
+		output = MR_Request.outputErrors;
+	}
+
 	if (msg) RApacheError(msg);
-	TearDownRequest();
-	return (MR_OutputErrors)? DONE: HTTP_INTERNAL_SERVER_ERROR;
+	if (output){
+		TearDownRequest(1);
+		return DONE; 
+	} else {
+		TearDownRequest(0); /* delete all buffered output */
+		return HTTP_INTERNAL_SERVER_ERROR;
+	}
 }
 
 static void RApacheError(char *msg){
+	int output;
+
 	if (!msg) return;
-	if (MR_OutputErrors && MR_BBout){
-		ap_fputs(MR_Request.r->output_filters,MR_BBout,MR_ErrorPrefix);
-		ap_fputs(MR_Request.r->output_filters,MR_BBout,"RApache Error!!!<br><br>");
+
+	if (MR_Request.outputErrors==-1){
+		/* Module-wide config */
+		output = MR_OutputErrors;
+	} else {
+		/* Per-request config */
+		output = MR_Request.outputErrors;
+	}
+
+	if (output && MR_BBout){
+		char *prefix = (MR_Request.errorPrefix)? MR_Request.errorPrefix : (char *)MR_ErrorPrefix;
+		char *suffix = (MR_Request.errorSuffix)? MR_Request.errorSuffix : (char *)MR_ErrorSuffix;
+		ap_fputs(MR_Request.r->output_filters,MR_BBout,prefix);
+		ap_fputs(MR_Request.r->output_filters,MR_BBout,"RApache Warning/Error!!!<br><br>");
 		ap_fputs(MR_Request.r->output_filters,MR_BBout,msg);
-		ap_fputs(MR_Request.r->output_filters,MR_BBout,MR_ErrorSuffix);
+		ap_fputs(MR_Request.r->output_filters,MR_BBout,suffix);
 	} else {
 		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,msg);
 	}
@@ -2225,16 +2264,29 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 	return ans;
 }
 
-SEXP RApache_outputErrors(SEXP status){
+SEXP RApache_outputErrors(SEXP status,SEXP prefix, SEXP suffix){
 	if (isLogical(status)){
 	   	if ((LOGICAL(status)[0] == TRUE)){
-			MR_OutputErrors = 1;
+			MR_Request.outputErrors = 1;
 		} else {
-			MR_OutputErrors = 0;
+			MR_Request.outputErrors = 0;
 		}
 	} else {
-		warning("ROutputErrors called with non-logical object!");
+		warning("ROutputErrors called with non-logical status!");
 	}
+
+	if (isString(prefix)){
+		MR_Request.errorPrefix = apr_pstrdup(MR_Request.r->pool,CHAR(STRING_PTR(prefix)[0]));
+	} else if (!isNull(prefix)) {
+		warning("ROutputErrors called with non-string prefix!");
+	}
+
+	if (isString(suffix)){
+		MR_Request.errorSuffix = apr_pstrdup(MR_Request.r->pool,CHAR(STRING_PTR(suffix)[0]));
+	} else if (!isNull(suffix)) {
+		warning("ROutputErrors called with non-string suffix!");
+	}
+
 	return R_NilValue;
 }
 
@@ -2251,7 +2303,7 @@ static void RegisterCallSymbols() {
 	{"RApache_parseCookies",(DL_FUNC) &RApache_parseCookies,0},
 	{"RApache_getServer",(DL_FUNC) &RApache_getServer,0},
 	{"RApache_sendBin",(DL_FUNC) &RApache_sendBin,3},
-	{"RApache_outputErrors",(DL_FUNC) &RApache_outputErrors,1},
+	{"RApache_outputErrors",(DL_FUNC) &RApache_outputErrors,3},
 	{NULL, NULL, 0}
 	};
 	R_registerRoutines(R_getEmbeddingDllInfo(),NULL,callMethods,NULL,NULL);

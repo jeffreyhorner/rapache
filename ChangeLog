@@ -1,7 +1,12 @@
 2008-10-07 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
+	* Release 1.1.1
+
 	* Updated .Call methods to use R_getEmbeddingDllInfo(void) which was
 	added in R 2.6.0.
+
+	* Updated RApacheOutputErrors by making the change per request. added
+	two new arguments... prefix and suffix to override module versions.
 
 2008-10-06 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 

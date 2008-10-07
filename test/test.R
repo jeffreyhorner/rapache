@@ -63,7 +63,10 @@ cat('Upload another file: <input type=file name=anotherFile><br>\n')
 cat('<input type=submit name=Submit>')
 
 cat("<hr>\n")
-zebra('CGI GET Data',GET)
+#RApacheOutputErrors(TRUE)
+#RApacheOutputErrors(TRUE,prefix='<!--\n',suffix='-->\n')
+#RApacheOutputErrors(FALSE)
+zebre('CGI GET Data',GET)
 zebra('CGI POST Data',POST)
 zebra('Cookies',COOKIES)
 if (!is.null(FILES)){
