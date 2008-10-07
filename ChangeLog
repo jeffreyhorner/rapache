@@ -1,3 +1,21 @@
+2008-10-07 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Updated .Call methods to use R_getEmbeddingDllInfo(void) which was
+	added in R 2.6.0.
+
+2008-10-06 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Thanks to Robert Kofler for finding a bug in test/test.R.
+
+	* Thanks for Jeroen Ooms for all his great feedback. Really the first
+	user to share his successes/complaints about rapache with me.
+
+	* Added RApacheOutputErrors(status=TRUE) to allow users 
+	to change at will; the side-effect of which alters the HTTP
+	response status code. status=TRUE will return 200, status=FALSE
+	will return 500.
+
+
 2008-07-24 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.1.0

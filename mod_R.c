@@ -199,7 +199,8 @@ RApacheInfo <- function() .Call('RApache_RApacheInfo')\n\
 sendBin <- function(object, con=stdout(), size=NA_integer_, endian=.Platform$endian){\n\
 	swap <- endian != .Platform$endian\n\
 	if (!is.vector(object) || mode(object) == 'list') stop('can only write vector objects')\n\
-	.Call('RApache_sendBin',object,size,swap)}";
+	.Call('RApache_sendBin',object,size,swap)}\n\
+RApacheOutputErrors <- function(status=TRUE) .Call('RApache_outputErrors',status)";
 
 /*
  * CGI Expression list. These are evaluated in the RApache environment before every request.
@@ -1519,6 +1520,8 @@ PUTS("	Keven E. Thorpe\n");
 PUTS("	Jeremy Stephens\n");
 PUTS("	Aleksander Wawer\n");
 PUTS("	David Konerding\n");
+PUTS("	Robert Kofler\n");
+PUTS("	Jeroen Ooms\n");
 PUTS("</pre>");
 PUTS("</body></html>");
 
@@ -2222,76 +2225,17 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 	return ans;
 }
 
-/*************************************************************************
- *
- * Magic to allow mod_R to export C functions usable in .Call()
- *
- *************************************************************************/
-
-/* From Rdynpriv.h */
-
-typedef void *HINSTANCE;
-typedef struct {
-    char       *name;
-    DL_FUNC     fun;
-    int         numArgs;
-
-    R_NativePrimitiveArgType *types;
-    R_NativeArgStyle *styles;
-   
-} Rf_DotCSymbol;
-typedef Rf_DotCSymbol Rf_DotFortranSymbol;
-
-
-typedef struct {
-    char       *name;
-    DL_FUNC     fun;
-    int         numArgs;
-    R_NativeObjectArgType *types;
-
-    R_NativeArgStyle *styles;
-} Rf_DotCallSymbol;
-
-typedef Rf_DotCallSymbol Rf_DotExternalSymbol;
-
-struct _DllInfo {
-    char	   *path;
-    char	   *name;
-    HINSTANCE	   handle;
-    Rboolean       useDynamicLookup; 
-
-    int            numCSymbols;
-    Rf_DotCSymbol     *CSymbols;
-
-    int            numCallSymbols;
-    Rf_DotCallSymbol  *CallSymbols;
-
-    int              numFortranSymbols;
-    Rf_DotFortranSymbol *FortranSymbols;
-
-    int              numExternalSymbols;
-    Rf_DotExternalSymbol *ExternalSymbols;
-};
-
-/* The following was lifted from Mac-GUI-1.19. Original author is Simon Urbanek. Will change in R 2.6.0 */
-/*-- now, this is ugly, we use internals of Rdynload to squeeze our functions into base load table --*/
-
-static void R_addCallRoutine(DllInfo *info, const R_CallMethodDef * const croutine,
-                 Rf_DotCallSymbol *sym)
-{
-    sym->name = strdup(croutine->name);
-    sym->fun = croutine->fun;
-    sym->numArgs = croutine->numArgs > -1 ? croutine->numArgs : -1;
-}
-
-static void registerCall(DllInfo *info, const R_CallMethodDef * const callRoutines) {
-	int oldnum = info->numCallSymbols;
-	int num, i;
-	for(num=0; callRoutines[num].name != NULL; num++) {;}
-	info->CallSymbols =	(Rf_DotCallSymbol*)realloc(info->CallSymbols, (num+oldnum)*sizeof(Rf_DotCallSymbol));
-	info->numCallSymbols = num+oldnum;
-	for(i = 0; i < num; i++)
-		R_addCallRoutine(info, callRoutines+i, info->CallSymbols + i + oldnum);
+SEXP RApache_outputErrors(SEXP status){
+	if (isLogical(status)){
+	   	if ((LOGICAL(status)[0] == TRUE)){
+			MR_OutputErrors = 1;
+		} else {
+			MR_OutputErrors = 0;
+		}
+	} else {
+		warning("ROutputErrors called with non-logical object!");
+	}
+	return R_NilValue;
 }
 
 static void RegisterCallSymbols() {
@@ -2307,8 +2251,8 @@ static void RegisterCallSymbols() {
 	{"RApache_parseCookies",(DL_FUNC) &RApache_parseCookies,0},
 	{"RApache_getServer",(DL_FUNC) &RApache_getServer,0},
 	{"RApache_sendBin",(DL_FUNC) &RApache_sendBin,3},
+	{"RApache_outputErrors",(DL_FUNC) &RApache_outputErrors,1},
 	{NULL, NULL, 0}
 	};
-	/* we add those to the base as we have no specific entry (yet?) */
-	registerCall(R_getDllInfo("base"), callMethods);
+	R_registerRoutines(R_getEmbeddingDllInfo(),NULL,callMethods,NULL,NULL);
 }
