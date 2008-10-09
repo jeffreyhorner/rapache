@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.1"
+#define MOD_R_VERSION "1.1.3"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
