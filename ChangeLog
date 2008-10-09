@@ -1,3 +1,16 @@
+2008-10-09 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.2
+
+2008-10-08 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* RApacheOutputErrors had no effect on functions that were
+	smart enough to trap errors with try, e.g. brew. The fix is to
+	test if those functions return an object of 'try-error'.
+
+	* If a request uses R's read functions to read the incoming POST
+	data, then we clear the pushback with .Internal(clearPushBack(stdin()))
+
 2008-10-07 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.1.1

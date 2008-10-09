@@ -534,7 +534,7 @@ static int AP_hook_request_handler (request_rec *r)
 {
 	RApacheHandlerType handlerType = 0;
 	RApacheHandler *h;
-	SEXP val;
+	SEXP ret;
 	int error=1,fileParsed=1;
 	apr_status_t rv;
 
@@ -579,7 +579,7 @@ static int AP_hook_request_handler (request_rec *r)
 			PROTECT(h->envir);
 			PROTECT(h->parsedFile->exprs);
 			error = 1;
-			val = EvalExprs(h->parsedFile->exprs,h->envir,&error);
+			ret = EvalExprs(h->parsedFile->exprs,h->envir,&error);
 			UNPROTECT(2);
 			if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error evaluating %s!\n",h->directive->file));
 		}
@@ -598,14 +598,21 @@ static int AP_hook_request_handler (request_rec *r)
 		PROTECT(h->envir);
 		PROTECT(h->expr);
 		error=1;
-		val = R_tryEval(h->expr,h->envir,&error);
+		ret = R_tryEval(h->expr,h->envir,&error);
 		UNPROTECT(2);
 		if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error calling function %s!\n",h->directive->function));
 	}
 
-	TearDownRequest(1);
 
-	return decode_return_value(val);
+	if (IS_INTEGER(ret) && LENGTH(ret) == 1){
+		TearDownRequest(1);
+		return asInteger(ret);
+	} else if (inherits(ret,"try-error")){
+		return RApacheResponseError(apr_psprintf(r->pool,"Function %s returned an object of 'try-error'. Returning HTTP response code 500.\n",h->directive->function));
+	} else {
+		TearDownRequest(1);
+		return DONE; /* user didn't specify return code, so presume done.*/
+	}
 }
 
 static apr_status_t AP_child_exit(void *data){
@@ -648,6 +655,7 @@ static void WriteConsoleEx(const char *buf, int size, int error){
 	}
 }
 
+/* according to R 2.7.2 the true size of buf is size+1 */
 static int ReadConsole(const char *prompt, unsigned char *buf, int size, int addHist){
 	apr_size_t len, bpos=0, blen;
 	apr_status_t rv;
@@ -770,6 +778,10 @@ static void EmptyRequest(void){
 static void TearDownRequest(int flush){
 	/* Clean up reading */
 	if (MR_BBin){
+		if (MR_Request.readStarted) {
+			/* TODO: check if this succeeds */
+			ExecRCode(".Internal(clearPushBack(stdin()))",R_GlobalEnv,NULL);
+		}
 		apr_brigade_cleanup(MR_BBin);
 		apr_brigade_destroy(MR_BBin);
 	}
