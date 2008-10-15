@@ -66,7 +66,7 @@ cat("<hr>\n")
 #RApacheOutputErrors(TRUE)
 #RApacheOutputErrors(TRUE,prefix='<!--\n',suffix='-->\n')
 #RApacheOutputErrors(FALSE)
-zebre('CGI GET Data',GET)
+zebra('CGI GET Data',GET)
 zebra('CGI POST Data',POST)
 zebra('Cookies',COOKIES)
 if (!is.null(FILES)){
