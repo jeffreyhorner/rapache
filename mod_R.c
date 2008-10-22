@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.3"
+#define MOD_R_VERSION "1.1.4"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -800,6 +800,7 @@ static void TearDownRequest(int flush){
 	}
 	MR_BBout = NULL;
 	bzero(&MR_Request,sizeof(RApacheRequest));
+	MR_Request.outputErrors = -1;
 
     if (MR_mutex != NULL) apr_thread_mutex_unlock(MR_mutex);
 }
@@ -1474,7 +1475,7 @@ static int RApacheInfo()
 
 EXEC("hrefify <- function(title) gsub('[\\\\.()]','_',title,perl=TRUE)");
 EXEC("cl<-'e'");
-EXEC("scrub <- function(str){ if (is.null(str)) return('null'); if (is.na(str)) return('NA'); if (length(str) == 0) return ('length 0 string'); str <- as.character(str); str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); if (length(str) == 0 || is.null(str) || str == '') str <- '&nbsp;'; str }");
+EXEC("scrub <- function(st){ if (is.null(st)) return('null'); if (is.na(st)) return('NA'); if (length(st) == 0) return ('length 0 sting'); if (typeof(st) == 'closure') { sink(textConnection('stt','w')); str(st); sink(); st <- stt; } else {st  <- as.character(st) } ; st <- gsub('&','&amp;',st); st <- gsub('@','_at_',st); st <- gsub('<','&lt;',st); st <- gsub('>','&gt;',st); if (length(st) == 0 || is.null(st) || st == '') st <- '&nbsp;'; st }");
 EXEC("zebelem <- function(n,v) { cl <<- ifelse(cl=='e','o','e'); cat('<tr class=\"',cl,'\">'); if(!is.na(n)) cat('<td class=\"l\">',n,'</td>'); cat('<td>'); if (length(v)>1) zebra(NULL,v) else cat(scrub(v)); cat('</td></tr>\n'); }");
 EXEC("zebra <- function(title,l){ if (!is.null(title)) cat('<h2><a name=\"',hrefify(title),'\"> </a>',title,'</h2>',sep=''); cat('<table><tbody>',sep=''); n <- names(l); mapply(zebelem,if(is.null(n)) rep(NA,length(l)) else n, l); cat('</tbody></table>\n') }");
 EXEC(" zebrifyPackage <-function(package){ zebra(package,unclass(packageDescription(package))); cat('<br/><hr/>\\n') }");
