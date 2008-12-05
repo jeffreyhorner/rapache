@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.4"
+#define MOD_R_VERSION "1.1.5"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -1988,7 +1988,7 @@ SEXP RApache_parseCookies(SEXP sreq){
 #define OFFMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
 #define TIMMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[1] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
 SEXP RApache_getServer(){
-	int len = 30, i = 0;
+	int len = 31, i = 0;
 	SEXP names, val, class;
 	if (!MR_Request.r) return R_NilValue;
 	if (MR_Request.serverVar) return MR_Request.serverVar;

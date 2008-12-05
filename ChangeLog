@@ -1,3 +1,9 @@
+2008-12-05 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.5
+
+	* Fixed off-by-one bug in RApache_getServer().
+
 2008-10-22 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.1.4
