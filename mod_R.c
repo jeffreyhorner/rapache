@@ -650,10 +650,16 @@ static void WriteConsoleEx(const char *buf, int size, int error){
 		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
 		/* fprintf(stderr,"caught WriteConsoleEx(%x,%d,%d)\n",buf,size,error); */
 	} else {
-		fprintf(stderr,"NULL Apache request record in WriteConsoleEx()! exiting...\n");
-		exit(-1);
+		/* might as well print for debugging */
+		fprintf(stderr,"WriteConsoleEx: %s\n",buf);
+		/* fprintf(stderr,"NULL Apache request record in WriteConsoleEx()! exiting...\n"); */
+		/* exit(-1); */
 	}
 }
+
+/* static void WriteConsoleEx_debug(const char *buf, int size, int error){
+	fprintf(stderr,"%s: %d %d\n",buf,size,error);
+} */
 
 /* according to R 2.7.2 the true size of buf is size+1 */
 static int ReadConsole(const char *prompt, unsigned char *buf, int size, int addHist){
@@ -903,7 +909,6 @@ static void init_R(apr_pool_t *p){
 
 	InitCGIexprs(); 
 
-
 	/* Execute all *OnStartup code */
 	apr_table_do(OnStartupCallback,NULL,MR_OnStartup,NULL);
 
@@ -1078,14 +1083,9 @@ static int ExecRCode(const char *code, SEXP env, int *error){
 
 	switch (status){
 		case PARSE_OK:
-			for(i = 0; i < length(expr); i++){
-				R_tryEval(VECTOR_ELT(expr, i),env,&errorOccurred);
-				if (error) *error = errorOccurred;
-				if (errorOccurred){
-					retval=0;
-					break;
-				}
-			}
+			EvalExprs(expr,env,&errorOccurred);
+			if (*error) *error = errorOccurred;
+			if (errorOccurred) retval=0;
 		break;
 		case PARSE_INCOMPLETE:
 		case PARSE_NULL:
@@ -1252,42 +1252,21 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 	return 1;
 }
 
-/* Protected evaluation of a vector of exprs */
-typedef struct {
-	SEXP exprs;
-	SEXP val;
-	SEXP env;
-} ProtectedEvalData;
-
-static void protectedEval(void *d){
-	int i, len;
-	ProtectedEvalData *data = (ProtectedEvalData *)d;
-	len = length(data->exprs);
-
-	for(i = 0; i < len; i++){
-		data->val = eval(VECTOR_ELT(data->exprs, i),data->env);
-	}
-	PROTECT(data->val);
-}
-
 static SEXP EvalExprs(SEXP exprs, SEXP env, int *error){
-    Rboolean ok;
-    ProtectedEvalData data;
+	SEXP lastval;
+	int i, errorOccurred=1;
+	for(i = 0; i < length(exprs); i++){
 
-    data.exprs = exprs;
-    data.val = NULL;
-	data.env = env;
+		/* swap out console writer for debugging */
+		/* ptr_R_WriteConsoleEx = WriteConsoleEx_debug;
+		Rf_PrintValue(VECTOR_ELT(exprs,i));
+		ptr_R_WriteConsoleEx = WriteConsoleEx; */
 
-    ok = R_ToplevelExec(protectedEval, &data);
-    if (error) {
-		*error = (ok == FALSE);
-    }
-    if (ok == FALSE)
-		data.val = NULL;
-    else
-		UNPROTECT(1);
-
-	return(data.val);
+		lastval = R_tryEval(VECTOR_ELT(exprs, i),env,&errorOccurred);
+		if (error) *error = errorOccurred;
+		if (errorOccurred) break;
+	}
+	return(lastval);
 }
 
 static void InitRApacheEnv(){
@@ -1379,7 +1358,9 @@ static int OnStartupCallback(void *rec, const char *key, const char *value){
 			printf("\nError parsing %s! Check the error log.\n\n",value);
 			exit(-1);
 		}
+		PROTECT(e);
 		EvalExprs(e,R_GlobalEnv,&error);
+		UNPROTECT(1);
 		if (error){
 			printf("\nError evaluating %s! Check the error log.\n\n",value);
 			exit(-1);
@@ -1665,6 +1646,7 @@ static void InjectCGIvars(SEXP env){
 	len = LENGTH(MR_CGIexprs);
 	for (i = 0; i < len; i++){
 		expr = VECTOR_ELT(MR_CGIexprs,i);
+		/* set the eval.env and assign.env args to  delayedAssign. */
 		SETCAR(CDR(CDR(CDR(expr))), env);
 		SETCAR(CDR(CDR(CDR(CDR(expr)))), env);
 	}

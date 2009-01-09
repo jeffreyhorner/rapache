@@ -1,3 +1,9 @@
+2009-01-09 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Fixed RSourceOnStartup; missing PROTECT().
+
+	* Removed non API code from EvalExprs().
+
 2008-12-05 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.1.5
