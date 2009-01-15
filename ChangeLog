@@ -1,3 +1,12 @@
+2009-01-15 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.6
+
+	* Function handlers now have their closure environments point to
+	the RApache environment for the duration of the requst.
+
+	* Fixed accidental pointer dereference in EvalExprs().
+
 2009-01-09 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Fixed RSourceOnStartup; missing PROTECT().

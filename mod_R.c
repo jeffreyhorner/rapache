@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.5"
+#define MOD_R_VERSION "1.1.6"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -317,6 +317,7 @@ static int RApacheInfo();
 static SEXP AprTableToList(apr_table_t *);
 static void InitCGIexprs();
 static void InjectCGIvars(SEXP env);
+static void ResetEnclosure(RApacheHandler *h);
 
 /*************************************************************************
  *
@@ -530,6 +531,11 @@ static void AP_hook_child_init(apr_pool_t *p, server_rec *s){
 	apr_pool_cleanup_register(p, p, AP_child_exit, AP_child_exit);
 }
 
+static void ResetEnclosure(RApacheHandler *h){
+	SET_CLOENV(CAR(h->expr),ENCLOS(MR_RApacheEnv));
+	SET_ENCLOS(MR_RApacheEnv,R_GlobalEnv);
+}
+
 static int AP_hook_request_handler (request_rec *r)
 {
 	RApacheHandlerType handlerType = 0;
@@ -558,6 +564,7 @@ static int AP_hook_request_handler (request_rec *r)
 	if (!h) return RApacheResponseError(NULL);
 
 	/* Prepare calling environment */
+	SET_ENCLOS(MR_RApacheEnv,R_GlobalEnv);
 	if (h->directive->preserveEnv){
 	   if (!h->envir) R_PreserveObject(h->envir = NewEnv(MR_RApacheEnv));
 	} else {
@@ -585,21 +592,20 @@ static int AP_hook_request_handler (request_rec *r)
 		}
 	}
 
-	/* Not sure we want to do this. For now, we load each package once in OnStartupCallback() */
-	/* Load package if needed */
-	/*jif (h->directive->package)
-		if (!Require(h->directive->package))
-			return RApacheResponseError(apr_psprintf(r->pool,"Error in require(%s)!\n",h->directive->package));*/
-
-
 	/* Eval handler expression if set */
 	if (h->directive->function){
-		if (!PrepareHandlerExpr(h,r,handlerType)) return RApacheResponseError(NULL);
+		if (!PrepareHandlerExpr(h,r,handlerType)) {
+			ResetEnclosure(h);
+			return RApacheResponseError(NULL);
+		}
 		PROTECT(h->envir);
 		PROTECT(h->expr);
 		error=1;
 		ret = R_tryEval(h->expr,h->envir,&error);
 		UNPROTECT(2);
+
+		ResetEnclosure(h);
+		
 		if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error calling function %s!\n",h->directive->function));
 	}
 
@@ -657,9 +663,9 @@ static void WriteConsoleEx(const char *buf, int size, int error){
 	}
 }
 
-/* static void WriteConsoleEx_debug(const char *buf, int size, int error){
+static void WriteConsoleEx_debug(const char *buf, int size, int error){
 	fprintf(stderr,"%s: %d %d\n",buf,size,error);
-} */
+}
 
 /* according to R 2.7.2 the true size of buf is size+1 */
 static int ReadConsole(const char *prompt, unsigned char *buf, int size, int addHist){
@@ -1059,7 +1065,6 @@ static SEXP NewEnv(SEXP enclos){
 	SEXP env;
 	PROTECT(env = allocSExp(ENVSXP));
 
-	SET_TYPEOF(env, ENVSXP); /* may be redundant, but unsure */
 	SET_FRAME(env, R_NilValue);
 	SET_ENCLOS(env, (enclos)? enclos: R_GlobalEnv);
 	SET_HASHTAB(env, R_NilValue);
@@ -1084,7 +1089,7 @@ static int ExecRCode(const char *code, SEXP env, int *error){
 	switch (status){
 		case PARSE_OK:
 			EvalExprs(expr,env,&errorOccurred);
-			if (*error) *error = errorOccurred;
+			if (error) *error = errorOccurred;
 			if (errorOccurred) retval=0;
 		break;
 		case PARSE_INCOMPLETE:
@@ -1219,7 +1224,7 @@ static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *filePa
 }
 
 static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType){
-	SEXP fun;
+	SEXP fun, tmpenv;
 	int veclen = (handlerType == R_SCRIPT)? 3 : 1;
 	if (h->directive->file){
 		fun = MyfindFun(install(h->directive->function),h->envir);
@@ -1236,6 +1241,15 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 			RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
 			return 0;
 		}
+
+		/* Now fix up the environment chain like so:
+		 * 1. h->envir contains CGI vars
+		 * 2. MR_RApacheEnv contains RApache functions/variables
+		 * 3. CLOENV(fun) is original enclosure.
+		 */
+		tmpenv = CLOENV(fun);
+		SET_CLOENV(fun,h->envir);
+		SET_ENCLOS(MR_RApacheEnv,tmpenv);
 	}
 
 	if (h->expr) R_ReleaseObject(h->expr);
@@ -1243,6 +1257,7 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 	SETCAR(h->expr,fun);
 
 	if (handlerType == R_SCRIPT){
+		/* the call will be: fun(file=file,envir=envir) */
 		SETCAR(CDR(h->expr),mkString(r->filename));
 		SET_TAG(CDR(h->expr),install("file"));
 		SETCAR(CDR(CDR(h->expr)),h->envir);
@@ -1413,7 +1428,7 @@ static SEXP MyfindFun(SEXP symb, SEXP envir){
 		t = TYPEOF(fun);
 	}
 
-	if (t == CLOSXP || t == BUILTINSXP || t == BUILTINSXP || t == SPECIALSXP)
+	if (t == CLOSXP || t == BUILTINSXP  || t == SPECIALSXP)
 		return fun;
 	return R_UnboundValue;
 }
@@ -1438,7 +1453,7 @@ static SEXP MyfindFunInPackage(SEXP symb, char *package){
 					t = TYPEOF(fun);
 				}
 
-				if (t == CLOSXP || t == BUILTINSXP || t == BUILTINSXP || t == SPECIALSXP)
+				if (t == CLOSXP || t == BUILTINSXP || t == SPECIALSXP)
 					return fun;
 			}
 		}
