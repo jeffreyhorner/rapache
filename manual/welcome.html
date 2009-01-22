@@ -71,11 +71,11 @@ This is an involved brew example which demonstrates its use with AJAX. There's t
 
 <h3>Using R code in a File</h3>
 
-<h4><a target="_rapache" href="/test/R">The Canonical Test</a></h4>
+<h4><a target="_rapache" href="/testR">The Canonical Test</a></h4>
 
 <p>Displays most all of rapache's features. Here's the apache config:</p>
 
-<div id="codeblock"> <pre class="hlite_apache">&lt;Location /test/R&gt;
+<div id="codeblock"> <pre class="hlite_apache">&lt;Location /testR&gt;
         <span class="kw1">SetHandler</span> r-handler
         RFileHandler /var/www/test.R
 &lt;/Location&gt;
@@ -169,9 +169,9 @@ OK
 
 </div>
 
-<h4><a target="_rapache" href="/test/sendBin">Sending Binary Data</a></h4>
+<h4><a target="_rapache" href="/testSendBin">Sending Binary Data</a></h4>
 apache config:
-<div id="codeblock"> <pre class="hlite_apache">&lt;Location /test/sendBin&gt;
+<div id="codeblock"> <pre class="hlite_apache">&lt;Location /testSendBin&gt;
         <span class="kw1">SetHandler</span> r-handler
         RFileHandler @DOCROOT@/sendBin.r
 &lt;/Location&gt;
