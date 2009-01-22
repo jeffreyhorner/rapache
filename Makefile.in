@@ -343,7 +343,7 @@ install: all
 	$(APREQ_INSTALL)
 
 $(DOCROOT)/httpd.conf: $(DOCROOT)/httpd.conf.in
-	$(RPROGBATCH) tools/config_http.R
+	$(R_HOME)/bin/Rscript tools/config_http.R $(APXS)  $(HTTPD)
 
 itest: all
 	@echo
@@ -372,7 +372,7 @@ clean:
 	$(APREQ_CLEAN)
 
 distclean: clean
-	rm -rf mod_R.h Makefile .depend .install libtool config.log config.status test/httpd.conf test/access_log test/error_log test/httpd.pid test/accept.lock* aclocal.m4 autom4te.cache libapreq2/library/t/Makefile libapreq2/config.nice libapreq2/module/apache/Makefile
+	rm -rf mod_R.h Makefile .depend .install libtool config.log config.status test/httpd.conf test/confs/* test/images/* test/access_log test/error_log test/httpd.pid test/accept.lock* aclocal.m4 autom4te.cache libapreq2/library/t/Makefile libapreq2/config.nice libapreq2/module/apache/Makefile
 	$(APREQ_CLEAN)
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

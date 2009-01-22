@@ -78,5 +78,4 @@ if (!is.null(FILES)){
 zebra("SERVER Variables",SERVER)
 cat("</BODY></HTML>\n")
 
-# -2 is DONE. Still haven't exported response codes.
 OK

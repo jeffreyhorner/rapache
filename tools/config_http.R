@@ -1,3 +1,5 @@
+APXS <- commandArgs(trailingOnly=TRUE)[1]
+HTTPD <- commandArgs(trailingOnly=TRUE)[2]
 options(warn=-1)
 NextAvailablePort <- function(){
 	start <- 8181
@@ -34,3 +36,13 @@ lines <- gsub('@PORT@',PORT,lines)
 lines <- gsub('@DOCROOT@',DOCROOT,lines)
 writeLines(lines,con)
 close(con)
+
+unlink('test/confs/load_modules')
+# Test if mime module compiled into httpd
+if (length(grep('mime',readLines(pipe(paste(HTTPD,'-l')))))==0){
+	# No, we need to add it. grab LIBEXECDIR
+	con <- file('test/confs/load_modules',open='w+')
+	libexecdir <- readLines(pipe(paste(APXS,'-q LIBEXECDIR')))[1]
+	cat('LoadModule mime_module ',libexecdir,'/mod_mime.so\n',sep='',file=con)
+	close(con)
+}

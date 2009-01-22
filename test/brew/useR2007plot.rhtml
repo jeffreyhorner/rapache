@@ -5,7 +5,7 @@ mo <- ifelse(is.null(GET$mo),9,as.numeric(GET$mo))
 options(hverbose=FALSE,verbose=FALSE)
 library(Hmisc)
 library(Cairo)
-PLOTDIR='/home/hornerj/rapache/branches/rapache-1-0-branch/test/images'
+PLOTDIR='test/images'
 plotname <- paste('plot.',sprintf('%.4f.%.4f.%d',p1,p2,mo),'.png',sep='')
 filename <- file.path(PLOTDIR,plotname)
 if (!file.exists(filename)){

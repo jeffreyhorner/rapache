@@ -75,6 +75,8 @@ Listen @PORT@
 
 LoadModule R_module           ../.libs/mod_R.so
 
+Include confs/
+
 DocumentRoot "@DOCROOT@"
 
 <Directory />
@@ -119,7 +121,7 @@ ROutputErrors
 
 #DirectoryIndex index.html
 
-DefaultType text/html
+#DefaultType text/html
 
 HostnameLookups Off
 
