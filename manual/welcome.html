@@ -27,8 +27,8 @@ From here, you can explore the following links to get ideas of how to write your
 <h3>Using brew</h3>
 <p>
 <a href="http://www.rforge.net/brew">brew</a> is an R package for combining (brewing) the output of evaluated R
-code with text. When used with rapache, it provides a server-side scripting
-environment very similar to PHP. You can use an apache2 config similar to this one:
+code with text. When used with rapache, <b>it provides a server-side scripting
+environment very similar to PHP</b>. You can use an apache2 config similar to this one:
 </p>
 
 
@@ -67,7 +67,7 @@ Today is: &lt;%=format<span class="br0">&#40;</span>Sys.<span class="me1">time</
 
 <h4><a target="_rapache" href="/brew/useR2007.rhtml">Power and Sample Size with Hmisc</a></h4>
 <p>
-This is an involved brew example which demonstrates its use with AJAX. There's too much code to list here but you can download the entire souce from the main rapache <a href="http://biostat.mc.vanderbilt.edu/rapache/links.html">links</a> page.</p>
+This is an involved brew example which demonstrates its use with <b>AJAX</b> and <b>Web Services</b>. There's too much code to list here but you can download the entire souce from the main rapache <a href="http://biostat.mc.vanderbilt.edu/rapache/links.html">links</a> page.</p>
 
 <h3>Using R code in a File</h3>
 
@@ -170,6 +170,7 @@ OK
 </div>
 
 <h4><a target="_rapache" href="/testSendBin">Sending Binary Data</a></h4>
+<p>Use it to set up a <b>Dynamic Plot Service</b>.</p>
 apache config:
 <div id="codeblock"> <pre class="hlite_apache">&lt;Location /testSendBin&gt;
         <span class="kw1">SetHandler</span> r-handler

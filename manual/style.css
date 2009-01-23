@@ -2,7 +2,7 @@
 body { 
 	/* background-color: #ffffdd; */
 	font-family:Verdana,'Lucida Grande',Arial,sans-serif;
-	font-size: 10pt;
+	font-size: 12pt;
 	text-align: left;
 }
 pre {
@@ -38,12 +38,12 @@ h2 {
 }
 h3 {
 	letter-spacing: -.02em;
-	font-size: 14pt;
+	font-size: 16pt;
 	margin-bottom: 10px;
 }
 h4,h5 {
 	letter-spacing: -.02em;
-	font-size: 12pt;
+	font-size: 13pt;
 	margin-bottom: 10px;
 }
 a { text-decoration: none; }
@@ -95,7 +95,7 @@ span#version {
 
 /* Menu */
 div#menu {
-	position: fixed; top: 200px; right: 40px;
+	position: fixed; top: 200px; right: 25px;
 }
 div#menu ul {
 	list-style-type: none;
