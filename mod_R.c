@@ -1592,10 +1592,10 @@ static int TableCallback(void *datum,const char *n, const char *v){
 		value = R_NilValue;
 	} else {
 		value = NEW_CHARACTER(1);
-		SET_ELEMENT(value,0,mkChar(v));
+		STRING_PTR(value)[0] = mkChar(v);
 	}
 
-	SET_ELEMENT(ctx->names,ctx->i,mkChar(n));
+	STRING_PTR(ctx->names)[ctx->i]=mkChar(n);
 	SET_ELEMENT(ctx->list,ctx->i,value);
 	ctx->i += 1;
 }
@@ -1859,7 +1859,7 @@ static int FileUploadsCallback(void *ft,const char *key, const char *val){
 	/* No file upload */
 	if (f == NULL || (apr_file_info_get(&finfo,APR_FINFO_SIZE,f) != APR_SUCCESS) || finfo.size <= 0 ){
 		SET_ELEMENT(pf->files,pf->i,R_NilValue);
-		SET_ELEMENT(pf->names,pf->i,mkChar(key));
+		STRING_PTR(pf->names)[pf->i]=mkChar(key);
 	} else {
 		filename = finfo.fname;
 
@@ -1868,19 +1868,19 @@ static int FileUploadsCallback(void *ft,const char *key, const char *val){
 		PROTECT(str1 = NEW_STRING(1));
 		PROTECT(str2 = NEW_STRING(1));
 
-		SET_ELEMENT(str1,0,COPY_TO_USER_STRING(val));
-		SET_ELEMENT(str2,0,COPY_TO_USER_STRING(filename));
+		STRING_PTR(str1)[0]=mkChar(val);
+		STRING_PTR(str2)[0]=mkChar(filename);
 
 		SET_ELEMENT(file_elem,0,str1);
 		SET_ELEMENT(file_elem,1,str2);
 
-		SET_ELEMENT(name_elem,0,COPY_TO_USER_STRING("name"));
-		SET_ELEMENT(name_elem,1,COPY_TO_USER_STRING("tmp_name"));
+		STRING_PTR(name_elem)[0]=mkChar("name");
+		STRING_PTR(name_elem)[1]=mkChar("tmp_name");
 
 		SET_NAMES(file_elem,name_elem);
 
 		SET_ELEMENT(pf->files,pf->i,file_elem);
-		SET_ELEMENT(pf->names,pf->i,COPY_TO_USER_STRING(key));
+		STRING_PTR(pf->names)[pf->i]=mkChar(key);
 
 		UNPROTECT(4);
 	}
@@ -1978,12 +1978,12 @@ SEXP RApache_parseCookies(SEXP sreq){
 	return AprTableToList(MR_Request.cookiesTable);
 }
 
-#define TABMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); SET_ELEMENT(MR_Request.serverVar,i++,AprTableToList(v))
-#define INTMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_INTEGER(1); INTEGER_DATA(val)[0] = v; SET_ELEMENT(MR_Request.serverVar,i++,val)
-#define STRMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); if (v){ val = NEW_STRING(1); STRING_PTR(val)[0] = mkChar(v);} else { val = R_NilValue;}; SET_ELEMENT(MR_Request.serverVar,i++,val)
-#define LGLMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); SET_ELEMENT(MR_Request.serverVar,i++,NewLogical(v));
-#define OFFMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
-#define TIMMBR(n,v) SET_ELEMENT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[1] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define TABMBR(n,v) STRING_PTR(names)[i]=mkChar(n); SET_ELEMENT(MR_Request.serverVar,i++,AprTableToList(v))
+#define INTMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_INTEGER(1); INTEGER_DATA(val)[0] = v; SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define STRMBR(n,v) STRING_PTR(names)[i]=mkChar(n); if (v){ val = NEW_STRING(1); STRING_PTR(val)[0] = mkChar(v);} else { val = R_NilValue;}; SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define LGLMBR(n,v) STRING_PTR(names)[i]=mkChar(n); SET_ELEMENT(MR_Request.serverVar,i++,NewLogical(v));
+#define OFFMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define TIMMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[1] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
 SEXP RApache_getServer(){
 	int len = 31, i = 0;
 	SEXP names, val, class;
