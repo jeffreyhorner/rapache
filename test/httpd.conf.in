@@ -75,7 +75,7 @@ Listen @PORT@
 
 LoadModule R_module           ../.libs/mod_R.so
 
-Include confs/
+Include confs/*
 
 DocumentRoot "@DOCROOT@"
 
@@ -103,10 +103,10 @@ ROutputErrors
         RFileHandler @DOCROOT@/sendBin.r
 </Location>
 
-<Directory @DOCROOT@/brew>
-	SetHandler r-script
-	RHandler brew::brew
-</Directory>
+#<Directory @DOCROOT@/brew>
+#	SetHandler r-script
+#	RHandler brew::brew
+#</Directory>
 
 <Location /test/R>
         SetHandler r-handler
