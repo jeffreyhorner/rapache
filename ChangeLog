@@ -1,3 +1,12 @@
+2010-03-26 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Noted an issue in test/http.conf.in when using a file in more than one
+	way
+
+	* Fixed a bug in undocumented directive RPreserveEnv.
+
+	* Fixed compile warning on bad first argument to fprintf
+
 2009-04-05 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 	
 	* Release 1.1.8

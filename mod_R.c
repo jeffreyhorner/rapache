@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.8"
+#define MOD_R_VERSION "1.1.9"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -115,6 +115,7 @@ typedef struct {
 
 typedef struct {
 	SEXP exprs;
+	SEXP envir;
 	apr_time_t mtime;
 } RApacheParsedFile;
 
@@ -565,17 +566,21 @@ static int AP_hook_request_handler (request_rec *r)
 
 	/* Prepare calling environment */
 	SET_ENCLOS(MR_RApacheEnv,R_GlobalEnv);
-	if (h->directive->preserveEnv){
-	   if (!h->envir) R_PreserveObject(h->envir = NewEnv(MR_RApacheEnv));
-	} else {
-	   h->envir = NewEnv(MR_RApacheEnv);
-	}
-	InjectCGIvars(h->envir);
+
 
 	/* Prepare file if needed */
 	if (h->directive->file){
 		fileParsed = 1;
 		if (!PrepareFileExprs(h,r,&fileParsed)) return RApacheResponseError(NULL);
+		
+		/* Preserved environments are per file */
+		if (h->directive->preserveEnv){
+		   if (!h->parsedFile->envir) R_PreserveObject(h->parsedFile->envir = NewEnv(MR_RApacheEnv));
+		   h->envir = h->parsedFile->envir;
+		} else {
+		   h->envir = NewEnv(MR_RApacheEnv);
+		}
+		InjectCGIvars(h->envir);
 
 		/* Do we need to eval parsed file?
 		 * Yes, if env is not preserved.
@@ -584,18 +589,27 @@ static int AP_hook_request_handler (request_rec *r)
 		 */
 		if (!h->directive->preserveEnv || fileParsed || !h->directive->function){
 			PROTECT(h->envir);
-			PROTECT(h->parsedFile->exprs);
+			PROTECT(h->parsedFile->exprs); /* already preserved in PrepareFileExprs, but... */
 			error = 1;
 			ret = EvalExprs(h->parsedFile->exprs,h->envir,&error);
 			UNPROTECT(2);
 			if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error evaluating %s!\n",h->directive->file));
 		}
+	} else {
+
+		/* No file means a function found in the either a global 
+		 * environment or an attached package.
+		 */ 
+		h->envir = NewEnv(MR_RApacheEnv);
+		InjectCGIvars(h->envir);
 	}
 
 	/* Eval handler expression if set */
 	if (h->directive->function){
 		if (!PrepareHandlerExpr(h,r,handlerType)) {
-			ResetEnclosure(h);
+
+			/* Only need to reset enclosure when no file present */
+			if (!h->directive->file) ResetEnclosure(h);
 			return RApacheResponseError(NULL);
 		}
 		PROTECT(h->envir);
@@ -604,7 +618,8 @@ static int AP_hook_request_handler (request_rec *r)
 		ret = R_tryEval(h->expr,h->envir,&error);
 		UNPROTECT(2);
 
-		ResetEnclosure(h);
+		/* Only need to reset enclosure when no file present */
+		if (!h->directive->file) ResetEnclosure(h);
 		
 		if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error calling function %s!\n",h->directive->function));
 	}
@@ -1153,7 +1168,9 @@ static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize, Pars
 	apr_finfo_t finfo;
 	SEXP cmd, expr, srcfile;
 
-	apr_file_open(&fd,file,APR_READ,APR_OS_DEFAULT,pool);
+	if (apr_file_open(&fd,file,APR_READ,APR_OS_DEFAULT,pool) != APR_SUCCESS)
+		return NULL;
+
 	if (!fsize){
 		apr_stat(&finfo,file,APR_FINFO_SIZE,pool);
 		fsize = finfo.size;
@@ -1226,9 +1243,12 @@ static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *filePa
 static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType){
 	SEXP fun, tmpenv;
 	int veclen = (handlerType == R_SCRIPT)? 3 : 1;
+	PROTECT(fun);
+	PROTECT(h->envir);
 	if (h->directive->file){
 		fun = MyfindFun(install(h->directive->function),h->envir);
 		if (fun ==  R_UnboundValue){
+			UNPROTECT(2);
 			RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
 			return 0;
 		}
@@ -1238,6 +1258,7 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 		else
 			fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
 		if (fun ==  R_UnboundValue){
+			UNPROTECT(2);
 			RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
 			return 0;
 		}
@@ -1263,6 +1284,7 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 		SETCAR(CDR(CDR(h->expr)),h->envir);
 		SET_TAG(CDR(CDR(h->expr)),install("envir"));
 	}
+	UNPROTECT(2);
 
 	return 1;
 }
@@ -1364,20 +1386,20 @@ static int OnStartupCallback(void *rec, const char *key, const char *value){
 	if (strcmp(key,"eval")==0){
 		ExecRCode(value,R_GlobalEnv,&error);
 		if (error){
-			printf("\nError evaluating '%s'! Check the error log.\n\n",value);
+			fprintf(stderr,"\nError evaluating '%s'! Exiting.\n",value);
 			exit(-1);
 		};
 	} else if (strcmp(key,"file")==0){
 		e = ParseFile(value,MR_Pool,0,&status);
 		if (!e){
-			printf("\nError parsing %s! Check the error log.\n\n",value);
+			fprintf(stderr,"\nError parsing %s! Exiting.\n",value);
 			exit(-1);
 		}
 		PROTECT(e);
 		EvalExprs(e,R_GlobalEnv,&error);
 		UNPROTECT(1);
 		if (error){
-			printf("\nError evaluating %s! Check the error log.\n\n",value);
+			fprintf(stderr,"\nError evaluating %s! Exiting.\n",value);
 			exit(-1);
 		}
 	} else if (strcmp(key,"package")==0){
@@ -1401,11 +1423,8 @@ static int OnStartupCallback(void *rec, const char *key, const char *value){
 
 		val = R_tryEval(e,R_GlobalEnv, &error);
 		UNPROTECT(1);
-		if (error || !isLogical(val) || (LOGICAL(val)[0] == FALSE)){
-			error=1;
-			printf("\nError loading package %s: ",value);
-			ExecRCode(apr_psprintf(MR_Pool,"if(\"%s\" %%in%% attributes(installed.packages())$dimnames[[1]]) cat('it is installed but a problem occurred when loading!\\n\\n') else cat('not installed!\\n\\n');",value,value),R_GlobalEnv,&error);
-			ExecRCode("cat(\"Library Paths:\n\"); print(.libPaths()); cat(\"\n\n\");",R_GlobalEnv,&error);
+		if (error){
+			fprintf(stderr,"\nError loading package %s! Exiting.",value);
 			exit(-1);
 		}
 	}
@@ -1658,6 +1677,8 @@ static void InitCGIexprs(){
 static void InjectCGIvars(SEXP env){
 	int i, error=1,len;
 	SEXP expr;
+
+	PROTECT(env);
 	len = LENGTH(MR_CGIexprs);
 	for (i = 0; i < len; i++){
 		expr = VECTOR_ELT(MR_CGIexprs,i);
@@ -1665,7 +1686,6 @@ static void InjectCGIvars(SEXP env){
 		SETCAR(CDR(CDR(CDR(expr))), env);
 		SETCAR(CDR(CDR(CDR(CDR(expr)))), env);
 	}
-	PROTECT(env);
 	EvalExprs(MR_CGIexprs,env,&error);
 	UNPROTECT(1);
 	if (error){
