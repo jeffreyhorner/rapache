@@ -113,7 +113,7 @@ ROutputErrors
         RFileHandler @DOCROOT@/test.R
 </Location>
 
-# XXX: This situation will cause a seg fault (in rapache-1.1.8) due to test.R already assigned to the task above. In essence the entire file must be evaluated to handle the above request. In the below, expressions in test.R are expected to 1) be evaluated and then 2) main() evaluated to handle the request. The segfault happens in 1).
+# FIXME: This location directive will cause a seg fault (in rapache-1.1.9 or earlier) due to test.R already assigned to the task above. In essence the entire file must be evaluated to handle the above request. In the below, expressions in test.R are expected to 1) be evaluated and then 2) main() evaluated to handle the request. The segfault happens in 1).
 <Location /test/Rblah>
         SetHandler r-handler
         RFileHandler @DOCROOT@/test.R::main
