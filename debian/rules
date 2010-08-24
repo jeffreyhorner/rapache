@@ -8,6 +8,7 @@ PACKAGE=$(shell dh_listpackages)
 build:
 	dh_testdir
 	./configure --with-R=/usr/bin/R --with-apache2-apxs=/usr/bin/apxs2 --with-apreq2-config=/usr/bin/apreq2-config
+	make
 
 clean:
 	dh_testdir
