@@ -1,0 +1,2 @@
+.libs/mod_R.so usr/lib/apache2/modules
+debian/mod_R.load etc/apache2/mods-available

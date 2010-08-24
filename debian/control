@@ -1,0 +1,21 @@
+Source: libapache2-mod-rstats
+Section: web
+Priority: optional
+Maintainer: Jeffrey Horner <jeffrey.horner@gmail.com>
+Build-Depends: debhelper (>= 4.2.20), apache2-prefork-dev (>= 2.0.52-1) | apache2-worker-dev, libapreq2-dev, r-base-dev
+Standards-Version: 3.7.2
+
+Package: libapache2-mod-rstats
+Architecture: any
+Depends: apache2-mpm-prefork | apache2-mpm-worker, apache2.2-common, libapreq2, r-base-core, ${shlibs:Depends}
+Description: Apache module for running server-side R programs
+ This package provides the R module for the Apache 2 webserver. Note
+ that it will work with either Apache's prefork or worker MPM. Prefork
+ is preferred.  
+ .
+ R is a language and environment for statistical computing and graphics.
+ By embedding R inside Apache, developers can create dynamic web pages and
+ graphics.  Even more compelling is the ability for developers to provide
+ web service style access to novel, cutting edge statistical techniques.
+ .
+ Homepage: http://www.rapache.net/

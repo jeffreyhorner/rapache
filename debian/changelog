@@ -1,0 +1,5 @@
+libapache2-mod-rstats (1.1.9) unstable; urgency=low
+
+  * First binary package release.
+
+ -- Jeffrey Horner <jeffreyhorner@gmail.com> Tue Aug 24 14:38:23 CDT 2010
