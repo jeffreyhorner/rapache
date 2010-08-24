@@ -37,5 +37,6 @@ binary-arch: build
 	dh_gencontrol
 	dh_md5sums 
 	dh_builddeb
+	dh_clean
 
 .PHONY: build clean binary binary-arch binary-indep
