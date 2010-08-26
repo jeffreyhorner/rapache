@@ -1,5 +1,5 @@
-libapache2-mod-rstats (1.1.9) UNRELEASED; urgency=low
+libapache2-mod-rstats (1.1.9-ppa2) lucid; urgency=low
 
   * First binary package release.
 
- -- Jeffrey Horner <jeffreyhorner@gmail.com>  Tue, 24 Aug 2010 19:00:25 -0500
+ -- Jeffrey Horner <jeffrey.horner@gmail.com>  Tue, 24 Aug 2010 19:00:25 -0500
