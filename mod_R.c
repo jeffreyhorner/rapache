@@ -77,6 +77,12 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include <Rinternals.h>
 #include <Rdefines.h>
 
+/*
+ * Should already be included, but...
+ */
+#include <stdio.h>
+#include <string.h>
+
 
 #define R_INTERFACE_PTRS
 #define CSTACK_DEFNS
@@ -152,8 +158,8 @@ static RApacheRequest MR_Request = { NULL, 0, 0, NULL, NULL, NULL, NULL , NULL, 
 
 /* Option to turn on errors in output */
 static int MR_OutputErrors = 0;
-static const char *MR_ErrorPrefix = "<div style=\"background-color:#eee; padding: 20px 20px 20px 20px; font-size: 14pt; border: 1px solid red;\"><code>";
-static const char *MR_ErrorSuffix = "</code></div>";
+static const char *MR_ErrorPrefix = "<div style=\"background-color:#eee; padding: 20px 20px 20px 20px; font-size: 14pt; border: 2px solid red;\"><p>";
+static const char *MR_ErrorSuffix = "</p></div>";
 
 /* Number of times apache has parsed config files; we'll do stuff on second pass */
 static int MR_ConfigPass = 1;
@@ -170,6 +176,7 @@ static unsigned long MR_pid;
 
 /* Per-child memory for configuration */
 static apr_pool_t *MR_Pool = NULL;
+static apr_bucket_alloc_t *MR_Bucket_Alloc = NULL;
 static apr_hash_t *MR_HandlerCache = NULL;
 static apr_hash_t *MR_ParsedFileCache = NULL;
 static apr_table_t *MR_OnStartup = NULL;
@@ -180,6 +187,7 @@ static apr_table_t *MR_OnStartup = NULL;
  */
 static apr_bucket_brigade *MR_BBin;
 static apr_bucket_brigade *MR_BBout;
+static apr_bucket_brigade *MR_BBerr;
 
 /*
  * RApache environment
@@ -191,8 +199,8 @@ static SEXP MR_RApacheEnv;
  */
 
 static const char MR_RApacheSource[] = "\
-setHeader <- function(header,value) .Call('RApache_setHeader',header,value)\n\
 setContentType <- function(type) .Call('RApache_setContentType',type)\n\
+setHeader <- function(header,value) .Call('RApache_setHeader',header,value)\n\
 setCookie <- function(name=NULL,value='',expires=NULL,path=NULL,domain=NULL,...){\n\
 	args <- list(...)\n\
 	therest <- ifelse(length(args)>0,paste(paste(names(args),args,sep='='),collapse=';'),'')\n\
@@ -275,6 +283,8 @@ static void Suicide(const char *s){ };
 static void ShowMessage(const char *s){ };
 static int ReadConsole(const char *, unsigned char *, int, int);
 static void WriteConsoleEx(const char *, int, int);
+static void WriteConsoleStderr(const char *, int, int);
+static void WriteConsoleErrorOnly(const char *, int, int);
 static void NoOpConsole(){ };
 static void NoOpBusy(int i) { };
 static void NoOpCleanUp(SA_TYPE s, int i, int j){ };
@@ -288,7 +298,7 @@ static void NoOpHistoryFun(SEXP a, SEXP b, SEXP c, SEXP d){ };
  */
 static void init_config_pass(apr_pool_t *p);
 static void init_R(apr_pool_t *);
-static int call_fun1str( char *funstr, char *argstr);
+static SEXP call_fun1str(const  char *funstr, const char *argstr,int *evalError);
 static int decode_return_value(SEXP ret);
 static int SetUpRequest(const request_rec *);
 static void EmptyRequest(void);
@@ -301,14 +311,12 @@ static void RegisterCallSymbols();
 static SEXP NewLogical(int tf);
 static SEXP NewInteger(int tf);
 static SEXP NewEnv(SEXP enclos);
-static int ExecRCode(const char *code,SEXP env, int *error);
-static SEXP ExecFun1Arg(SEXP fun, SEXP arg);
-static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize, ParseStatus *);
+static SEXP EvalExprs(SEXP exprs, SEXP env, int *evalError); /* more than one expression evaluator*/
+static SEXP ParseEval(const char *code,SEXP env, int *evalError);
+static SEXP CallFun1str(const char *fun, const char *arg, SEXP env, int *evalError);
+static SEXP CallFun1expr(const char *fun, SEXP arg, SEXP env, int *evalError);
 static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *fileParsed);
 static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType);
-static SEXP EvalExprs(SEXP exprs, SEXP env, int *error); /* more than one expression evaluator*/
-static void StartRprof();
-static void StopRprof();
 static void InitRApacheEnv();
 static void InitRApachePool();
 static int OnStartupCallback(void *rec, const char *key, const char *value);
@@ -318,7 +326,7 @@ static int RApacheInfo();
 static SEXP AprTableToList(apr_table_t *);
 static void InitCGIexprs();
 static void InjectCGIvars(SEXP env);
-static void ResetEnclosure(RApacheHandler *h);
+static void PrintTraceback(void);
 
 /*************************************************************************
  *
@@ -363,27 +371,6 @@ static void *AP_create_dir_cfg(apr_pool_t *p, char *dir){
 	cfg = (RApacheDirective *)apr_pcalloc(p,sizeof(RApacheDirective));
 	return (void *)cfg;
 }
-/*
-void print_cfg(char *fname, char *cname1, RApacheDirective *c1, char *cname2, RApacheDirective *c2){
-	printf("CALLED %s\n",fname);
-
-	printf("%s:\n",cname1);
-	printf("\tfile: %s\n",c1->file);
-	printf("\tfunction: %s\n",c1->function);
-	printf("\tpackage: %s\n",c1->package);
-	printf("\thandlerKey: %s\n",c1->handlerKey);
-	printf("\tpreserveEnv: %d\n",c1->preserveEnv);
-
-	if (cname2){
-		printf("%s:\n",cname2);
-		printf("\tfile: %s\n",c2->file);
-		printf("\tfunction: %s\n",c2->function);
-		printf("\tpackage: %s\n",c2->package);
-		printf("\thandlerKey: %s\n",c2->handlerKey);
-		printf("\tpreserveEnv: %d\n",c2->preserveEnv);
-	}
-
-} */
 
 void *AP_merge_dir_cfg(apr_pool_t *pool, void *parent, void *new){
 	RApacheDirective *c;
@@ -532,9 +519,11 @@ static void AP_hook_child_init(apr_pool_t *p, server_rec *s){
 	apr_pool_cleanup_register(p, p, AP_child_exit, AP_child_exit);
 }
 
-static void ResetEnclosure(RApacheHandler *h){
-	SET_CLOENV(CAR(h->expr),ENCLOS(MR_RApacheEnv));
-	SET_ENCLOS(MR_RApacheEnv,R_GlobalEnv);
+static void PrintTraceback(void){
+	int evalError;
+	ptr_R_WriteConsoleEx = WriteConsoleErrorOnly;
+	ParseEval("cat('Traceback:\\n');traceback()",R_GlobalEnv,&evalError);
+	ptr_R_WriteConsoleEx = WriteConsoleEx;
 }
 
 static int AP_hook_request_handler (request_rec *r)
@@ -542,7 +531,7 @@ static int AP_hook_request_handler (request_rec *r)
 	RApacheHandlerType handlerType = 0;
 	RApacheHandler *h;
 	SEXP ret;
-	int error=1,fileParsed=1;
+	int evalError=1,fileParsed=1;
 	apr_status_t rv;
 
 	/* Only handle our handlers */
@@ -563,10 +552,6 @@ static int AP_hook_request_handler (request_rec *r)
 	h = GetHandlerFromRequest(r);
 
 	if (!h) return RApacheResponseError(NULL);
-
-	/* Prepare calling environment */
-	SET_ENCLOS(MR_RApacheEnv,R_GlobalEnv);
-
 
 	/* Prepare file if needed */
 	if (h->directive->file){
@@ -590,10 +575,13 @@ static int AP_hook_request_handler (request_rec *r)
 		if (!h->directive->preserveEnv || fileParsed || !h->directive->function){
 			PROTECT(h->envir);
 			PROTECT(h->parsedFile->exprs); /* already preserved in PrepareFileExprs, but... */
-			error = 1;
-			ret = EvalExprs(h->parsedFile->exprs,h->envir,&error);
+			evalError = 1;
+			ret = EvalExprs(h->parsedFile->exprs,h->envir,&evalError);
 			UNPROTECT(2);
-			if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error evaluating %s!\n",h->directive->file));
+			if (evalError) {
+				PrintTraceback();
+				return RApacheResponseError(NULL);
+			}
 		}
 	} else {
 
@@ -607,29 +595,25 @@ static int AP_hook_request_handler (request_rec *r)
 	/* Eval handler expression if set */
 	if (h->directive->function){
 		if (!PrepareHandlerExpr(h,r,handlerType)) {
-
-			/* Only need to reset enclosure when no file present */
-			if (!h->directive->file) ResetEnclosure(h);
 			return RApacheResponseError(NULL);
 		}
 		PROTECT(h->envir);
 		PROTECT(h->expr);
-		error=1;
-		ret = R_tryEval(h->expr,h->envir,&error);
+		evalError=1;
+		ret = EvalExprs(h->expr,h->envir,&evalError);
 		UNPROTECT(2);
 
-		/* Only need to reset enclosure when no file present */
-		if (!h->directive->file) ResetEnclosure(h);
-		
-		if (error) return RApacheResponseError(apr_psprintf(r->pool,"Error calling function %s!\n",h->directive->function));
+		if (evalError) {
+			PrintTraceback();
+			return RApacheResponseError(NULL);
+		}
 	}
-
 
 	if (IS_INTEGER(ret) && LENGTH(ret) == 1){
 		TearDownRequest(1);
 		return asInteger(ret);
 	} else if (inherits(ret,"try-error")){
-		return RApacheResponseError(apr_psprintf(r->pool,"Function %s returned an object of 'try-error'. Returning HTTP response code 500.\n",h->directive->function));
+		return RApacheResponseError(apr_psprintf(r->pool,"Function %s returned an object of 'try-error'.\n",h->directive->function));
 	} else {
 		TearDownRequest(1);
 		return DONE; /* user didn't specify return code, so presume done.*/
@@ -647,12 +631,10 @@ static apr_status_t AP_child_exit(void *data){
 	 */
 	if (MR_InitStatus && MR_pid == pid){
 		MR_InitStatus = 0;
-		/* R_RunExitFinalizers(); */
-		/* Rf_CleanEd(); */
-		/* KillAllDevices(); */
 	}
 
 	if (MR_Pool) {
+		apr_bucket_alloc_destroy(MR_Bucket_Alloc);
 		apr_pool_destroy(MR_Pool);
 		MR_Pool = NULL;
 	}
@@ -665,21 +647,29 @@ static apr_status_t AP_child_exit(void *data){
  * R interface callbacks
  *
  *************************************************************************/
-static void WriteConsoleEx(const char *buf, int size, int error){
+static void WriteConsoleEx(const char *buf, int size, int errorFlag){
 	if (MR_Request.r){
-		if (!error) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
+		if (!errorFlag) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
 		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
-		/* fprintf(stderr,"caught WriteConsoleEx(%x,%d,%d)\n",buf,size,error); */
+		/* fprintf(stderr,"(request) caught WriteConsoleEx(%s,%d,%d)\n",buf,size,error); */
 	} else {
 		/* might as well print for debugging */
-		fprintf(stderr,"WriteConsoleEx: %s\n",buf);
+		fprintf(stderr,"caught WriteConsoleEx(%s,%d,%d)\n",buf,size,error);
 		/* fprintf(stderr,"NULL Apache request record in WriteConsoleEx()! exiting...\n"); */
 		/* exit(-1); */
 	}
 }
 
-static void WriteConsoleEx_debug(const char *buf, int size, int error){
-	fprintf(stderr,"%s: %d %d\n",buf,size,error);
+static void WriteConsoleErrorOnly(const char *buf, int size, int errorFlag){
+	RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
+}
+
+static void WriteConsoleStderr(const char *buf, int size, int errorFlag){
+	fprintf(stderr,"%*s",size,buf);
+}
+
+static void WriteConsoleEx_debug(const char *buf, int size, int errorFlag){
+	fprintf(stderr,"%s: %d %d\n",buf,size,errorFlag);
 }
 
 /* according to R 2.7.2 the true size of buf is size+1 */
@@ -803,17 +793,91 @@ static void EmptyRequest(void){
 
 /* No need to free any memory here since it was allocated out of the request pool */
 static void TearDownRequest(int flush){
+	int output,evalError;
+	apr_bucket *bucket;
+	apr_size_t len;
+	apr_status_t rv;
+	const char *data;
+
 	/* Clean up reading */
 	if (MR_BBin){
 		if (MR_Request.readStarted) {
 			/* TODO: check if this succeeds */
-			ExecRCode(".Internal(clearPushBack(stdin()))",R_GlobalEnv,NULL);
+			ParseEval(".Internal(clearPushBack(stdin()))",R_GlobalEnv,&evalError);
 		}
 		apr_brigade_cleanup(MR_BBin);
 		apr_brigade_destroy(MR_BBin);
 	}
 	MR_BBin = NULL;
-	/* Clean up writing */
+
+	/* Clean up writing, e.g. flush output */
+	if (MR_BBout){
+
+		/* A reason not to flush when the brigade is not empty is to
+		 * preserve error conditons
+		 */
+		if(!APR_BRIGADE_EMPTY(MR_BBout) && flush){
+			ap_filter_flush(MR_BBout,MR_Request.r->output_filters);
+		}
+	}
+
+
+	/* Output errors */
+	if (MR_BBerr){
+		if (MR_Request.outputErrors==-1){
+			/* Module-wide config */
+			output = MR_OutputErrors;
+		} else {
+			/* Per-request config */
+			output = MR_Request.outputErrors;
+		}
+
+		if (output && MR_BBout){
+
+			/* Copy MR_BBerr to MR_BBout */
+			/* ap_fputs(MR_Request.r->output_filters,MR_BBout,msg); */
+			ap_fputs(MR_Request.r->output_filters,MR_BBout,"\n<!--\n");
+			for (bucket = APR_BRIGADE_FIRST(MR_BBerr); bucket != APR_BRIGADE_SENTINEL(MR_BBerr); bucket = APR_BUCKET_NEXT(bucket)) {
+				if (APR_BUCKET_IS_EOS(bucket)) {
+					break;
+				}
+
+				/* We can't do much with this. */
+				if (APR_BUCKET_IS_FLUSH(bucket)) {
+					continue;
+				}
+
+				/* read */
+				apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
+				ap_fwrite(MR_Request.r->output_filters,MR_BBout,data,len);
+			}
+
+			ap_fputs(MR_Request.r->output_filters,MR_BBout,"-->\n");
+		} else {
+			/* Write contents of MR_BBerr to log */
+			/* ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,msg); */
+			for (bucket = APR_BRIGADE_FIRST(MR_BBerr); bucket != APR_BRIGADE_SENTINEL(MR_BBerr); bucket = APR_BUCKET_NEXT(bucket)) {
+				if (APR_BUCKET_IS_EOS(bucket)) {
+					break;
+				}
+
+				/* We can't do much with this. */
+				if (APR_BUCKET_IS_FLUSH(bucket)) {
+					continue;
+				}
+
+				/* read */
+				apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
+				/*ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"%*s",len,data);*/
+				fprintf(stderr,"%*s",len,data);
+			}
+		}
+
+		apr_brigade_cleanup(MR_BBerr);
+	}
+	MR_BBerr = NULL;
+
+	/* Clean up writing for good.*/
 	if (MR_BBout){
 
 		/* A reason not to flush when the brigade is not empty is to
@@ -826,6 +890,7 @@ static void TearDownRequest(int flush){
 		apr_brigade_destroy(MR_BBout);
 	}
 	MR_BBout = NULL;
+
 	bzero(&MR_Request,sizeof(RApacheRequest));
 	MR_Request.outputErrors = -1;
 
@@ -860,23 +925,32 @@ static void RApacheError(char *msg){
 
 	if (!msg) return;
 
-	if (MR_Request.outputErrors==-1){
-		/* Module-wide config */
-		output = MR_OutputErrors;
-	} else {
-		/* Per-request config */
-		output = MR_Request.outputErrors;
+	if (MR_BBerr == NULL){
+		/* Allocated out of Global rApache pool */
+		if ((MR_BBerr = apr_brigade_create(MR_Pool, MR_Bucket_Alloc)) == NULL){
+			fprintf(stderr,"FATAL ERROR! RApacheError cannot create MR_BBerr brigade\n");
+			exit(-1);
+		}
+		if (MR_Request.outputErrors==-1){
+			/* Module-wide config */
+			output = MR_OutputErrors;
+		} else {
+			/* Per-request config */
+			output = MR_Request.outputErrors;
+		}
+		if (output && MR_BBout){
+			char *prefix = (MR_Request.errorPrefix)? MR_Request.errorPrefix : (char *)MR_ErrorPrefix;
+			char *suffix = (MR_Request.errorSuffix)? MR_Request.errorSuffix : (char *)MR_ErrorSuffix;
+			ap_fputs(MR_Request.r->output_filters,MR_BBout,prefix);
+			ap_fputs(MR_Request.r->output_filters,MR_BBout,"Oops!!! <b>rApache</b> has something to tell you. View source and read the HTML comments at the end.");
+			ap_fputs(MR_Request.r->output_filters,MR_BBout,suffix);
+		} else {
+			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"rApache Notice!");
+		}
 	}
-
-	if (output && MR_BBout){
-		char *prefix = (MR_Request.errorPrefix)? MR_Request.errorPrefix : (char *)MR_ErrorPrefix;
-		char *suffix = (MR_Request.errorSuffix)? MR_Request.errorSuffix : (char *)MR_ErrorSuffix;
-		ap_fputs(MR_Request.r->output_filters,MR_BBout,prefix);
-		ap_fputs(MR_Request.r->output_filters,MR_BBout,"RApache Warning/Error!!!<br><br>");
-		ap_fputs(MR_Request.r->output_filters,MR_BBout,msg);
-		ap_fputs(MR_Request.r->output_filters,MR_BBout,suffix);
-	} else {
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,msg);
+	if (apr_brigade_puts(MR_BBerr,NULL,NULL,msg) != APR_SUCCESS){
+		fprintf(stderr,"FATAL ERROR! RApacheError cannot write to MR_BBerr brigade\n");
+		exit(-1);
 	}
 }
 
@@ -919,6 +993,23 @@ static void init_R(apr_pool_t *p){
 
 	Rf_initEmbeddedR(argc, argv);
 
+	/* redirect R's inputs and outputs. Print to stderr during startup.  */
+	R_Consolefile = NULL;
+	R_Outputfile = NULL;
+	ptr_R_Suicide = Suicide;
+	/* ptr_R_ShowMessage = ShowMessage; */
+	/* R_Consolefile = R_Outputfile = NULL; */
+	ptr_R_WriteConsole = NULL;
+	ptr_R_WriteConsoleEx = WriteConsoleStderr;
+	ptr_R_ReadConsole = ReadConsole;
+	ptr_R_ResetConsole = ptr_R_FlushConsole = ptr_R_ClearerrConsole = NoOpConsole;
+	ptr_R_Busy = NoOpBusy;
+	ptr_R_CleanUp = NoOpCleanUp;
+	ptr_R_ShowFiles = NoOpShowFiles;
+	ptr_R_ChooseFile = NoOpChooseFile;
+	ptr_R_EditFile = NoOpEditFile;
+	ptr_R_loadhistory = ptr_R_savehistory = ptr_R_addhistory = NoOpHistoryFun;
+
 	#ifdef CSTACK_DEFNS
 	/* Don't do any stack checking */
 	R_CStackLimit = -1;
@@ -948,21 +1039,9 @@ static void init_R(apr_pool_t *p){
 	/* Initialize libapreq2 */
 	apreq_initialize(MR_Pool);
 
-	/* Lastly, now redirect R's inputs and outputs */
-	R_Consolefile = NULL;
-	R_Outputfile = NULL;
-	ptr_R_Suicide = Suicide;
-	ptr_R_ShowMessage = ShowMessage;
-	ptr_R_WriteConsole = NULL;
+	/* Lastly, now redirect R's output */
 	ptr_R_WriteConsoleEx = WriteConsoleEx;
-	ptr_R_ReadConsole = ReadConsole;
-	ptr_R_ResetConsole = ptr_R_FlushConsole = ptr_R_ClearerrConsole = NoOpConsole;
-	ptr_R_Busy = NoOpBusy;
-	ptr_R_CleanUp = NoOpCleanUp;
-	ptr_R_ShowFiles = NoOpShowFiles;
-	ptr_R_ChooseFile = NoOpChooseFile;
-	ptr_R_EditFile = NoOpEditFile;
-	ptr_R_loadhistory = ptr_R_savehistory = ptr_R_addhistory = NoOpHistoryFun;
+	ptr_R_WriteConsole = NULL;
 }
 
 static int decode_return_value(SEXP ret)
@@ -974,30 +1053,6 @@ static int decode_return_value(SEXP ret)
 	return DONE;
 }
 
-int call_fun1str( char *funstr, char *argstr){
-	SEXP val, expr, fun, arg;
-	int errorOccurred;
-
-	/* Call funstr */
-	fun = MyfindFun(Rf_install(funstr), R_GlobalEnv);
-	PROTECT(fun);
-
-	/* argument */
-	PROTECT(arg = NEW_CHARACTER(1));
-	SET_STRING_ELT(arg, 0, COPY_TO_USER_STRING(argstr));
-
-	/* expression */
-	PROTECT(expr = allocVector(LANGSXP,2));
-	SETCAR(expr,fun);
-	SETCAR(CDR(expr),arg);
-
-	errorOccurred=1;
-	val = R_tryEval(expr,R_GlobalEnv,&errorOccurred);
-	UNPROTECT(3);
-
-	return (errorOccurred)? 0:1;
-}
-
 void InitRApachePool(void){
 
 	if (MR_Pool) return;
@@ -1006,6 +1061,7 @@ void InitRApachePool(void){
 		fprintf(stderr,"Fatal Error: could not apr_pool_create(MR_Pool)!\n");
 		exit(-1);
 	}
+	MR_Bucket_Alloc = apr_bucket_alloc_create(MR_Pool);
 
 	/* Table to hold *OnStartup code. Allocate 8 entries. */
 	if (!(MR_OnStartup = apr_table_make(MR_Pool,8))){
@@ -1090,48 +1146,51 @@ static SEXP NewEnv(SEXP enclos){
 	return env;
 }
 
-static int ExecRCode(const char *code, SEXP env, int *error){
+static SEXP ParseEval(const char *code, SEXP env, int *evalError){
+	SEXP tmp, exprs, lastval=R_NilValue;
 	ParseStatus status;
-	SEXP cmd, expr, fun;
-	int i, errorOccurred=1, retval = 1;
+	int eLen;
 
-	PROTECT(cmd = allocVector(STRSXP, 1));
-	SET_STRING_ELT(cmd, 0, mkChar(code));
+	if (!evalError){
+		fprintf(stderr,"Internal Error! ParseEval called with invalid argument.\n");
+		exit(-1);
+	}
 
-	/* fprintf(stderr,"ExecRCode(%s)\n",code); */
-	PROTECT(expr = R_ParseVector(cmd, -1, &status,R_NilValue));
+	PROTECT(tmp = mkString(code));
+	PROTECT(exprs = R_ParseVector(tmp, -1, &status,R_NilValue));
 
-	switch (status){
-		case PARSE_OK:
-			EvalExprs(expr,env,&errorOccurred);
-			if (error) *error = errorOccurred;
-			if (errorOccurred) retval=0;
-		break;
-		case PARSE_INCOMPLETE:
-		case PARSE_NULL:
-		case PARSE_ERROR:
-		case PARSE_EOF:
-		default:
-			retval=0;
-		break;
+	eLen = length(exprs);
+	if (status == PARSE_OK && isExpression(exprs) && eLen){
+		int i;
+		for(i = 0; i < eLen; i++){
+			lastval = R_tryEval(VECTOR_ELT(exprs, i),env,evalError);
+			if (*evalError) break;
+		}
 	}
 	UNPROTECT(2);
-
-	return retval;
+	return lastval;
 }
 
-static SEXP ExecFun1Arg(SEXP fun, SEXP arg){
-	SEXP val, expr;
-	int errorOccurred;
+static SEXP CallFun1expr(const char *fun, SEXP arg, SEXP env, int *evalError){
+	SEXP cmd, val;
 
-	PROTECT(fun); PROTECT(arg);
-	PROTECT(expr = allocVector(LANGSXP,2));
-	SETCAR(expr,fun);
-	SETCAR(CDR(expr),arg);
+	PROTECT(cmd = lang2(MyfindFun(install(fun),R_GlobalEnv),arg));
 
-	errorOccurred=1;
-	val = R_tryEval(expr,R_GlobalEnv,&errorOccurred);
-	UNPROTECT(3);
+	val = EvalExprs(cmd,env,evalError);
+
+	UNPROTECT(1);
+
+	return val;
+}
+
+static SEXP CallFun1str(const char *fun, const char *arg, SEXP env, int *evalError){
+	SEXP val;
+	char *text;
+
+	text = Calloc(strlen(fun)+strlen(arg)+5,char);
+	sprintf(text,"%s('%s')",fun,arg);
+	val = ParseEval(text,env,evalError);
+	Free(text);
 
 	return val;
 }
@@ -1144,7 +1203,7 @@ static void StartRprof(){
 	SETCAR(expr,fun);
 
 	errorOccurred=1;
-	R_tryEval(expr,R_GlobalEnv,&errorOccurred);
+	EvalExprs(expr,R_GlobalEnv,&errorOccurred);
 	UNPROTECT(2);
 }
 
@@ -1157,51 +1216,17 @@ static void StopRprof(){
 	SETCAR(CDR(expr),R_NilValue);
 
 	errorOccurred=1;
-	R_tryEval(expr,R_GlobalEnv,&errorOccurred);
+	EvalExprs(expr,R_GlobalEnv,&errorOccurred);
 	UNPROTECT(2);
-}
-
-static SEXP ParseFile(const char *file, apr_pool_t *pool, apr_size_t fsize, ParseStatus *status){
-	apr_file_t *fd;
-	apr_size_t bufsize;
-	void *buf;
-	apr_finfo_t finfo;
-	SEXP cmd, expr, srcfile;
-
-	if (apr_file_open(&fd,file,APR_READ,APR_OS_DEFAULT,pool) != APR_SUCCESS)
-		return NULL;
-
-	if (!fsize){
-		apr_stat(&finfo,file,APR_FINFO_SIZE,pool);
-		fsize = finfo.size;
-	}
-
-	bufsize = fsize;
-	buf = (void *)apr_pcalloc(pool,fsize+1);
-
-	apr_file_read(fd,buf,&bufsize);
-
-	PROTECT(cmd = allocVector(STRSXP, 1));
-	SET_STRING_ELT(cmd, 0, mkChar(buf));
-
-	PROTECT(srcfile = NEW_STRING(1));
-	SET_STRING_ELT(srcfile, 0, mkChar(file));
-
-	expr = R_ParseVector(cmd,-1,status,srcfile);
-	UNPROTECT(2);
-
-	if (*status == PARSE_OK) return expr;
-
-	return NULL;
 }
 
 static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *fileParsed){
 	RApacheParsedFile *parsedFile;
-	ParseStatus status;
+	int evalError=1;
 	apr_finfo_t finfo;
 	if (apr_stat(&finfo,h->directive->file,APR_FINFO_MTIME|APR_FINFO_SIZE,r->pool) != APR_SUCCESS){
-		RApacheResponseError(apr_psprintf(r->pool,
-					"From RApache Directive: %s\n\tInvalid file: %s\n",
+		RApacheError(apr_psprintf(r->pool,
+					"From RApache Directive: %s\n\tInvalid file (apr_stat): %s\n",
 					h->directive->handlerKey,h->directive->file));
 		return 0;
 	}
@@ -1226,8 +1251,8 @@ static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *filePa
 		/* Release old parse file expressions for gc */
 		if (parsedFile->exprs) R_ReleaseObject(parsedFile->exprs);
 
-		if ((parsedFile->exprs = ParseFile(h->directive->file,r->pool,finfo.size,&status)) == NULL){
-			RApacheError(apr_psprintf(r->pool,"ParsedFile(%s) failed!",h->directive->file));
+		parsedFile->exprs = CallFun1str("parse",h->directive->file,R_GlobalEnv,&evalError);
+		if (evalError){
 			return 0;
 		} else {
 			R_PreserveObject(parsedFile->exprs);
@@ -1240,81 +1265,95 @@ static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *filePa
 	return 1;
 }
 
-static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType){
-	SEXP fun, tmpenv;
-	int veclen = (handlerType == R_SCRIPT)? 3 : 1;
-	PROTECT(fun);
-	PROTECT(h->envir);
-	if (h->directive->file){
-		fun = MyfindFun(install(h->directive->function),h->envir);
-		if (fun ==  R_UnboundValue){
-			UNPROTECT(2);
-			RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
-			return 0;
-		}
-	} else {
-		if (h->directive->package)
-			fun = MyfindFunInPackage(install(h->directive->function),h->directive->package);
-		else
-			fun = MyfindFun(install(h->directive->function),R_GlobalEnv);
-		if (fun ==  R_UnboundValue){
-			UNPROTECT(2);
-			RApacheError(apr_psprintf(r->pool,"Handler %s not found!",h->directive->function));
-			return 0;
-		}
-
-		/* Now fix up the environment chain like so:
-		 * 1. h->envir contains CGI vars
-		 * 2. MR_RApacheEnv contains RApache functions/variables
-		 * 3. CLOENV(fun) is original enclosure.
-		 */
-		tmpenv = CLOENV(fun);
-		SET_CLOENV(fun,h->envir);
-		SET_ENCLOS(MR_RApacheEnv,tmpenv);
-	}
-
-	if (h->expr) R_ReleaseObject(h->expr);
-	R_PreserveObject(h->expr = allocVector(LANGSXP,veclen));
-	SETCAR(h->expr,fun);
-
-	if (handlerType == R_SCRIPT){
-		/* the call will be: fun(file=file,envir=envir) */
-		SETCAR(CDR(h->expr),mkString(r->filename));
-		SET_TAG(CDR(h->expr),install("file"));
-		SETCAR(CDR(CDR(h->expr)),h->envir);
-		SET_TAG(CDR(CDR(h->expr)),install("envir"));
-	}
-	UNPROTECT(2);
-
-	return 1;
+static SEXP ParseText(const char *text, int *parseError){
+	SEXP cmd, val;
+	PROTECT(cmd = lang4(findFun(install("parse"),R_BaseEnv),mkString(""),R_NilValue,mkString(text)));
+	val = EvalExprs(cmd,R_GlobalEnv,parseError);
+	UNPROTECT(1);
+	return val;
 }
 
-static SEXP EvalExprs(SEXP exprs, SEXP env, int *error){
-	SEXP lastval;
-	int i, errorOccurred=1;
-	for(i = 0; i < length(exprs); i++){
+static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType){
+	char *fmt1="%s()";
+	char *fmt2="%s::%s()";
+	char *fmt3="%s(file='%s',envir=.rAenv)";
+	char *fmt4="%s::%s(file='%s',envir=.rAenv)";
+	char *text;
+	int parseError;
 
-		/* swap out console writer for debugging */
-		/* ptr_R_WriteConsoleEx = WriteConsoleEx_debug;
-		Rf_PrintValue(VECTOR_ELT(exprs,i));
-		ptr_R_WriteConsoleEx = WriteConsoleEx; */
-
-		lastval = R_tryEval(VECTOR_ELT(exprs, i),env,&errorOccurred);
-		if (error) *error = errorOccurred;
-		if (errorOccurred) break;
+	if (handlerType == R_SCRIPT){
+		if (h->directive->package){
+			text = Calloc(strlen(fmt4)+strlen(h->directive->package)+strlen(h->directive->function)+strlen(r->filename),char);
+			sprintf(text,fmt4,h->directive->package,h->directive->function,r->filename);
+		} else{
+			text = Calloc(strlen(fmt3)+strlen(h->directive->function)+strlen(r->filename),char);
+			sprintf(text,fmt3,h->directive->function,r->filename);
+		}
+	} else {
+		if (h->directive->package){
+			text = Calloc(strlen(fmt2)+strlen(h->directive->package)+strlen(h->directive->function),char);
+			sprintf(text,fmt2,h->directive->package,h->directive->function);
+		} else{
+			text = Calloc(strlen(fmt1)+strlen(h->directive->function),char);
+			sprintf(text,fmt1,h->directive->function);
+		}
 	}
+
+	PROTECT(h->expr = ParseText(text,&parseError));
+	Free(text);
+
+	if (!parseError) {
+		if (handlerType == R_SCRIPT){
+			/* Monkey with expression and place the environment in there */
+			defineVar(install(".rAfile"),mkString(r->filename),h->envir);
+			defineVar(install(".rAenv"),h->envir,h->envir);
+		}
+		R_PreserveObject(h->expr);
+		UNPROTECT(1);
+		return 1;
+	} else {
+		UNPROTECT(1);
+		return 0;
+		/* Uh Oh! */
+	}
+	/* not reached */
+	return 0;
+}
+
+static SEXP EvalExprs(SEXP exprs, SEXP env, int *evalError){
+	SEXP lastval = R_NilValue;
+	int i, len;
+
+	if (!evalError){
+		fprintf(stderr,"Internal Error! EvalExprs called with invalid argument.\n");
+		exit(-1);
+	}
+
+	PROTECT(exprs);
+	if (isLanguage(exprs)){
+		lastval = R_tryEval(exprs,env,evalError);
+	} else if (isExpression(exprs) && length(exprs)){
+		len = length(exprs);
+		for(i = 0; i < len; i++){
+			lastval = R_tryEval(VECTOR_ELT(exprs, i),env,evalError);
+			if (*evalError) break;
+		}
+	} else {
+		fprintf(stderr,"Internal Error! EvalExprs() called with bad exprs\n");
+	}
+	UNPROTECT(1);
 	return(lastval);
 }
 
 static void InitRApacheEnv(){
 	ParseStatus status;
 	SEXP cmd, expr, fun;
-	int i, error=1;
+	int i, evalError=1;
 
 	R_PreserveObject(MR_RApacheEnv = NewEnv(R_GlobalEnv));
-	ExecRCode(MR_RApacheSource,MR_RApacheEnv,&error);
-	if (error){
-		fprintf(stderr,"Error eval'ing MR_RApacheSource!\n\n");
+	ParseEval(MR_RApacheSource,MR_RApacheEnv,&evalError);
+	if (evalError){
+		fprintf(stderr,"Internal Error! Error eval'ing MR_RApacheSource!\n\n");
 		exit(-1);
 	}
 
@@ -1372,59 +1411,30 @@ static void InitRApacheEnv(){
 	defineVar(install("HTTP_NOT_EXTENDED"),NewInteger(510),MR_RApacheEnv);
 
 	R_LockEnvironment(MR_RApacheEnv, TRUE);
-
-	/* For debugging */
-	/* defineVar(install("RApacheEnv"),MR_RApacheEnv,R_GlobalEnv); */
-	/* ExecRCode("gctorture()",R_GlobalEnv,&error); */
 }
 
 static int OnStartupCallback(void *rec, const char *key, const char *value){
-	SEXP e, val;
+	SEXP val;
 	ParseStatus status;
-	int error=1;
+	int evalError=1;
 
 	if (strcmp(key,"eval")==0){
-		ExecRCode(value,R_GlobalEnv,&error);
-		if (error){
+		ParseEval(value,R_GlobalEnv,&evalError);
+		if (evalError){
 			fprintf(stderr,"\nError evaluating '%s'! Exiting.\n",value);
 			exit(-1);
 		};
 	} else if (strcmp(key,"file")==0){
-		e = ParseFile(value,MR_Pool,0,&status);
-		if (!e){
-			fprintf(stderr,"\nError parsing %s! Exiting.\n",value);
-			exit(-1);
-		}
-		PROTECT(e);
-		EvalExprs(e,R_GlobalEnv,&error);
-		UNPROTECT(1);
-		if (error){
+		val = CallFun1str("source",value,R_GlobalEnv,&evalError);
+		if (evalError){
 			fprintf(stderr,"\nError evaluating %s! Exiting.\n",value);
 			exit(-1);
 		}
 	} else if (strcmp(key,"package")==0){
-		PROTECT(e = allocVector(LANGSXP,6));
-		/* library() */
-		SETCAR(e,findFun(install("require"),R_GlobalEnv));
-		/* package */
-		SETCAR(CDR(e),mkString(value));
-		/* character.only=TRUE */
-		SETCAR(CDR(CDR(e)),NewLogical(TRUE));
-		SET_TAG(CDR(CDR(e)),install("character.only"));
-		/* logical.return=TRUE */
-		SETCAR(CDR(CDR(CDR(e))),NewLogical(TRUE));
-		SET_TAG(CDR(CDR(CDR(e))),install("quietly"));
-		/* warn.conflicts=FALSE */
-		SETCAR(CDR(CDR(CDR(CDR(e)))),NewLogical(FALSE));
-		SET_TAG(CDR(CDR(CDR(CDR(e)))),install("warn.conflicts"));
-		/* keep.source=FALSE */
-		SETCAR(CDR(CDR(CDR(CDR(CDR(e))))),NewLogical(FALSE));
-		SET_TAG(CDR(CDR(CDR(CDR(CDR(e))))),install("keep.source"));
-
-		val = R_tryEval(e,R_GlobalEnv, &error);
-		UNPROTECT(1);
-		if (error){
-			fprintf(stderr,"\nError loading package %s! Exiting.",value);
+		val = CallFun1str("library",value,R_GlobalEnv,&evalError);
+		
+		if (evalError || (IS_LOGICAL(val) && LOGICAL(val)[0] == FALSE) ){
+			fprintf(stderr,"\nError loading package %s! Exiting.\n",value);
 			exit(-1);
 		}
 	}
@@ -1441,9 +1451,9 @@ static SEXP MyfindFun(SEXP symb, SEXP envir){
 
 	/* eval promise if need be */
 	if (t == PROMSXP){
-		int error=1;
-		fun = R_tryEval(fun,envir,&error);
-		if (error) return R_UnboundValue;
+		int evalError=1;
+		fun = R_tryEval(fun,envir,&evalError);
+		if (evalError) return R_UnboundValue;
 		t = TYPEOF(fun);
 	}
 
@@ -1466,9 +1476,9 @@ static SEXP MyfindFunInPackage(SEXP symb, char *package){
 				t = TYPEOF(fun);
 				/* eval promise if need be */
 				if (t == PROMSXP){
-					int error=1;
-					fun = R_tryEval(fun,rho,&error);
-					if (error) return R_UnboundValue;
+					int evalError=1;
+					fun = R_tryEval(fun,rho,&evalError);
+					if (evalError) return R_UnboundValue;
 					t = TYPEOF(fun);
 				}
 
@@ -1481,7 +1491,7 @@ static SEXP MyfindFunInPackage(SEXP symb, char *package){
 }
 
 #define PUTS(s) ap_fputs(MR_Request.r->output_filters,MR_BBout,s)
-#define EXEC(s) ExecRCode(s,envir,&errorOccurred); if (errorOccurred) return RApacheResponseError(NULL)
+#define EXEC(s) ParseEval(s,envir,&errorOccurred); if (errorOccurred) return RApacheResponseError(NULL)
 static int RApacheInfo()
 {
 	SEXP envir = NewEnv(MR_RApacheEnv);
@@ -1675,7 +1685,7 @@ static void InitCGIexprs(){
 }
 
 static void InjectCGIvars(SEXP env){
-	int i, error=1,len;
+	int i, evalError=1,len;
 	SEXP expr;
 
 	PROTECT(env);
@@ -1686,9 +1696,9 @@ static void InjectCGIvars(SEXP env){
 		SETCAR(CDR(CDR(CDR(expr))), env);
 		SETCAR(CDR(CDR(CDR(CDR(expr)))), env);
 	}
-	EvalExprs(MR_CGIexprs,env,&error);
+	EvalExprs(MR_CGIexprs,env,&evalError);
 	UNPROTECT(1);
-	if (error){
+	if (evalError){
 		fprintf(stderr,"Could not inject CGI VARS!!!!\n");
 		return;
 	}
@@ -1751,7 +1761,7 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 		if (inherits(sexpires,"POSIXct")){
 			tmpExpires = sexpires;
 		} else if (inherits(sexpires,"POSIXlt")){
-			tmpExpires = ExecFun1Arg(MyfindFun(install("as.POSIXct"),R_GlobalEnv),sexpires);
+			tmpExpires = CallFun1expr("as.POSIXct",sexpires,R_GlobalEnv,NULL);
 		}
 		apr_time_ansi_put(&texpires,(time_t)(REAL(tmpExpires)[0]));
 		apr_rfc822_date(strExpires, texpires);
@@ -2005,7 +2015,7 @@ SEXP RApache_parseCookies(SEXP sreq){
 #define OFFMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
 #define TIMMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[1] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
 SEXP RApache_getServer(){
-	int len = 31, i = 0;
+	int len = 33, i = 0;
 	SEXP names, val, class;
 	if (!MR_Request.r) return R_NilValue;
 	if (MR_Request.serverVar) return MR_Request.serverVar;
@@ -2044,6 +2054,8 @@ SEXP RApache_getServer(){
 	OFFMBR("read_length",MR_Request.r->read_length);
 	TIMMBR("request_time",MR_Request.r->request_time);
 	TIMMBR("mtime",MR_Request.r->mtime);
+	STRMBR("remote_ip",MR_Request.r->connection->remote_ip);
+	STRMBR("remote_host",MR_Request.r->connection->remote_host);
 
 	SET_NAMES(MR_Request.serverVar,names);
 	UNPROTECT(2);
