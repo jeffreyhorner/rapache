@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.9"
+#define MOD_R_VERSION "1.1.10"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -78,7 +78,7 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include <Rdefines.h>
 
 /*
- * Should already be included, but...
+ * sprintf and friends
  */
 #include <stdio.h>
 #include <string.h>
@@ -280,7 +280,7 @@ static apr_status_t AP_child_exit(void *data);
  * R interface callbacks
  */
 static void Suicide(const char *s){ };
-static void ShowMessage(const char *s){ };
+static void ShowMessage(const char *s);
 static int ReadConsole(const char *, unsigned char *, int, int);
 static void WriteConsoleEx(const char *, int, int);
 static void WriteConsoleStderr(const char *, int, int);
@@ -298,10 +298,7 @@ static void NoOpHistoryFun(SEXP a, SEXP b, SEXP c, SEXP d){ };
  */
 static void init_config_pass(apr_pool_t *p);
 static void init_R(apr_pool_t *);
-static SEXP call_fun1str(const  char *funstr, const char *argstr,int *evalError);
-static int decode_return_value(SEXP ret);
 static int SetUpRequest(const request_rec *);
-static void EmptyRequest(void);
 static void TearDownRequest(int flush);
 static RApacheHandler *GetHandlerFromRequest(const request_rec *r);
 static int RApacheResponseError(char *msg);
@@ -311,6 +308,7 @@ static void RegisterCallSymbols();
 static SEXP NewLogical(int tf);
 static SEXP NewInteger(int tf);
 static SEXP NewEnv(SEXP enclos);
+static SEXP ParseText(const char *text, int *parseError);
 static SEXP EvalExprs(SEXP exprs, SEXP env, int *evalError); /* more than one expression evaluator*/
 static SEXP ParseEval(const char *code,SEXP env, int *evalError);
 static SEXP CallFun1str(const char *fun, const char *arg, SEXP env, int *evalError);
@@ -321,7 +319,6 @@ static void InitRApacheEnv();
 static void InitRApachePool();
 static int OnStartupCallback(void *rec, const char *key, const char *value);
 static SEXP MyfindFun(SEXP fun, SEXP envir);
-static SEXP MyfindFunInPackage(SEXP fun, char *package);
 static int RApacheInfo();
 static SEXP AprTableToList(apr_table_t *);
 static void InitCGIexprs();
@@ -374,7 +371,6 @@ static void *AP_create_dir_cfg(apr_pool_t *p, char *dir){
 
 void *AP_merge_dir_cfg(apr_pool_t *pool, void *parent, void *new){
 	RApacheDirective *c;
-	RApacheDirective *p = (RApacheDirective *)parent;
 	RApacheDirective *n = (RApacheDirective *)new;
 
 	/* print_cfg("AP_merge_dir_cfg","Parent",p,"New",n); */
@@ -400,7 +396,6 @@ void *AP_create_srv_cfg(apr_pool_t *p, server_rec *s){
 
 void *AP_merge_srv_cfg(apr_pool_t *pool, void *parent, void *new){
 	RApacheDirective *c;
-	RApacheDirective *p = (RApacheDirective *)parent;
 	RApacheDirective *n = (RApacheDirective *)new;
 
 	/* print_cfg("AP_merge_srv_cfg","Parent",p,"New",n); */
@@ -519,12 +514,6 @@ static void AP_hook_child_init(apr_pool_t *p, server_rec *s){
 	apr_pool_cleanup_register(p, p, AP_child_exit, AP_child_exit);
 }
 
-static void PrintTraceback(void){
-	int evalError;
-	ptr_R_WriteConsoleEx = WriteConsoleErrorOnly;
-	ParseEval("cat('Traceback:\\n');traceback()",R_GlobalEnv,&evalError);
-	ptr_R_WriteConsoleEx = WriteConsoleEx;
-}
 
 static int AP_hook_request_handler (request_rec *r)
 {
@@ -532,7 +521,6 @@ static int AP_hook_request_handler (request_rec *r)
 	RApacheHandler *h;
 	SEXP ret;
 	int evalError=1,fileParsed=1;
-	apr_status_t rv;
 
 	/* Only handle our handlers */
 	if (strcmp(r->handler,"r-handler")==0) handlerType = R_HANDLER;
@@ -647,36 +635,33 @@ static apr_status_t AP_child_exit(void *data){
  * R interface callbacks
  *
  *************************************************************************/
+static void ShowMessage(const char *s){
+	(ptr_R_WriteConsoleEx)(s,strlen(s),1);
+}
 static void WriteConsoleEx(const char *buf, int size, int errorFlag){
 	if (MR_Request.r){
 		if (!errorFlag) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
 		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
-		/* fprintf(stderr,"(request) caught WriteConsoleEx(%s,%d,%d)\n",buf,size,error); */
 	} else {
-		/* might as well print for debugging */
-		fprintf(stderr,"caught WriteConsoleEx(%s,%d,%d)\n",buf,size,error);
-		/* fprintf(stderr,"NULL Apache request record in WriteConsoleEx()! exiting...\n"); */
-		/* exit(-1); */
+		WriteConsoleStderr(buf,size,errorFlag);
 	}
 }
 
 static void WriteConsoleErrorOnly(const char *buf, int size, int errorFlag){
-	RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
+	if (MR_Request.r)
+		RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
+	else
+		WriteConsoleStderr(buf,size,errorFlag);
 }
 
 static void WriteConsoleStderr(const char *buf, int size, int errorFlag){
 	fprintf(stderr,"%*s",size,buf);
 }
 
-static void WriteConsoleEx_debug(const char *buf, int size, int errorFlag){
-	fprintf(stderr,"%s: %d %d\n",buf,size,errorFlag);
-}
-
 /* according to R 2.7.2 the true size of buf is size+1 */
 static int ReadConsole(const char *prompt, unsigned char *buf, int size, int addHist){
-	apr_size_t len, bpos=0, blen;
+	apr_size_t len, bpos=0;
 	apr_status_t rv;
-	SEXP str;
 	apr_bucket *bucket;
 	const char *data;
 
@@ -787,16 +772,11 @@ static int SetUpRequest(const request_rec *r){
 	return 1;
 }
 
-static void EmptyRequest(void){
-	apr_brigade_cleanup(MR_BBout);
-}
-
 /* No need to free any memory here since it was allocated out of the request pool */
 static void TearDownRequest(int flush){
 	int output,evalError;
 	apr_bucket *bucket;
 	apr_size_t len;
-	apr_status_t rv;
 	const char *data;
 
 	/* Clean up reading */
@@ -997,8 +977,7 @@ static void init_R(apr_pool_t *p){
 	R_Consolefile = NULL;
 	R_Outputfile = NULL;
 	ptr_R_Suicide = Suicide;
-	/* ptr_R_ShowMessage = ShowMessage; */
-	/* R_Consolefile = R_Outputfile = NULL; */
+	ptr_R_ShowMessage = ShowMessage;
 	ptr_R_WriteConsole = NULL;
 	ptr_R_WriteConsoleEx = WriteConsoleStderr;
 	ptr_R_ReadConsole = ReadConsole;
@@ -1042,15 +1021,6 @@ static void init_R(apr_pool_t *p){
 	/* Lastly, now redirect R's output */
 	ptr_R_WriteConsoleEx = WriteConsoleEx;
 	ptr_R_WriteConsole = NULL;
-}
-
-static int decode_return_value(SEXP ret)
-{
-	if (IS_INTEGER(ret) && LENGTH(ret) == 1){
-		return asInteger(ret);
-	}
-
-	return DONE;
 }
 
 void InitRApachePool(void){
@@ -1097,6 +1067,13 @@ void init_config_pass(apr_pool_t *p){
  * R specific functions
  *
  *************************************************************************/
+
+static void PrintTraceback(void){
+	int evalError;
+	ptr_R_WriteConsoleEx = WriteConsoleErrorOnly;
+	ParseEval("cat('Traceback:\\n');traceback()",R_GlobalEnv,&evalError);
+	ptr_R_WriteConsoleEx = WriteConsoleEx;
+}
 
 void InitTempDir(apr_pool_t *p)
 {
@@ -1146,29 +1123,56 @@ static SEXP NewEnv(SEXP enclos){
 	return env;
 }
 
-static SEXP ParseEval(const char *code, SEXP env, int *evalError){
-	SEXP tmp, exprs, lastval=R_NilValue;
-	ParseStatus status;
-	int eLen;
+static SEXP ParseText(const char *text, int *parseError){
+	SEXP cmd, val;
+
+	if (!parseError){
+		fprintf(stderr,"Internal Error! ParseText called with invalid argument.\n");
+		exit(-1);
+	}
+	PROTECT(cmd = lang4(findFun(install("parse"),R_BaseEnv),mkString(""),R_NilValue,mkString(text)));
+	val = R_tryEval(cmd,R_GlobalEnv,parseError);
+	UNPROTECT(1);
+	return val;
+}
+
+SEXP ParseEval(const char *code, SEXP env, int *evalError){
+	SEXP exprs, val;
 
 	if (!evalError){
 		fprintf(stderr,"Internal Error! ParseEval called with invalid argument.\n");
 		exit(-1);
 	}
 
-	PROTECT(tmp = mkString(code));
-	PROTECT(exprs = R_ParseVector(tmp, -1, &status,R_NilValue));
+	exprs = ParseText(code,evalError);
+	if (*evalError) return R_NilValue;
+	val = EvalExprs(exprs,env,evalError);
+	return val;
+}
 
-	eLen = length(exprs);
-	if (status == PARSE_OK && isExpression(exprs) && eLen){
-		int i;
-		for(i = 0; i < eLen; i++){
+static SEXP EvalExprs(SEXP exprs, SEXP env, int *evalError){
+	SEXP lastval = R_NilValue;
+	int i, len;
+
+	if (!evalError){
+		fprintf(stderr,"Internal Error! EvalExprs called with invalid argument.\n");
+		exit(-1);
+	}
+
+	PROTECT(exprs);
+	if (isLanguage(exprs)){
+		lastval = R_tryEval(exprs,env,evalError);
+	} else if (isExpression(exprs) && length(exprs)){
+		len = length(exprs);
+		for(i = 0; i < len; i++){
 			lastval = R_tryEval(VECTOR_ELT(exprs, i),env,evalError);
 			if (*evalError) break;
 		}
+	} else {
+		fprintf(stderr,"Internal Error! EvalExprs() called with bad exprs\n");
 	}
-	UNPROTECT(2);
-	return lastval;
+	UNPROTECT(1);
+	return(lastval);
 }
 
 static SEXP CallFun1expr(const char *fun, SEXP arg, SEXP env, int *evalError){
@@ -1193,31 +1197,6 @@ static SEXP CallFun1str(const char *fun, const char *arg, SEXP env, int *evalErr
 	Free(text);
 
 	return val;
-}
-
-static void StartRprof(){
-	SEXP fun, expr;
-	int errorOccurred;
-	PROTECT(fun = MyfindFun(install("Rprof"),R_GlobalEnv));
-	PROTECT(expr = allocVector(LANGSXP,1));
-	SETCAR(expr,fun);
-
-	errorOccurred=1;
-	EvalExprs(expr,R_GlobalEnv,&errorOccurred);
-	UNPROTECT(2);
-}
-
-static void StopRprof(){
-	SEXP fun, expr ;
-	int errorOccurred;
-	PROTECT(fun = MyfindFun(install("Rprof"),R_GlobalEnv));
-	PROTECT(expr = allocVector(LANGSXP,2));
-	SETCAR(expr,fun);
-	SETCAR(CDR(expr),R_NilValue);
-
-	errorOccurred=1;
-	EvalExprs(expr,R_GlobalEnv,&errorOccurred);
-	UNPROTECT(2);
 }
 
 static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *fileParsed){
@@ -1265,14 +1244,10 @@ static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *filePa
 	return 1;
 }
 
-static SEXP ParseText(const char *text, int *parseError){
-	SEXP cmd, val;
-	PROTECT(cmd = lang4(findFun(install("parse"),R_BaseEnv),mkString(""),R_NilValue,mkString(text)));
-	val = EvalExprs(cmd,R_GlobalEnv,parseError);
-	UNPROTECT(1);
-	return val;
-}
 
+/*
+ * This version is better suited to printing warnings,errors, and traceback.
+ */
 static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType){
 	char *fmt1="%s()";
 	char *fmt2="%s::%s()";
@@ -1320,35 +1295,9 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 	return 0;
 }
 
-static SEXP EvalExprs(SEXP exprs, SEXP env, int *evalError){
-	SEXP lastval = R_NilValue;
-	int i, len;
-
-	if (!evalError){
-		fprintf(stderr,"Internal Error! EvalExprs called with invalid argument.\n");
-		exit(-1);
-	}
-
-	PROTECT(exprs);
-	if (isLanguage(exprs)){
-		lastval = R_tryEval(exprs,env,evalError);
-	} else if (isExpression(exprs) && length(exprs)){
-		len = length(exprs);
-		for(i = 0; i < len; i++){
-			lastval = R_tryEval(VECTOR_ELT(exprs, i),env,evalError);
-			if (*evalError) break;
-		}
-	} else {
-		fprintf(stderr,"Internal Error! EvalExprs() called with bad exprs\n");
-	}
-	UNPROTECT(1);
-	return(lastval);
-}
 
 static void InitRApacheEnv(){
-	ParseStatus status;
-	SEXP cmd, expr, fun;
-	int i, evalError=1;
+	int evalError=1;
 
 	R_PreserveObject(MR_RApacheEnv = NewEnv(R_GlobalEnv));
 	ParseEval(MR_RApacheSource,MR_RApacheEnv,&evalError);
@@ -1415,7 +1364,6 @@ static void InitRApacheEnv(){
 
 static int OnStartupCallback(void *rec, const char *key, const char *value){
 	SEXP val;
-	ParseStatus status;
 	int evalError=1;
 
 	if (strcmp(key,"eval")==0){
@@ -1459,34 +1407,6 @@ static SEXP MyfindFun(SEXP symb, SEXP envir){
 
 	if (t == CLOSXP || t == BUILTINSXP  || t == SPECIALSXP)
 		return fun;
-	return R_UnboundValue;
-}
-
-static SEXP MyfindFunInPackage(SEXP symb, char *package){
-	SEXP rho, name, fun;
-	SEXPTYPE t;
-	SEXP nameSymbol = install("name");
-	char *nameptr;
-	for (rho = ENCLOS(R_GlobalEnv); rho != R_EmptyEnv; rho = ENCLOS(rho)){
-		if (rho == R_BaseEnv) return R_UnboundValue;
-		name = getAttrib(rho,nameSymbol);
-		if ((nameptr = ap_strchr(CHAR(STRING_ELT(name,0)),':'))){
-			if (strcmp(package,nameptr+1)==0){
-				fun = findVarInFrame3(rho,symb,TRUE);
-				t = TYPEOF(fun);
-				/* eval promise if need be */
-				if (t == PROMSXP){
-					int evalError=1;
-					fun = R_tryEval(fun,rho,&evalError);
-					if (evalError) return R_UnboundValue;
-					t = TYPEOF(fun);
-				}
-
-				if (t == CLOSXP || t == BUILTINSXP || t == SPECIALSXP)
-					return fun;
-			}
-		}
-	}
 	return R_UnboundValue;
 }
 
@@ -1627,6 +1547,8 @@ static int TableCallback(void *datum,const char *n, const char *v){
 	STRING_PTR(ctx->names)[ctx->i]=mkChar(n);
 	SET_ELEMENT(ctx->list,ctx->i,value);
 	ctx->i += 1;
+
+	return 1;
 }
 
 static SEXP AprTableToList(apr_table_t *t){
@@ -2185,7 +2107,7 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 					error("size changing is not supported for raw vectors");
 				break;
 			default:
-				UNIMPLEMENTED_TYPE("writeBin", object);
+				error("unimplemented type in sendBin");
 		}
 		buf = R_chk_calloc(len, size); /* R_alloc(len, size); */
 		switch(TYPEOF(object)) {
