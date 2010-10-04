@@ -76,6 +76,8 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include <Rversion.h>
 #include <Rinternals.h>
 #include <Rdefines.h>
+/*void Rf_PrintWarnings(void); *//* Waiting for confirmation if this is exposed in R API.*/
+/*#define PrintWarnings Rf_PrintWarnings*/
 
 /*
  * sprintf and friends
@@ -567,6 +569,7 @@ static int AP_hook_request_handler (request_rec *r)
 			ret = EvalExprs(h->parsedFile->exprs,h->envir,&evalError);
 			UNPROTECT(2);
 			if (evalError) {
+				/*PrintWarnings();*/
 				PrintTraceback();
 				return RApacheResponseError(NULL);
 			}
@@ -592,10 +595,13 @@ static int AP_hook_request_handler (request_rec *r)
 		UNPROTECT(2);
 
 		if (evalError) {
+			/*PrintWarnings();*/
 			PrintTraceback();
 			return RApacheResponseError(NULL);
 		}
 	}
+
+	/*PrintWarnings();*/
 
 	if (IS_INTEGER(ret) && LENGTH(ret) == 1){
 		TearDownRequest(1);
@@ -1249,10 +1255,10 @@ static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *filePa
  * This version is better suited to printing warnings,errors, and traceback.
  */
 static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType){
-	char *fmt1="%s()";
-	char *fmt2="%s::%s()";
-	char *fmt3="%s(file='%s',envir=.rAenv)";
-	char *fmt4="%s::%s(file='%s',envir=.rAenv)";
+	static char const fmt1[]="%s()";
+	static char const fmt2[]="%s::%s()";
+	static char const fmt3[]="%s(file='%s',envir=.rAenv)";
+	static char const fmt4[]="%s::%s(file='%s',envir=.rAenv)";
 	char *text;
 	int parseError;
 
