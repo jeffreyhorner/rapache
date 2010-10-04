@@ -426,6 +426,7 @@ static void AP_register_hooks (apr_pool_t *p)
 static const char *AP_cmd_RHandler(cmd_parms *cmd, void *conf, const char *handler){
 	const char *part, *function;
 	RApacheDirective *c = (RApacheDirective *)conf;
+	ap_directive_t *d = cmd->directive;
 	InitRApachePool();
 
 	if (ap_strchr(handler,'/')){
@@ -436,7 +437,11 @@ static const char *AP_cmd_RHandler(cmd_parms *cmd, void *conf, const char *handl
 	part = ap_strstr(handler,"::");
 	if (part) {
 		c->package = apr_pstrmemdup(cmd->pool,handler,part - handler);
-		apr_table_add(MR_OnStartup,"package",c->package);
+		apr_table_add(
+			MR_OnStartup,
+			apr_psprintf( cmd->pool, "%s on line %u of %s",
+				d->directive,d->line_num,d->filename),
+			apr_psprintf(cmd->pool,"library(%s)",c->package));
 		function = part + 2;
 	} else {
 		function = handler;
@@ -469,12 +474,21 @@ static const char *AP_cmd_RFileHandler(cmd_parms *cmd, void *conf, const char *h
 }
 
 static const char *AP_cmd_REvalOnStartup(cmd_parms *cmd, void *conf, const char *evalstr){
+	ap_directive_t *d = cmd->directive;
+
 	InitRApachePool();
-	apr_table_add(MR_OnStartup,"eval",evalstr);
+
+	apr_table_add(
+		MR_OnStartup,
+		apr_psprintf( cmd->pool, "%s on line %u of %s",
+			d->directive,d->line_num,d->filename),
+		evalstr
+	);
 	return NULL;
 }
 
 static const char *AP_cmd_RSourceOnStartup(cmd_parms *cmd, void *conf, const char *file){
+	ap_directive_t *d = cmd->directive;
 	InitRApachePool();
 	if (MR_ConfigPass == 1){
 		apr_finfo_t finfo;
@@ -483,7 +497,12 @@ static const char *AP_cmd_RSourceOnStartup(cmd_parms *cmd, void *conf, const cha
 		}
 		return NULL;
 	}
-	apr_table_add(MR_OnStartup,"file",file);
+	apr_table_add(
+		MR_OnStartup,
+		apr_psprintf( cmd->pool, "%s on line %u of %s",
+			d->directive,d->line_num,d->filename),
+		apr_psprintf(cmd->pool,"source('%s')",file)
+	);
 	return NULL;
 }
 
@@ -1008,6 +1027,7 @@ static void init_R(apr_pool_t *p){
 
 	/* Execute all *OnStartup code */
 	apr_table_do(OnStartupCallback,NULL,MR_OnStartup,NULL);
+	apr_table_clear(MR_OnStartup);
 
 	/* For the RFile directive */
 	if (!(MR_ParsedFileCache = apr_hash_make(MR_Pool))){
@@ -1372,26 +1392,11 @@ static int OnStartupCallback(void *rec, const char *key, const char *value){
 	SEXP val;
 	int evalError=1;
 
-	if (strcmp(key,"eval")==0){
-		ParseEval(value,R_GlobalEnv,&evalError);
-		if (evalError){
-			fprintf(stderr,"\nError evaluating '%s'! Exiting.\n",value);
-			exit(-1);
-		};
-	} else if (strcmp(key,"file")==0){
-		val = CallFun1str("source",value,R_GlobalEnv,&evalError);
-		if (evalError){
-			fprintf(stderr,"\nError evaluating %s! Exiting.\n",value);
-			exit(-1);
-		}
-	} else if (strcmp(key,"package")==0){
-		val = CallFun1str("library",value,R_GlobalEnv,&evalError);
-		
-		if (evalError || (IS_LOGICAL(val) && LOGICAL(val)[0] == FALSE) ){
-			fprintf(stderr,"\nError loading package %s! Exiting.\n",value);
-			exit(-1);
-		}
-	}
+	val = ParseEval(value,R_GlobalEnv,&evalError);
+	if (evalError){
+		fprintf(stderr," From directive %s.\n",key);
+		exit(-1);
+	};
 
 	return 1;
 }
