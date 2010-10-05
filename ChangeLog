@@ -1,5 +1,17 @@
 2010-03-26 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
+	* Release 1.1.10
+
+	* Added printing of apache conf filename and line number on
+	rApache startup error.
+
+	* Eliminated -Wall warnings
+
+	* Cleaned up error and warning reporting. Involved reworking
+	dispatch code.
+
+2010-03-26 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
 	* Noted an issue in test/http.conf.in when using a file in more than one
 	way
 
