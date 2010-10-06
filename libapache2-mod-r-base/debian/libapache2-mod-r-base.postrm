@@ -1,0 +1,23 @@
+#! /bin/sh
+
+set -e
+
+case "$1" in
+  remove)
+    :
+		a2dismod mod_R
+    ;;
+  purge | disappear | upgrade | failed-upgrade | abort-upgrade)
+    :
+    ;;
+  abort-install)
+    :
+		a2dismod mod_R
+	;;
+  *) echo "$0: didn't understand being called with \`$1'" 1>&2
+     exit 1;;
+esac
+
+#DEBHELPER#
+
+exit 0

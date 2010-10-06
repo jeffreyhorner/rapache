@@ -1,0 +1,9 @@
+echo -n "checking for \$APREQ_CONFIG... "
+if test -z "$APREQ_CONFIG" ; then
+    echo "not found... Please set APREQ_CONFIG to the absolute path to apreq2-config script"
+    echo ""
+    exit 1
+else
+	echo "Found ${APREQ_CONFIG}... testing"
+	sh ${APREQ_CONFIG} --includes
+fi

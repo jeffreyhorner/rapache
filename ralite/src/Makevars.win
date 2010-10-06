@@ -1,0 +1,2 @@
+PKG_CPPFLAGS =  -I"c:/MinGW/msys/1.0/local/apr/include/apreq2"  -I"c:/MinGW/msys/1.0/local/apr/include/apr-1"
+PKG_LIBS = -L"c:/MinGW/msys/1.0/local/apr/lib" -lapreq2  -laprutil-1  -lapr-1 -Wl,--enable-auto-import,--subsystem,console  -lrpcrt4 -lshell32 -lws2_32 -ladvapi32 -lkernel32 -lmsvcrt  -lexpat -liconv

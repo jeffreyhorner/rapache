@@ -1,0 +1,47 @@
+#!/usr/bin/make -f
+
+# Uncomment this to turn on verbose mode.
+export DH_VERBOSE=1
+
+PACKAGE=$(shell dh_listpackages)
+
+build:
+	dh_testdir
+	./configure --with-R=/usr/bin/R --with-apache2-apxs=/usr/bin/apxs2 --with-apreq2-config=/usr/bin/apreq2-config
+	if test -f /usr/bin/lsb_release -a `/usr/bin/lsb_release -cs` = "lucid"; then \
+		cp /usr/lib/libapreq2.la libapreq2.la~; \
+		sed -e "s/\/usr\/lib\/libuuid.la/-luuid/g;s/libdir='\/lib/libdir='\/usr\/lib/g" < libapreq2.la~ > libapreq2.la; \
+	fi;
+	$(MAKE)
+
+clean:
+	dh_testdir
+	dh_testroot
+	if [ -f Makefile ]; then $(MAKE) distclean; fi;
+	dh_clean
+
+binary: binary-arch binary-indep
+
+binary-indep: 
+
+binary-arch: build
+	dh_testdir
+	dh_testroot
+	dh_clean -k
+	dh_installdirs
+	dh_install
+	dh_installdocs
+	dh_installchangelogs
+	dh_link
+	dh_strip
+	dh_compress
+	dh_fixperms
+	dh_installdeb
+	#dh_shlibdeps
+	dh_gencontrol
+	dh_md5sums 
+	dh_builddeb
+	#dh_clean
+	dh_prep
+
+.PHONY: build clean binary binary-arch binary-indep

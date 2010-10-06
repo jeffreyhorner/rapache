@@ -1,0 +1,5 @@
+libapache2-mod-r-base (1.1.10-ppa3) lucid; urgency=low
+
+  * First binary package release with new name.
+
+ -- Jeffrey Horner <jeffrey.horner@gmail.com>  Fri, 01 Oct 2010 19:00:25 -0500
