@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.10"
+#define MOD_R_VERSION "1.1.11"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -431,6 +431,7 @@ static const char *AP_cmd_RHandler(cmd_parms *cmd, void *conf, const char *handl
 
 	if (ap_strchr(handler,'/')){
 		fprintf(stderr,"\n\tWARNING! %s seems to contain a file. If this is true, then use the RFileHandler directive instead.\n",handler);
+		fflush(stderr);
 	}
 
 	c->handlerKey = apr_pstrdup(cmd->pool,handler);
@@ -681,6 +682,7 @@ static void WriteConsoleErrorOnly(const char *buf, int size, int errorFlag){
 
 static void WriteConsoleStderr(const char *buf, int size, int errorFlag){
 	fprintf(stderr,"%*s",size,buf);
+	fflush(stderr);
 }
 
 /* according to R 2.7.2 the true size of buf is size+1 */
@@ -873,8 +875,8 @@ static void TearDownRequest(int flush){
 
 				/* read */
 				apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
-				/*ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"%*s",len,data);*/
-				fprintf(stderr,"%*s",len,data);
+				apr_file_printf(MR_Request.r->server->error_log,"%*s",len,data);
+				apr_file_flush(MR_Request.r->server->error_log);
 			}
 		}
 
@@ -1196,6 +1198,7 @@ static SEXP EvalExprs(SEXP exprs, SEXP env, int *evalError){
 		}
 	} else {
 		fprintf(stderr,"Internal Error! EvalExprs() called with bad exprs\n");
+		fflush(stderr);
 	}
 	UNPROTECT(1);
 	return(lastval);
@@ -1633,6 +1636,7 @@ static void InjectCGIvars(SEXP env){
 	UNPROTECT(1);
 	if (evalError){
 		fprintf(stderr,"Could not inject CGI VARS!!!!\n");
+		fflush(stderr);
 		return;
 	}
 }
@@ -1710,7 +1714,6 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";domain=",CHAR(STRING_PTR(sdomain)[0]),NULL);
 	/* therest */
 	if (therest != R_NilValue && isString(therest) && CHAR(STRING_PTR(therest)[0])[0] != '\0'){
-		fprintf(stderr,"therest is <%s>\n",CHAR(STRING_PTR(therest)[0]));
 		cookie = apr_pstrcat(MR_Request.r->pool,cookie,";",CHAR(STRING_PTR(therest)[0]),NULL);
 	}
 

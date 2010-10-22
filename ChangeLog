@@ -1,4 +1,12 @@
-2010-03-26 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+2010-10-22 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.11
+
+	* The server error log file descriptor is used instead of
+	stderr for printing to the error log. Changed the calls to
+	use apr_file_printf and apr_file_flush.
+
+2010-10-04 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.1.10
 
