@@ -1,3 +1,9 @@
+2010-10-23 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.12
+
+	* Replaced calls to apr_file_printf with apr_file_write
+
 2010-10-22 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.1.11

@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.11"
+#define MOD_R_VERSION "1.1.12"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -805,6 +805,7 @@ static void TearDownRequest(int flush){
 	apr_bucket *bucket;
 	apr_size_t len;
 	const char *data;
+	apr_status_t status;
 
 	/* Clean up reading */
 	if (MR_BBin){
@@ -874,13 +875,21 @@ static void TearDownRequest(int flush){
 				}
 
 				/* read */
-				apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
-				apr_file_printf(MR_Request.r->server->error_log,"%*s",len,data);
+				status = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
+				if (status != APR_SUCCESS){
+					fprintf(stderr,"WARNING! apr_bucket_read returned %d\n",status);
+				}
+				status = apr_file_write(MR_Request.r->server->error_log,data,&len);
+				if (status != APR_SUCCESS){
+					fprintf(stderr,"WARNING! apr_file_write returned %d\n",status);
+				}
 				apr_file_flush(MR_Request.r->server->error_log);
+
 			}
 		}
 
 		apr_brigade_cleanup(MR_BBerr);
+		apr_brigade_destroy(MR_BBerr);
 	}
 	MR_BBerr = NULL;
 
