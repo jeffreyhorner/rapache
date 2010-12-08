@@ -1,3 +1,11 @@
+2010-12-08 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.13
+
+	* All R and CGI related functions are attached
+	to the search path in the named environment 'rapache'
+	placed just before the base environment.
+
 2010-10-23 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.1.12

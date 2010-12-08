@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.12"
+#define MOD_R_VERSION "1.1.13"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -214,25 +214,15 @@ sendBin <- function(object, con=stdout(), size=NA_integer_, endian=.Platform$end
 	swap <- endian != .Platform$endian\n\
 	if (!is.vector(object) || mode(object) == 'list') stop('can only write vector objects')\n\
 	.Call('RApache_sendBin',object,size,swap)}\n\
-RApacheOutputErrors <- function(status=TRUE,prefix=NULL,suffix=NULL) .Call('RApache_outputErrors',status,prefix,suffix)";
-
-/*
- * CGI Expression list. These are evaluated in the RApache environment before every request.
- */
-static SEXP MR_CGIexprs;
-
-/*
- * CGI Variables. Each tuple is passed to delayedAssign() and evaluated in the RApache environment
- * before every request.
- */
-static const char *MR_CGIvars[] = {
-	"GET", "RApache_parseGet",
-	"COOKIES", "RApache_parseCookies",
-	"POST", "RApache_parsePost",
-	"FILES", "RApache_parseFiles",
-	"SERVER", "RApache_getServer",
-	NULL
-};
+RApacheOutputErrors <- function(status=TRUE,prefix=NULL,suffix=NULL) .Call('RApache_outputErrors',status,prefix,suffix)\n\
+.ResetCGIVars <- function(){\n\
+	re <- as.environment('rapache')\n\
+	delayedAssign('GET', .Call('RApache_parseGet'),re,re)\n\
+	delayedAssign('COOKIES', .Call('RApache_parseCookies'),re,re)\n\
+	delayedAssign('POST', .Call('RApache_parsePost'),re,re)\n\
+	delayedAssign('FILES', .Call('RApache_parseFiles'),re,re)\n\
+	delayedAssign('SERVER', .Call('RApache_getServer'),re,re)\n\
+}";
 
 /*
  * Global Thread Mutex
@@ -318,13 +308,12 @@ static SEXP CallFun1expr(const char *fun, SEXP arg, SEXP env, int *evalError);
 static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *fileParsed);
 static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType);
 static void InitRApacheEnv();
+static void RefreshRApacheEnv();
 static void InitRApachePool();
 static int OnStartupCallback(void *rec, const char *key, const char *value);
 static SEXP MyfindFun(SEXP fun, SEXP envir);
 static int RApacheInfo();
 static SEXP AprTableToList(apr_table_t *);
-static void InitCGIexprs();
-static void InjectCGIvars(SEXP env);
 static void PrintTraceback(void);
 
 /*************************************************************************
@@ -563,6 +552,8 @@ static int AP_hook_request_handler (request_rec *r)
 
 	if (!h) return RApacheResponseError(NULL);
 
+	RefreshRApacheEnv(); /* ensures we're on search path, updates CGI vars, etc. */
+
 	/* Prepare file if needed */
 	if (h->directive->file){
 		fileParsed = 1;
@@ -570,12 +561,11 @@ static int AP_hook_request_handler (request_rec *r)
 		
 		/* Preserved environments are per file */
 		if (h->directive->preserveEnv){
-		   if (!h->parsedFile->envir) R_PreserveObject(h->parsedFile->envir = NewEnv(MR_RApacheEnv));
+		   if (!h->parsedFile->envir) R_PreserveObject(h->parsedFile->envir = NewEnv(R_GlobalEnv));
 		   h->envir = h->parsedFile->envir;
 		} else {
-		   h->envir = NewEnv(MR_RApacheEnv);
+		   h->envir = NewEnv(R_GlobalEnv);
 		}
-		InjectCGIvars(h->envir);
 
 		/* Do we need to eval parsed file?
 		 * Yes, if env is not preserved.
@@ -599,8 +589,7 @@ static int AP_hook_request_handler (request_rec *r)
 		/* No file means a function found in the either a global 
 		 * environment or an attached package.
 		 */ 
-		h->envir = NewEnv(MR_RApacheEnv);
-		InjectCGIvars(h->envir);
+		h->envir = NewEnv(R_GlobalEnv);
 	}
 
 	/* Eval handler expression if set */
@@ -1034,8 +1023,6 @@ static void init_R(apr_pool_t *p){
 
 	InitRApacheEnv();
 
-	InitCGIexprs(); 
-
 	/* Execute all *OnStartup code */
 	apr_table_do(OnStartupCallback,NULL,MR_OnStartup,NULL);
 	apr_table_clear(MR_OnStartup);
@@ -1333,11 +1320,50 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 	return 0;
 }
 
+static void RefreshRApacheEnv(){
+	SEXP t;
+	int evalError=1, envFound=0;
+
+	for (t = ENCLOS(R_GlobalEnv); t != R_BaseEnv; t = ENCLOS(t)){
+		if (t == MR_RApacheEnv) {
+			envFound=1;
+			break;
+		}
+	}
+
+	/* Not found. Place on search path right before base */
+	if (!envFound){
+
+		/* Search for envir right before BaseEnv */
+		for (t = R_GlobalEnv; ENCLOS(t) != R_BaseEnv; t = ENCLOS(t))/* noop */;
+
+		/* ENCLOS(t) beter be R_BaseEnv */
+		if (ENCLOS(t) == R_BaseEnv){
+			SET_ENCLOS(t,MR_RApacheEnv);
+		} else {
+			fprintf(stderr,"Internal Error! Error reattaching rapache environment!\n\n");
+			exit(-1);
+		}
+	}
+
+	ParseEval(".ResetCGIVars()",MR_RApacheEnv,&evalError);
+	if (evalError){
+		fprintf(stderr,"Internal Error! Error resetting CGI vars!\n\n");
+		exit(-1);
+	}
+}
 
 static void InitRApacheEnv(){
 	int evalError=1;
 
-	R_PreserveObject(MR_RApacheEnv = NewEnv(R_GlobalEnv));
+	/* Attach apache env right before base */
+	R_PreserveObject(MR_RApacheEnv = ParseEval("attach(NULL,pos=length(search()),'rapache')",R_GlobalEnv,&evalError));
+	if (evalError){
+		fprintf(stderr,"Internal Error! Error attaching rapache environment!\n\n");
+		exit(-1);
+	}
+
+	evalError=1;
 	ParseEval(MR_RApacheSource,MR_RApacheEnv,&evalError);
 	if (evalError){
 		fprintf(stderr,"Internal Error! Error eval'ing MR_RApacheSource!\n\n");
@@ -1397,7 +1423,21 @@ static void InitRApacheEnv(){
 	defineVar(install("HTTP_INSUFFICIENT_STORAGE"),NewInteger(507),MR_RApacheEnv);
 	defineVar(install("HTTP_NOT_EXTENDED"),NewInteger(510),MR_RApacheEnv);
 
-	R_LockEnvironment(MR_RApacheEnv, TRUE);
+	/* CGI VARS */
+	defineVar(install("GET"),R_NilValue,MR_RApacheEnv);
+	defineVar(install("POST"),R_NilValue,MR_RApacheEnv);
+	defineVar(install("COOKIES"),R_NilValue,MR_RApacheEnv);
+	defineVar(install("FILES"),R_NilValue,MR_RApacheEnv);
+	defineVar(install("SERVER"),R_NilValue,MR_RApacheEnv);
+
+	/* Lock environment AND bindings except for CGI vars.*/
+	R_LockEnvironment(MR_RApacheEnv, TRUE); 
+
+	R_unLockBinding(install("GET"),MR_RApacheEnv);
+	R_unLockBinding(install("POST"),MR_RApacheEnv);
+	R_unLockBinding(install("COOKIES"),MR_RApacheEnv);
+	R_unLockBinding(install("FILES"),MR_RApacheEnv);
+	R_unLockBinding(install("SERVER"),MR_RApacheEnv);
 }
 
 static int OnStartupCallback(void *rec, const char *key, const char *value){
@@ -1437,7 +1477,7 @@ static SEXP MyfindFun(SEXP symb, SEXP envir){
 #define EXEC(s) ParseEval(s,envir,&errorOccurred); if (errorOccurred) return RApacheResponseError(NULL)
 static int RApacheInfo()
 {
-	SEXP envir = NewEnv(MR_RApacheEnv);
+	SEXP envir = NewEnv(R_GlobalEnv);
 	int errorOccurred=1;
 	ap_set_content_type( MR_Request.r, "text/html");
 
@@ -1589,65 +1629,6 @@ static SEXP AprTableToList(apr_table_t *t){
 	SET_NAMES(ctx.list,ctx.names);
 	UNPROTECT(2);
 	return ctx.list;
-}
-
-static void InitCGIexprs(){
-	int i, numVars=0;
-	SEXP symdA, symdC, expdA, expdC, str;
-
-	PROTECT(symdA = findFun(install("delayedAssign"),R_GlobalEnv));
-	PROTECT(symdC = findFun(install(".Call"),R_GlobalEnv));
-
-	for (i = 0; MR_CGIvars[i] ; i+=2){
-		numVars++;
-	}
-
-	PROTECT(MR_CGIexprs = allocVector(EXPRSXP,numVars));
-	numVars = 0;
-	for (i = 0; MR_CGIvars[i] ; i+=2){
-
-		/* create .Call('bar') expr */
-		PROTECT(str = NEW_STRING(1));
-		CHARACTER_DATA(str)[0] = mkChar(MR_CGIvars[i+1]);
-		PROTECT(expdC = allocVector(LANGSXP,2));
-		SETCAR(expdC,symdC);
-		SETCAR(CDR(expdC),str);
-
-		/* create delayedAssign('foo',.Call('bar'),NULL,NULL); */
-		PROTECT(str = NEW_STRING(1));
-		CHARACTER_DATA(str)[0] = mkChar(MR_CGIvars[i]);
-		PROTECT(expdA = allocVector(LANGSXP,5));
-		SETCAR(expdA,symdA);
-		SETCAR(CDR(expdA),str);
-		SETCAR(CDR(CDR(expdA)), expdC);
-		SETCAR(CDR(CDR(CDR(expdA))), R_NilValue);
-		SETCAR(CDR(CDR(CDR(CDR(expdA)))), R_NilValue);
-
-		SET_VECTOR_ELT(MR_CGIexprs,numVars++,expdA);
-	}
-	UNPROTECT(3 + (4 * numVars));
-	R_PreserveObject(MR_CGIexprs);
-}
-
-static void InjectCGIvars(SEXP env){
-	int i, evalError=1,len;
-	SEXP expr;
-
-	PROTECT(env);
-	len = LENGTH(MR_CGIexprs);
-	for (i = 0; i < len; i++){
-		expr = VECTOR_ELT(MR_CGIexprs,i);
-		/* set the eval.env and assign.env args to  delayedAssign. */
-		SETCAR(CDR(CDR(CDR(expr))), env);
-		SETCAR(CDR(CDR(CDR(CDR(expr)))), env);
-	}
-	EvalExprs(MR_CGIexprs,env,&evalError);
-	UNPROTECT(1);
-	if (evalError){
-		fprintf(stderr,"Could not inject CGI VARS!!!!\n");
-		fflush(stderr);
-		return;
-	}
 }
 
 /*************************************************************************
