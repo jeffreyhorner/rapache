@@ -1641,6 +1641,8 @@ SEXP RApache_setHeader(SEXP header, SEXP value){
 	const char *key = CHAR(STRING_PTR(header)[0]);
 	const char *val;
 
+	if (!MR_Request.r) return NewLogical(FALSE);
+
 	if (!key) return NewLogical(FALSE);
    
 	if (value == R_NilValue){
@@ -1656,6 +1658,9 @@ SEXP RApache_setHeader(SEXP header, SEXP value){
 
 SEXP RApache_setContentType(SEXP stype){
 	const char *ctype;
+
+	if (!MR_Request.r) return NewLogical(FALSE);
+
 	if (stype == R_NilValue) return NewLogical(FALSE);
 	ctype = CHAR(STRING_PTR(stype)[0]);
 	if (!ctype) return NewLogical(FALSE);
@@ -1667,6 +1672,8 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 	const char *name, *value, *cookie;
 	char strExpires[APR_RFC822_DATE_LEN];
 	apr_time_t texpires;
+
+	if (!MR_Request.r) return NewLogical(FALSE);
 
 	/* name */
 	if (sname == R_NilValue) return NewLogical(FALSE);
@@ -1780,11 +1787,15 @@ SEXP RApache_urlEnDecode(SEXP str,SEXP enc){
 }
 
 SEXP RApache_RApacheInfo(){
+	if (!MR_Request.r) return R_NilValue;
 	RApacheInfo();
 	return R_NilValue;
 }
 
 SEXP RApache_parseGet() {
+
+	if (!MR_Request.r) return R_NilValue;
+
 	/* If we've already made the table, just hand it out again */
 	if (MR_Request.argsTable) return AprTableToList(MR_Request.argsTable);
 	/* Don't parse if there aren't an GET variables to parse */
@@ -1854,6 +1865,8 @@ static SEXP parsePost(int returnPost) {
 	SEXP filenames;
 	int nfiles;
 
+	if (!MR_Request.r) return R_NilValue;
+
 	if (MR_Request.readStarted) {
 		/* If we've already started reading with R then don't try to parse at all. */
 		RApacheError("Oops! Your R code has already started reading the request.");
@@ -1920,6 +1933,8 @@ SEXP RApache_parseFiles(){ return parsePost(0); }
 
 SEXP RApache_parseCookies(SEXP sreq){
 	const char *cookies;
+
+	if (!MR_Request.r) return R_NilValue;
 
 	if (MR_Request.cookiesTable) 
 		return AprTableToList(MR_Request.cookiesTable);
@@ -2009,6 +2024,8 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 	char *buf;
 	/* Rboolean wasopen = TRUE, isRaw = FALSE;
 	Rconnection con = NULL; */
+
+	if (!MR_Request.r) return R_NilValue;
 
 	/* checkArity(op, args); */
 	/* object = CAR(args); */

@@ -1,3 +1,8 @@
+2011-01-11 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Ensure .Call functions can work outside the context
+	of a web request.
+
 2010-12-08 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.1.13
