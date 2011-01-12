@@ -22,7 +22,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.13"
+#define MOD_R_VERSION "1.1.14"
 #define SVNID "$Id$"
 #include "mod_R.h" 
 
@@ -882,7 +882,9 @@ static void TearDownRequest(int flush){
 	}
 	MR_BBerr = NULL;
 
-	/* Clean up writing for good.*/
+	/* It's possible that errors were redirected to the output stream, so
+	 * clean up writing for good.
+	 */
 	if (MR_BBout){
 
 		/* A reason not to flush when the brigade is not empty is to
