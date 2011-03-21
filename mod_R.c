@@ -2251,6 +2251,16 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 	return ans;
 }
 
+SEXP RApache_recBin(SEXP sbytes){
+	SEXP ans;
+	size_t bytes;
+	bytes = asInteger(sbytes);
+	PROTECT(ans = allocVector(RAWSXP, bytes));
+	ReadConsole("",(unsigned char *)RAW(ans),(int)bytes,0);
+	UNPROTECT(1);
+	return ans;
+}
+
 SEXP RApache_outputErrors(SEXP status,SEXP prefix, SEXP suffix){
 	if (isLogical(status)){
 	   	if ((LOGICAL(status)[0] == TRUE)){
@@ -2290,6 +2300,7 @@ static void RegisterCallSymbols() {
 	{"RApache_parseCookies",(DL_FUNC) &RApache_parseCookies,0},
 	{"RApache_getServer",(DL_FUNC) &RApache_getServer,0},
 	{"RApache_sendBin",(DL_FUNC) &RApache_sendBin,3},
+	{"RApache_recBin", (DL_FUNC) &RApache_recBin,1},
 	{"RApache_outputErrors",(DL_FUNC) &RApache_outputErrors,3},
 	{NULL, NULL, 0}
 	};
