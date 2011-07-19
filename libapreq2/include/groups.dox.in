@@ -1,0 +1,84 @@
+/**
+ * @mainpage
+ * Project Website: http://httpd.apache.org/apreq/
+ *
+ * @verbinclude README
+ */
+
+/** 
+ * @defgroup libapreq2 Apache Request Library
+ * @brief libapreq2 Version @APREQ_DOTTED_VERSION@
+ *
+ * libapreq2 is a shared library based on the Apache
+ * Portable Runtime libraries libapr and libaprutil.
+ * @see http://apr.apache.org/
+ *
+ * @section apreq2_config Configuring libapreq2 Applications
+ * This package includes <code>apreq2-config</code>, 
+ * a configuration script for building applications
+ * with libapreq2.  Run <code>apreq2-config --help</code>
+ * to display its options. XXX add examples here XXX
+ */
+
+/**
+ * @defgroup apreq_module Modules
+ * @brief apreq2 modules included in @PACKAGE@-@VERSION@.
+ *
+ * XXX
+ */
+
+/**
+ * @defgroup apreq_lang Language Bindings
+ * @brief libapreq2 APIs for programming languages other than C
+ *
+ * XXX
+ */
+
+/** 
+ * @page apreq_license LICENSE 
+ * @verbinclude LICENSE
+ */
+
+/** 
+ * @page apreq_notice NOTICE
+ * @verbinclude NOTICE
+ */
+
+/** 
+ * @page apreq_install INSTALL 
+ * @verbinclude INSTALL
+ */
+
+/**
+ * @defgroup apreq_xs Perl
+ * @brief XS Modules
+ * @ingroup apreq_lang
+@manonly 
+.SH "SEE ALSO"
+.IX Header "SEE ALSO"
+\&\fIapreq_xs_request\fR\|(3), \fIapreq_xs_upload\fR\|(3), \fIapreq_xs_cookie\fR\|(3)
+@endmanonly
+ */
+
+/**
+ * @defgroup apreq_xs_request Apache2::Request
+ * @ingroup apreq_xs
+ * @htmlinclude Request.html
+ */
+
+/**
+ * @defgroup apreq_xs_upload Apache2::Upload
+ * @ingroup apreq_xs
+ * @htmlinclude Upload.html
+ */
+
+/**
+ * @defgroup apreq_xs_cookie Apache2::Cookie
+ * @ingroup apreq_xs
+ * @htmlinclude Cookie.html
+ */
+
+/**
+ * @page apreq_faq FAQ
+ * @htmlinclude FAQ.html
+ */

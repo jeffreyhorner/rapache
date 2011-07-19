@@ -1,0 +1,544 @@
+.TH "include/apreq_util.h" 3 "4 May 2005" "Version 2.05-dev" "libapreq2" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+include/apreq_util.h \- Utility functions for apreq. 
+.SH SYNOPSIS
+.br
+.PP
+\fC#include 'apr_file_io.h'\fP
+.br
+\fC#include 'apr_buckets.h'\fP
+.br
+\fC#include 'apreq.h'\fP
+.br
+
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "char * \fBapreq_join\fP (\fBapr_pool_t\fP *p, const char *sep, const \fBapr_array_header_t\fP *arr, \fBapreq_join_t\fP mode)"
+.br
+.ti -1c
+.RI "\fBapr_ssize_t\fP \fBapreq_index\fP (const char *hay, \fBapr_size_t\fP hlen, const char *ndl, \fBapr_size_t\fP nlen, const \fBapreq_match_t\fP type)"
+.br
+.ti -1c
+.RI "\fBapr_size_t\fP \fBapreq_quote\fP (char *dest, const char *src, const \fBapr_size_t\fP slen)"
+.br
+.ti -1c
+.RI "\fBapr_size_t\fP \fBapreq_quote_once\fP (char *dest, const char *src, const \fBapr_size_t\fP slen)"
+.br
+.ti -1c
+.RI "\fBapr_size_t\fP \fBapreq_encode\fP (char *dest, const char *src, const \fBapr_size_t\fP slen)"
+.br
+.ti -1c
+.RI "\fBapr_size_t\fP \fBapreq_cp1252_to_utf8\fP (char *dest, const char *src, \fBapr_size_t\fP slen)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_decode\fP (char *dest, \fBapr_size_t\fP *dlen, const char *src, \fBapr_size_t\fP slen)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_decodev\fP (char *dest, \fBapr_size_t\fP *dlen, struct iovec *v, int nelts)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP char * \fBapreq_escape\fP (\fBapr_pool_t\fP *p, const char *src, const \fBapr_size_t\fP slen)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_ssize_t\fP \fBapreq_unescape\fP (char *str)"
+.br
+.ti -1c
+.RI "\fBapr_int64_t\fP \fBapreq_atoi64f\fP (const char *s)"
+.br
+.ti -1c
+.RI "\fBapr_int64_t\fP \fBapreq_atoi64t\fP (const char *s)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_brigade_fwrite\fP (\fBapr_file_t\fP *f, \fBapr_off_t\fP *wlen, \fBapr_bucket_brigade\fP *bb)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_file_mktemp\fP (\fBapr_file_t\fP **fp, \fBapr_pool_t\fP *pool, const char *path)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_brigade_setaside\fP (\fBapr_bucket_brigade\fP *bb, \fBapr_pool_t\fP *p)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapr_status_t\fP \fBapreq_brigade_copy\fP (\fBapr_bucket_brigade\fP *d, \fBapr_bucket_brigade\fP *s)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP void \fBapreq_brigade_move\fP (\fBapr_bucket_brigade\fP *d, \fBapr_bucket_brigade\fP *s, \fBapr_bucket\fP *e)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_header_attribute\fP (const char *hdr, const char *name, const \fBapr_size_t\fP nlen, const char **val, \fBapr_size_t\fP *vlen)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_brigade_concat\fP (\fBapr_pool_t\fP *pool, const char *temp_dir, \fBapr_size_t\fP brigade_limit, \fBapr_bucket_brigade\fP *out, \fBapr_bucket_brigade\fP *in)"
+.br
+.ti -1c
+.RI "\fBapr_file_t\fP * \fBapreq_brigade_spoolfile\fP (\fBapr_bucket_brigade\fP *bb)"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Utility functions for apreq. 
+
+This header contains useful functions for creating new parsers, hooks or modules. It includes
+.PP
+.IP "\(bu" 2
+string <-> array converters
+.IP "\(bu" 2
+substring search functions
+.IP "\(bu" 2
+simple encoders & decoders for urlencoded strings
+.IP "\(bu" 2
+simple time, date, & file-size converters 
+.PP
+
+.SH "Function Documentation"
+.PP 
+.SS "\fBapr_int64_t\fP apreq_atoi64f (const char * s)"
+.PP
+Converts file sizes (KMG) to bytes
+.PP
+\fBParameters:\fP
+.RS 4
+\fIs\fP file size matching m/^\\d+[KMG]b?$/i
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+64-bit integer representation of s.
+.RE
+.PP
+\fBTodo\fP
+.RS 4
+What happens when s is malformed? Should this return an unsigned value instead? 
+.RE
+.PP
+
+.SS "\fBapr_int64_t\fP apreq_atoi64t (const char * s)"
+.PP
+Converts time strings (YMDhms) to seconds
+.PP
+\fBParameters:\fP
+.RS 4
+\fIs\fP time string matching m/^\\+?\\d+[YMDhms]$/
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+64-bit integer representation of s as seconds.
+.RE
+.PP
+\fBTodo\fP
+.RS 4
+What happens when s is malformed? Should this return an unsigned value instead? 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_brigade_concat (\fBapr_pool_t\fP * pool, const char * temp_dir, \fBapr_size_t\fP brigade_limit, \fBapr_bucket_brigade\fP * out, \fBapr_bucket_brigade\fP * in)"
+.PP
+Concatenates the brigades, spooling large brigades into a tempfile (APREQ_SPOOL) bucket.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIpool\fP Pool for creating a tempfile bucket. 
+.br
+\fItemp_dir\fP Directory for tempfile creation. 
+.br
+\fIbrigade_limit\fP If out's length would exceed this value, the appended buckets get written to a tempfile. 
+.br
+\fIout\fP Resulting brigade. 
+.br
+\fIin\fP Brigade to append.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS. 
+.PP
+Error status code resulting from either \fBapr_brigade_length()\fP, \fBapreq_file_mktemp()\fP, \fBapreq_brigade_fwrite()\fP, or \fBapr_file_seek()\fP.
+.RE
+.PP
+\fBTodo\fP
+.RS 4
+Flesh out these error codes, making them as explicit as possible. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_brigade_copy (\fBapr_bucket_brigade\fP * d, \fBapr_bucket_brigade\fP * s)\fC [static]\fP"
+.PP
+Copy a brigade.
+.PP
+\fBParameters:\fP
+.RS 4
+\fId\fP (destination) Copied buckets are appended to this brigade. 
+.br
+\fIs\fP (source) Brigade to copy from.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS. 
+.PP
+Error status code from an unsuccessful \fBapr_bucket_copy()\fP.
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+s == d produces Undefined Behavior. 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_brigade_fwrite (\fBapr_file_t\fP * f, \fBapr_off_t\fP * wlen, \fBapr_bucket_brigade\fP * bb)"
+.PP
+Writes brigade to a file.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIf\fP File that gets the brigade. 
+.br
+\fIwlen\fP On a successful return, wlen holds the length of the brigade, which is the amount of data written to the file. 
+.br
+\fIbb\fP Bucket brigade.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS. 
+.PP
+Error status code from either an unsuccessful \fBapr_bucket_read()\fP, or a failed \fBapr_file_writev()\fP.
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+In the future, this function may do something intelligent with file buckets. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP void apreq_brigade_move (\fBapr_bucket_brigade\fP * d, \fBapr_bucket_brigade\fP * s, \fBapr_bucket\fP * e)\fC [static]\fP"
+.PP
+Move the front of a brigade.
+.PP
+\fBParameters:\fP
+.RS 4
+\fId\fP (destination) Append buckets to this brigade. 
+.br
+\fIs\fP (source) Brigade to take buckets from. 
+.br
+\fIe\fP First bucket of s after the move. All buckets before e are appended to d.
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+This moves all buckets when e == \fBAPR_BRIGADE_SENTINEL(s)\fP. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_status_t\fP apreq_brigade_setaside (\fBapr_bucket_brigade\fP * bb, \fBapr_pool_t\fP * p)\fC [static]\fP"
+.PP
+Set aside all buckets in the brigade.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIbb\fP Brigade. 
+.br
+\fIp\fP Setaside buckets into this pool. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS. 
+.PP
+Error status code from an unsuccessful \fBapr_bucket_setaside()\fP. 
+.RE
+.PP
+
+.SS "\fBapr_file_t\fP* apreq_brigade_spoolfile (\fBapr_bucket_brigade\fP * bb)"
+.PP
+Determines the spool file used by the brigade. Returns NULL if the brigade is not spooled in a file (does not use an APREQ_SPOOL bucket).
+.PP
+\fBParameters:\fP
+.RS 4
+\fIbb\fP the bucket brigade 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+the spool file, or NULL. 
+.RE
+.PP
+
+.SS "\fBapr_size_t\fP apreq_cp1252_to_utf8 (char * dest, const char * src, \fBapr_size_t\fP slen)"
+.PP
+Convert a string from cp1252 to utf8. Caller must ensure it is large enough to hold the encoded string and trailing '\\0'.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIdest\fP Location of utf8-encoded result string. Caller must ensure it is large enough to hold the encoded string and trailing '\\0'. 
+.br
+\fIsrc\fP Original string. 
+.br
+\fIslen\fP Length of original string.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+length of utf8-encoded string in dest; does not exceed 3 * slen. 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_decode (char * dest, \fBapr_size_t\fP * dlen, const char * src, \fBapr_size_t\fP slen)"
+.PP
+Url-decodes a string.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIdest\fP Location of url-encoded result string. Caller must ensure dest is large enough to hold the encoded string and trailing null character. 
+.br
+\fIdlen\fP points to resultant length of url-decoded string in dest 
+.br
+\fIsrc\fP Original string. 
+.br
+\fIslen\fP Length of original string.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS + apreq_charset_t (<=APREQ_CHARSET_UTF8) on success. 
+.PP
+APR_INCOMPLETE + apreq_charset_t (<=APREQ_CHARSET_UTF8) if the string ends in the middle of an escape sequence. 
+.PP
+\fBAPREQ_ERROR_BADSEQ\fP or \fBAPREQ_ERROR_BADCHAR\fP on malformed input.
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+In the non-success case, dlen will be set to include the last succesfully decoded value. This function decodes %uXXXX into a utf8 (wide) character, following ECMA-262 (the Javascript spec) Section B.2.1. 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_decodev (char * dest, \fBapr_size_t\fP * dlen, struct iovec * v, int nelts)"
+.PP
+Url-decodes an iovec array.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIdest\fP Location of url-encoded result string. Caller must ensure dest is large enough to hold the encoded string and trailing null character. 
+.br
+\fIdlen\fP Resultant length of dest. 
+.br
+\fIv\fP Array of iovecs that represent the source string 
+.br
+\fInelts\fP Number of iovecs in the array.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS + apreq_charset_t (<=APREQ_CHARSET_UTF8) on success. 
+.PP
+APR_INCOMPLETE + apreq_charset_t (<=APREQ_CHARSET_UTF8) if the iovec ends in the middle of an escape sequence. 
+.PP
+\fBAPREQ_ERROR_BADSEQ\fP or \fBAPREQ_ERROR_BADCHAR\fP on malformed input.
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+In the non-APR_SUCCESS case, dlen will be set to include the last succesfully decoded value. This function decodes %uXXXX into a utf8 (wide) character, following ECMA-262 (the Javascript spec) Section B.2.1. 
+.RE
+.PP
+
+.SS "\fBapr_size_t\fP apreq_encode (char * dest, const char * src, const \fBapr_size_t\fP slen)"
+.PP
+Url-encodes a string.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIdest\fP Location of url-encoded result string. Caller must ensure it is large enough to hold the encoded string and trailing '\\0'. 
+.br
+\fIsrc\fP Original string. 
+.br
+\fIslen\fP Length of original string.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+length of url-encoded string in dest; does not exceed 3 * slen. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP char* apreq_escape (\fBapr_pool_t\fP * p, const char * src, const \fBapr_size_t\fP slen)\fC [static]\fP"
+.PP
+Returns an url-encoded copy of a string.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIp\fP Pool used to allocate the return value. 
+.br
+\fIsrc\fP Original string. 
+.br
+\fIslen\fP Length of original string.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+The url-encoded string.
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+Use this function insead of apreq_encode if its caller might otherwise overflow dest. 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_file_mktemp (\fBapr_file_t\fP ** fp, \fBapr_pool_t\fP * pool, const char * path)"
+.PP
+Makes a temporary file.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIfp\fP Points to the temporary apr_file_t on success. 
+.br
+\fIpool\fP Pool to associate with the temp file. When the pool is destroyed, the temp file will be closed and deleted. 
+.br
+\fIpath\fP The base directory which will contain the temp file. If param == NULL, the directory will be selected via tempnam(). See the tempnam manpage for details.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS. 
+.PP
+Error status code from unsuccessful \fBapr_filepath_merge()\fP, or a failed \fBapr_file_mktemp()\fP. 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_header_attribute (const char * hdr, const char * name, const \fBapr_size_t\fP nlen, const char ** val, \fBapr_size_t\fP * vlen)"
+.PP
+Search a header string for the value of a particular named attribute.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIhdr\fP Header string to scan. 
+.br
+\fIname\fP Name of attribute to search for. 
+.br
+\fInlen\fP Length of name. 
+.br
+\fIval\fP Location of (first) matching value. 
+.br
+\fIvlen\fP Length of matching value.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS. 
+.PP
+\fBAPREQ_ERROR_NOATTR\fP if the attribute is not found. 
+.PP
+\fBAPREQ_ERROR_BADSEQ\fP if an unpaired quote mark was detected. 
+.RE
+.PP
+
+.SS "\fBapr_ssize_t\fP apreq_index (const char * hay, \fBapr_size_t\fP hlen, const char * ndl, \fBapr_size_t\fP nlen, const \fBapreq_match_t\fP type)"
+.PP
+Returns offset of match string's location, or -1 if no match is found.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIhay\fP Location of bytes to scan. 
+.br
+\fIhlen\fP Number of bytes available for scanning. 
+.br
+\fIndl\fP Search string 
+.br
+\fInlen\fP Length of search string. 
+.br
+\fItype\fP Match type.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Offset of match string, or -1 if no match is found. 
+.RE
+.PP
+
+.SS "char* apreq_join (\fBapr_pool_t\fP * p, const char * sep, const \fBapr_array_header_t\fP * arr, \fBapreq_join_t\fP mode)"
+.PP
+Join an array of values. The result is an empty string if there are no values.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIp\fP Pool to allocate return value. 
+.br
+\fIsep\fP String that is inserted between the joined values. 
+.br
+\fIarr\fP Array of \fBapreq_value_t\fP entries. 
+.br
+\fImode\fP Join type- see apreq_join_t.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Joined string, or NULL on error 
+.RE
+.PP
+
+.SS "\fBapr_size_t\fP apreq_quote (char * dest, const char * src, const \fBapr_size_t\fP slen)"
+.PP
+Places a quoted copy of src into dest. Embedded quotes are escaped with a backslash ('\\').
+.PP
+\fBParameters:\fP
+.RS 4
+\fIdest\fP Location of quoted copy. Must be large enough to hold the copy and trailing null byte. 
+.br
+\fIsrc\fP Original string. 
+.br
+\fIslen\fP Length of original string. 
+.br
+\fIdest\fP Destination string.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+length of quoted copy in dest. 
+.RE
+.PP
+
+.SS "\fBapr_size_t\fP apreq_quote_once (char * dest, const char * src, const \fBapr_size_t\fP slen)"
+.PP
+Same as \fBapreq_quote()\fP except when src begins and ends in quote marks. In that case it assumes src is quoted correctly, and just copies src to dest.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIdest\fP Location of quoted copy. Must be large enough to hold the copy and trailing null byte. 
+.br
+\fIsrc\fP Original string. 
+.br
+\fIslen\fP Length of original string. 
+.br
+\fIdest\fP Destination string.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+length of quoted copy in dest. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapr_ssize_t\fP apreq_unescape (char * str)\fC [static]\fP"
+.PP
+An \fIin-situ\fP url-decoder.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIstr\fP The string to decode
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Length of decoded string, or < 0 on error. 
+.RE
+.PP
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for libapreq2 from the source code.

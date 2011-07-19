@@ -1,0 +1,37 @@
+This directory contains the necessary makefiles to build
+libapreq and related things on Win32 using VC++ 6. Run,
+from the httpd-apreq-2 top-level directory,
+   perl Makefile.PL
+to generate the top-level Makefile. Available options are:
+
+  --with-apache2=C:\Path\to\Apache2 : specify the top-level Apache2 directory
+  --debug                           : build a debug version
+  --without-perl                    : skip initialization of perl glue
+  --help                            : print a help message
+
+With no options specified, an attempt will be made to find a suitable 
+Apache2 directory, and if found, a non-debug version will be built.
+
+Assuming the configuration is successful, a Makefile will
+be generated. This can be used as:
+
+  nmake               - builds the libapreq2 library
+  nmake test          - runs the supplied tests
+  nmake mod_apreq     - builds mod_apreq
+  nmake install       - install the C libraries
+  nmake clean         - clean
+  nmake perl_glue     - build the perl glue
+  nmake perl_test     - test the perl glue
+  nmake perl_install  - install the perl glue
+  nmake docs          - build documentation
+  nmake help          - print a usage message
+
+The 'docs' target is only available if a doxygen binary is detected.
+
+An experimental apxs tool for Win32 is available at
+   http://perl.apache.org/dist/win32-bin/apxs_win32.tar.gz
+which will be needed to build the env/c-modules tests. If the
+apxs bat file isn't found on your system, the configuration
+script should offer to fetch and install it for you. If this
+is not done, grab the above archive, unpack it, and run the
+Configure.pl script within the archive to install.

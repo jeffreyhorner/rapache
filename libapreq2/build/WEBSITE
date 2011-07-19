@@ -1,0 +1,55 @@
+build/
+        General Info on the apreq community.
+        Utility scripts for building & packaging httpd-apreq-2.
+
+
+
+UPDATING THE WEBSITE:
+        (cf: http://jakarta.apache.org/site/jakarta-site2.html )
+
+  RedHat Linux Instructions:
+
+  1) Download and install j2re and j2sdk rpms from Sun's
+     website:
+
+        http://java.sun.com/j2se/1.3/download.html
+
+  2) Download the latest binary release of Apache Ant:
+
+        http://ant.apache.org/bindownload.cgi
+
+    (I just expanded the tar.gz file in /usr/java/ant, which
+     is alongside the jre and jdk directory trees.)
+
+  3) Prep the (bash) environment:
+
+    $ export ANT_HOME=/usr/java/ant/apache-ant-1.5.3-1
+    $ export PATH=$PATH:$ANT_HOME/bin
+    $ export JAVA_HOME=/usr/java/jdk1.3.1_07
+
+  4) Check out httpd-site from cvs.apache.org and run
+
+    $ cd httpd-site
+    $ emacs xdocs/apreq
+    $ ant
+    $ cvs commit -m "..." xdocs/apreq/ docs/apreq/
+
+  5) Login (via ssh) to httpd.apache.org and do
+
+    $ cd /www/httpd.apache.org
+    $ cvs update index.html apreq/
+
+
+
+BUILDING THE DOXYGEN DOCUMENTATION:
+
+  Be sure doxygen is installed on your machine.  Then cd to 
+  the base directory (httpd-apreq-2) and run
+
+        % make docs
+
+  This will generate the C documentation in the docs/ directory
+  using build/doxygen.conf as the config file for doxygen.
+
+
+

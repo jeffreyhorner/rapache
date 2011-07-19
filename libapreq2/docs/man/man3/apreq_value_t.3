@@ -1,0 +1,50 @@
+.TH "apreq_value_t" 3 "4 May 2005" "Version 2.05-dev" "libapreq2" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+apreq_value_t \- libapreq's pre-extensible string type  
+
+.PP
+.SH SYNOPSIS
+.br
+.PP
+\fC#include <apreq.h>\fP
+.PP
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "char * \fBname\fP"
+.br
+.ti -1c
+.RI "\fBapr_size_t\fP \fBnlen\fP"
+.br
+.ti -1c
+.RI "\fBapr_size_t\fP \fBdlen\fP"
+.br
+.ti -1c
+.RI "char \fBdata\fP [1]"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+libapreq's pre-extensible string type 
+.PP
+.SH "Field Documentation"
+.PP 
+.SS "char \fBapreq_value_t::data\fP[1]"
+.PP
+value data 
+.SS "\fBapr_size_t\fP \fBapreq_value_t::dlen\fP"
+.PP
+length of data 
+.SS "char* \fBapreq_value_t::name\fP"
+.PP
+value name 
+.SS "\fBapr_size_t\fP \fBapreq_value_t::nlen\fP"
+.PP
+length of name 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for libapreq2 from the source code.

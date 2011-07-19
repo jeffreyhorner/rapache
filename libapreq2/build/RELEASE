@@ -1,0 +1,99 @@
+Instructions for the apreq Release Manager (RM)
+
+
+1. Prep the package for CPAN by running:
+
+        % make release
+
+   This will generate a libapreq2-2.XX-dev.tar.gz candidate in the 
+   current directory.   You should keep this source tree
+   intact to tag the final release.
+
+
+2. Test the generated file with
+
+        % make release_test
+
+   Make sure all perl tests pass.
+
+
+3. Upload the release candidate to people.apache.org/~username
+   and post a candidate announcement to apreq-dev@. Also, it is 
+   strongly recommended that the RM crosspost the candidate 
+   announcement to the modperl@ list, to solicit feedback
+   from a much larger audience.
+
+
+4. Give the mailing list participants 48-72 hours to comment and
+   vote on the candidate.  If there is a "majority consensus" 
+   (three +1 and more +1s than -1s) among the committers, the RM 
+   may proceed with the release.
+
+
+5. Edit STATUS, marking the release date
+
+        /** @page STATUS
+
+        2.XX-dev released on <today's date>.
+
+
+   Also add the release date to the top @section in CHANGES:
+
+        /** @page CHANGES
+
+        @section v2_XX_dev Changes with libapreq2-2.XX-dev (released ...).
+
+   Commit the changes and tag the tree (tr/0-9a-zA-Z/_/c in the 
+   version number)
+
+        % svn commit -m "2.XX-dev released." STATUS CHANGES
+        % svn cp https://svn.apache.org/repos/asf/httpd/apreq/trunk \
+                 https://svn.apache.org/repos/asf/httpd/apreq/tags/v2_XX_dev
+
+6. Regenerate the release 
+
+        % make release && make release_test
+
+   Then test and sign it via gpg:
+
+        % gpg --detach-sign --armor libapreq2-2.XX-dev.tar.gz
+
+   or pgp:
+
+        % pgp -sba libapreq2-2.XX-dev.tar.gz
+
+
+7. Upload (scp) the package and signature to www.apache.org
+   for distribution:
+
+        % scp libapreq2-2.XX-dev.tar.gz* \
+          <username>@people.apache.org:/www/www.apache.org/dist/httpd/libapreq/
+
+   Ask another developer to confirm the uploaded signature is ok.
+
+        % gpg --verify libapreq2-2.XX-dev.tar.gz.asc
+        % pgp libapreq2-2.XX-dev.tar.gz.asc
+
+   Check that your public key is among those listed in the
+   /www/www.apache.org/dist/httpd/KEYS file.   If not, you
+   need to commit the necessary change to KEYS the httpd-dist repos.
+   Then update the website's copy using "cvs co KEYS" in the 
+   /www/www.apache.org/dist/httpd/ directory.
+
+
+8. Upload the package to CPAN. Doublecheck that the md5 checksum
+   received from PAUSE is correct.
+
+
+9. Wait ~12-24 hours for the ASF mirrors to pick up the new package, then
+   update the apreq homepage to list the new release in the News section
+   Be sure to update the libapreq2 documentation. For instructions on updating 
+   the httpd website, see build/WEBSITE.  IMPORTANT: YOU MUST UPDATE
+   download.html TO POINT AT THE NEW RELEASE PACKAGE!
+
+
+10. Mail the announcement from your cvs.apache.org account by piping the 
+    "CPAN Upload" email acknowledgement (from PAUSE) through build/announcement.pl:
+
+    % build/announcement.pl $user@apache.org < CPAN_ack | ssh user@people.apache.org "sendmail -oi -t -odq"
+

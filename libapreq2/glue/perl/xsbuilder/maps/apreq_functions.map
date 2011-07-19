@@ -1,0 +1,51 @@
+##########  Apache::Request:: Functions  ##########
+#################### APR::Request stuff ####################
+
+MODULE=APR::Request  PACKAGE=APR::Request PREFIX=apreq_
+apreq_cp1252_to_utf8
+#apreq_hook_add
+
+MODULE=APR::Request::Apache2 PACKAGE=APR::Request::Apache2 PREFIX=APR__Request__Apache2_
+apreq_xs_handle_apache2_t *:DEFINE_handle | apreq_handle_apache2 (r) | const char *:class, request_rec *:r
+
+MODULE=APR::Request::CGI PACKAGE=APR::Request::CGI PREFIX=APR__Request__CGI_
+apreq_xs_handle_cgi_t *:DEFINE_handle | apreq_handle_cgi (p) | const char *:class, apr_pool_t *:p
+
+
+#################### APR::Request::Cookie stuff ####################
+MODULE=APR::Request::Cookie PACKAGE=APR::Request::Cookie PREFIX=apreq_cookie_
+apreq_cookie_expires
+
+MODULE=APR::Request::Cookie PACKAGE=APR::Request::Cookie::Table PREFIX=APR__Request__Cookie__Table_
+DEFINE_get      | apreq_xs_cookie_table_FETCH |
+DEFINE_FETCH    | apreq_xs_cookie_table_FETCH |
+DEFINE_NEXTKEY  | apreq_xs_cookie_table_NEXTKEY |
+DEFINE_FIRSTKEY | apreq_xs_cookie_table_NEXTKEY |
+DEFINE_do       | apreq_xs_cookie_table_do |
+
+
+#################### APR::Request::Param stuff ####################
+
+MODULE=APR::Request PACKAGE=APR::Request PREFIX=APR__Request_
+DEFINE_parse  | apreq_xs_parse |
+DEFINE_jar    | apreq_xs_jar |
+DEFINE_args   | apreq_xs_args  |
+DEFINE_body   | apreq_xs_body  |
+DEFINE_param  | apreq_xs_param |
+
+MODULE=APR::Request::Param PACKAGE=APR::Request::Param::Table PREFIX=APR__Request__Param__Table_
+DEFINE_get      | apreq_xs_param_table_FETCH |
+DEFINE_FETCH    | apreq_xs_param_table_FETCH |
+DEFINE_NEXTKEY  | apreq_xs_param_table_NEXTKEY |
+DEFINE_FIRSTKEY | apreq_xs_param_table_NEXTKEY |
+DEFINE_do       | apreq_xs_param_table_do |
+
+MODULE=APR::Request::Param PACKAGE=APR::Request::Brigade PREFIX=APR__Request__Brigade_
+DEFINE_new | apreq_xs_brigade_copy |
+DEFINE_TIEHANDLE | apreq_xs_brigade_copy |
+DEFINE_READ | apreq_xs_brigade_read |
+DEFINE_READLINE | apreq_xs_brigade_readline |
+
+MODULE=APR::Request::Param PACKAGE=APR::Request::Brigade::IO  PREFIX=APR__Request__Brigade__IO_
+DEFINE_read | apreq_xs_brigade_read |
+DEFINE_readline | apreq_xs_brigade_readline |

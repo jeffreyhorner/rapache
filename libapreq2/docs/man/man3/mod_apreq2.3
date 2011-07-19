@@ -1,0 +1,69 @@
+.TH "Apache 2.X Filter Module" 3 "4 May 2005" "Version 2.05-dev" "libapreq2" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+Apache 2.X Filter Module \- mod_apreq2 - DSO that ties libapreq2 to \fBApache\fP HTTPD 2.X.  
+
+.PP
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBapreq_handle_t\fP * \fBapreq_handle_apache2\fP (request_rec *r)"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+mod_apreq2 - DSO that ties libapreq2 to \fBApache\fP HTTPD 2.X. 
+.PP
+mod_apreq2 provides the 'APREQ2' input filter for using libapreq2 (and allow its parsed data structures to be shared) within the \fBApache\fP 2.X webserver. Using it, libapreq2 works properly in every phase of the HTTP request, from translation handlers to output filters, and even for subrequests / internal redirects.
+.PP
+.PP
+.PP
+.SS "Activating mod_apreq2 in \fBApache\fP 2.X"
+.PP
+The installation process triggered by \fC% make install\fP \fIwill not modify your webserver's config file\fP. Hence, be sure you activate it on startup by adding a LoadModule directive to your webserver config; e.g.
+.PP
+.PP
+.nf
+     LoadModule    modules/mod_apreq2.so
+.fi
+.PP
+.PP
+The mod_apreq2 filter is named 'APREQ2', and may be used in Apache's input filter directives, e.g. 
+.PP
+.nf
+     AddInputFilter APREQ2         # or
+     SetInputFilter APREQ2
+
+.fi
+.PP
+.PP
+However, this is not required because libapreq2 will add the filter (only) if it's necessary. You just need to ensure that your module invokes \fBapreq_handle_apache2()\fP \fIbefore the content handler ultimately reads from the input filter chain\fP. It is important to realize that no matter how the input filters are initially arranged, the APREQ2 filter will attempt to reposition itself to be the last input filter to read the data.
+.PP
+If you want to use other input filters to transform the incoming HTTP request data, is important to register those filters with \fBApache\fP as having type AP_FTYPE_CONTENT_SET or AP_FTYPE_RESOURCE. Due to the limitations of Apache's current input filter design, types higher than AP_FTYPE_CONTENT_SET may not work properly whenever the apreq filter is active.
+.PP
+This is especially true when a content handler uses libapreq2 to parse some of the post data before doing an internal redirect. Any input filter subsequently added to the redirected request will bypass the original apreq filter (and therefore lose access to some of the original post data), unless its type is less than the type of the apreq filter (currently AP_FTYPE_PROTOCOL-1).
+.PP
+.SS "Server Configuration Directives"
+.PP
+Directive Context DefaultDescription  APREQ2_ReadLimit directory #APREQ_DEFAULT_READ_LIMIT  Maximum number of bytes mod_apreq2 will send off to libapreq2 for parsing. mod_apreq2 will log this event and subsequently remove itself from the filter chain.   APREQ2_BrigadeLimit directory #APREQ_DEFAULT_BRIGADE_LIMIT Maximum number of bytes mod_apreq2 will let accumulate within the heap-buckets in a brigade. Excess data will be spooled to an appended file bucket.   APREQ2_TempDir directory NULL Sets the location of the temporary directory apreq will use to spool overflow brigade data (based on the APREQ2_BrigadeLimit setting). If left unset, libapreq2 will select a platform-specific location via \fBapr_temp_dir_get()\fP.   Per-directory commands for mod_apreq2
+.PP
+.SS "Implementation Details"
+.PP
+.PP
+.nf
+
+   XXX apreq as a normal input filter
+   XXX apreq as a 'virtual' content handler.
+   XXX apreq as a transparent 'tee'.
+   XXX apreq parser registration in post_config
+ 
+.fi
+.PP
+ 
+.SH "Function Documentation"
+.PP 
+.SS "\fBapreq_handle_t\fP* apreq_handle_apache2 (request_rec * r)"
+.PP
+Create an apreq handle which communicates with an \fBApache\fP 2.X request_rec. 

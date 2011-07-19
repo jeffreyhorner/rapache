@@ -1,0 +1,143 @@
+APR::Pool	T_POOLOBJ
+APR::BucketAlloc	T_PTROBJ
+APR::Request::Apache2	T_APREQ_HANDLE_APACHE2
+APR::Request::Cookie	T_APREQ_COOKIE
+APR::Request::Param::Table	T_APREQ_TABLE
+APR::Brigade	T_PTROBJ
+APR::Table	T_HASHOBJ
+APR::Request::CGI	T_APREQ_HANDLE_CGI
+APR::Request::Param	T_APREQ_PARAM
+APR::Request::Error	T_APREQ_ERROR
+Apache2::RequestRec	T_APACHEOBJ
+APR::Request::Cookie::Table	T_HASHOBJ
+APR::Request	T_APREQ_HANDLE
+apr_status_t	T_IV
+const void *	T_PTR
+const char *	T_PV
+apreq_xs_subclass_t	T_SUBCLASS
+const apreq_xs_subclass_t *	T_SUBCLASS
+const apr_size_t	T_UV
+apreq_xs_subclass_t *	T_SUBCLASS
+apr_size_t	T_UV
+unsigned char	T_UV
+
+INPUT
+T_APREQ_HANDLE
+	$var = apreq_xs_sv2handle(aTHX_ $arg)
+
+T_HASHOBJ
+	if (sv_derived_from($arg, \"${ntype}\")) {
+        if (SVt_PVHV == SvTYPE(SvRV($arg))) {
+            SV *hv = SvRV($arg);
+            MAGIC *mg;
+            if (SvMAGICAL(hv)) {
+                if ((mg = mg_find(hv, PERL_MAGIC_tied))) {
+                    $var = INT2PTR(void *, MgObjIV(mg));
+                }
+                else {
+                    Perl_warn(aTHX_ \"Not a tied hash: (magic=%c)\", mg);
+                    $var = NULL;
+                }
+            }
+            else {
+                Perl_warn(aTHX_ \"SV is not tied\");
+                $var = NULL;
+            }
+        }
+        else {
+            $var = INT2PTR(void *, SvObjIV($arg));
+        }
+    }
+    else {
+        Perl_croak(aTHX_
+                   \"argument is not a blessed reference \"
+                   \"(expecting an %s derived object)\", \"${ntype}\");
+    }
+
+
+T_APREQ_ERROR
+	$var = (HV *)SvRV($arg)
+
+T_APREQ_HANDLE_APACHE2
+	$var = apreq_xs_sv2handle(aTHX_ $arg)
+
+T_APREQ_COOKIE
+	$var = apreq_xs_sv2cookie(aTHX_ $arg)
+
+T_SUBCLASS
+	    if (SvROK($arg) || !sv_derived_from($arg, \"$Package\"))
+        Perl_croak(aTHX_ \"Usage: argument is not a subclass of $Package\");
+    $var = SvPV_nolen($arg)
+
+
+T_APREQ_HANDLE_CGI
+	$var = apreq_xs_sv2handle(aTHX_ $arg)
+
+T_APREQ_PARAM
+	$var = apreq_xs_sv2param(aTHX_ $arg)
+
+T_APREQ_TABLE
+	if (sv_derived_from($arg, \"${ntype}\")) {
+        if (SVt_PVHV == SvTYPE(SvRV($arg))) {
+            SV *hv = SvRV($arg);
+            MAGIC *mg;
+            if (SvMAGICAL(hv)) {
+                if ((mg = mg_find(hv, PERL_MAGIC_tied))) {
+                    $var = INT2PTR(void *,MgObjIV(mg));
+                }
+                else {
+                    Perl_warn(aTHX_ \"Not a tied hash: (magic=%c)\", mg);
+                    $var = NULL;
+                }
+            }
+            else {
+                Perl_warn(aTHX_ \"SV is not tied\");
+                $var = NULL;
+            }
+        }
+        else {
+            $var = INT2PTR(void *, SvObjIV($arg));
+        }
+    }
+    else {
+        Perl_croak(aTHX_
+                   \"argument is not a blessed reference \"
+                   \"(expecting an %s derived object)\", \"${ntype}\");
+    }
+
+
+OUTPUT
+T_APREQ_HANDLE
+	$arg = apreq_xs_handle2sv(aTHX_ $var, class, parent);
+
+T_APREQ_TABLE
+	$arg = apreq_xs_table2sv(aTHX_ $var, \"${ntype}\", parent, PARAM_CLASS, sizeof(PARAM_CLASS)-1);
+
+T_HASHOBJ
+	{
+    SV *hv = (SV*)newHV();
+    SV *rsv = $arg;
+    sv_setref_pv(rsv, \"${ntype}\", $var);
+    sv_magic(hv, rsv, PERL_MAGIC_tied, Nullch, 0);
+    $arg = SvREFCNT_inc(sv_bless(sv_2mortal(newRV_noinc(hv)),
+                                 gv_stashpv(\"${ntype}\", TRUE)));
+  }
+
+
+T_APREQ_ERROR
+	$arg = sv_bless(newRV_noinc((SV*)$var), gv_stashpvn(\"${ntype}\", sizeof(\"${ntype}\") - 1, FALSE);
+
+T_APREQ_HANDLE_APACHE2
+	    $arg = apreq_xs_handle2sv(aTHX_ $var, class, SvRV(ST(1)));
+    SvMAGIC(SvRV($arg))->mg_ptr = (void *)r;
+
+
+T_APREQ_COOKIE
+	$arg = apreq_xs_cookie2sv(aTHX_ $var, class, parent);
+
+T_APREQ_HANDLE_CGI
+	$arg = apreq_xs_handle2sv(aTHX_ $var, class, SvRV(ST(1)));
+
+T_APREQ_PARAM
+	$arg = apreq_xs_param2sv(aTHX_ $var, class, parent);
+

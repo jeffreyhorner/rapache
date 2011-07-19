@@ -1,0 +1,314 @@
+=head1 NAME
+
+APR::Request::Param - wrapper for libapreq2's param API.
+
+
+
+
+=head1 SYNOPSIS
+
+  use APR::Request::Param;
+
+
+
+
+=head1 DESCRIPTION
+
+The C<< APR::Request::Param >> module provides base methods
+for interfacing with libapreq2's param API.  It also provides
+a few utility functions and constants.
+
+
+
+
+=head1 OVERLOADS
+
+APR::Request::Param
+
+
+
+
+=head2 ""
+
+    "$param"
+
+The double-quote interpolation operator maps to 
+C<< APR::Request::Param::value() >>.
+
+
+
+
+=head1 METHODS
+
+APR::Request::Param
+
+
+
+
+=head2 name
+
+    $param->name()
+
+Returns the param's name.
+This attribute cannot be modified.
+
+
+
+
+=head2 value
+
+    $param->value()
+
+Returns the param's value.
+This attribute cannot be modified.
+
+
+
+
+=head2 is_tainted
+
+    $param->is_tainted()
+    $param->is_tainted($set)
+
+
+Get/set the param's internal tainted flag.
+Note: if the param's charset is APREQ_CHARSET_UTF8 (8),
+this also activates the SvUTF8_on flag during calls
+to name() and/or value().
+
+
+
+=head2 charset
+
+    $param->charset()
+    $param->charset($set)
+
+Get/set the param's internal charset.  The charset
+is a number between 0 and 255; the current recognized
+values are
+
+=over 4
+
+=item 0 APREQ_CHARSET_ASCII    (7-bit us-ascii)
+
+=item 1 APREQ_CHARSET_LATIN1   (8-bit iso 8859-1)
+
+=item 2 APREQ_CHARSET_CP1252   (8-bit Windows-1252)
+
+=item 8 APREQ_CHARSET_UTF8     (utf8 encoded Unicode)
+
+=back
+
+See L<is_tainted> above for info about how APREQ_CHARSET_UTF8
+relates to perl's UTF-8 flag.
+
+
+
+
+=head2 make
+
+    APR::Request::Param->make($pool, $name, $value)
+
+Fast XS param constructor.
+
+
+
+
+=head2 info
+
+    $param->info()
+    $param->info($set)
+
+Get/set the APR::Table headers for this param.
+
+
+
+
+=head2 upload
+
+    $param->upload()
+    $param->upload($set)
+
+Get/set the APR::Brigade file-upload content for this param.
+
+
+
+
+=head2 upload_filename
+
+    $param->upload_filename()
+
+Returns the client-side filename associated with this param.
+
+
+
+
+=head2 upload_link
+
+    $param->upload_link($path)
+
+Links the file-upload content with the local file named C<< $path >>.
+Creates a hard-link if the spoolfile's (see L<upload_tempname>) 
+temporary directory is on the same device as C<< $path >>;
+otherwise this writes a copy.
+
+
+
+
+=head2 upload_slurp
+
+    $param->upload_slurp($data)
+
+Reads the entire file-upload content into C<< $data >>.
+
+
+
+
+=head2 upload_size
+
+    $param->upload_size()
+
+Returns the size of the param's file-upload content.
+
+
+
+
+=head2 upload_type
+
+    $param->upload_type()
+
+Returns the MIME-type of the param's file-upload content.
+
+
+
+
+=head2 upload_tempname
+
+    $param->upload_tempname()
+
+Returns the name of the local spoolfile for this param.
+
+
+
+
+=head2 upload_io
+
+    $param->upload_io()
+
+Returns an L<APR::Request::Brigade::IO> object, which can
+be treated as a non-seekable IO stream.
+
+
+=head2 upload_fh
+
+
+    $param->upload_fh
+
+Returns a seekable filehandle representing the file-upload content.
+
+
+
+
+=head1 METHODS
+
+APR::Request::Param::Table
+
+
+=head2 param_class
+
+    $table->param_class()
+    $table->param_class($set)
+
+
+Get/set the class each table element is blessed into during a
+L<get> or L<FETCH> call.  If defined, the class must be derived
+from APR::Request::Param.
+
+
+=head2 get
+
+    $table->get()
+    $table->get($name)
+
+
+
+=head2 FETCH
+
+    $table->FETCH($name)
+
+
+
+
+=head2 NEXTKEY
+
+    $table->NEXTKEY()
+
+
+
+
+=head2 FIRSTKEY
+
+    $table->FIRSTKEY()
+
+
+
+
+=head2 do
+
+    $table->do($callback, @keys)
+
+
+
+
+=head1 METHODS
+
+APR::Request::Brigade
+
+
+=head2 new, TIEHANDLE
+
+
+=head2 READ
+
+
+=head2 READLINE
+
+
+
+
+
+=head1 METHODS
+
+APR::Request::Brigade::IO
+
+
+=head2 read
+
+
+=head2 readline
+
+
+
+
+
+=head1 SEE ALSO
+
+
+
+
+
+=head1 COPYRIGHT
+
+  Copyright 2003-2005  The Apache Software Foundation
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.

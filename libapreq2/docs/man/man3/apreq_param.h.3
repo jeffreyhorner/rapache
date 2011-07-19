@@ -1,0 +1,272 @@
+.TH "include/apreq_param.h" 3 "4 May 2005" "Version 2.05-dev" "libapreq2" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+include/apreq_param.h \- Request parsing and parameter API. 
+.SH SYNOPSIS
+.br
+.PP
+\fC#include 'apreq.h'\fP
+.br
+\fC#include 'apr_buckets.h'\fP
+.br
+
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "typedef \fBapreq_param_t\fP \fBapreq_param_t\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "static \fBAPR_INLINE\fP unsigned \fBapreq_param_is_tainted\fP (const \fBapreq_param_t\fP *p)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP void \fBapreq_param_tainted_on\fP (\fBapreq_param_t\fP *p)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP void \fBapreq_param_tainted_off\fP (\fBapreq_param_t\fP *p)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapreq_charset_t\fP \fBapreq_param_charset_set\fP (\fBapreq_param_t\fP *p, unsigned char c)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapreq_charset_t\fP \fBapreq_param_charset_get\fP (\fBapreq_param_t\fP *p)"
+.br
+.ti -1c
+.RI "static \fBAPR_INLINE\fP \fBapreq_param_t\fP * \fBapreq_value_to_param\fP (const char *val)"
+.br
+.ti -1c
+.RI "\fBapreq_param_t\fP * \fBapreq_param_make\fP (\fBapr_pool_t\fP *p, const char *name, const \fBapr_size_t\fP nlen, const char *val, const \fBapr_size_t\fP vlen)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_param_decode\fP (\fBapreq_param_t\fP **param, \fBapr_pool_t\fP *pool, const char *word, \fBapr_size_t\fP nlen, \fBapr_size_t\fP vlen)"
+.br
+.ti -1c
+.RI "char * \fBapreq_param_encode\fP (\fBapr_pool_t\fP *pool, const \fBapreq_param_t\fP *param)"
+.br
+.ti -1c
+.RI "\fBapr_status_t\fP \fBapreq_parse_query_string\fP (\fBapr_pool_t\fP *pool, \fBapr_table_t\fP *t, const char *qs)"
+.br
+.ti -1c
+.RI "\fBapr_array_header_t\fP * \fBapreq_params_as_array\fP (\fBapr_pool_t\fP *p, const \fBapr_table_t\fP *t, const char *key)"
+.br
+.ti -1c
+.RI "const char * \fBapreq_params_as_string\fP (\fBapr_pool_t\fP *p, const \fBapr_table_t\fP *t, const char *key, \fBapreq_join_t\fP mode)"
+.br
+.ti -1c
+.RI "const \fBapr_table_t\fP * \fBapreq_uploads\fP (const \fBapr_table_t\fP *body, \fBapr_pool_t\fP *pool)"
+.br
+.ti -1c
+.RI "const \fBapreq_param_t\fP * \fBapreq_upload\fP (const \fBapr_table_t\fP *body, const char *name)"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Request parsing and parameter API. 
+
+
+.SH "Typedef Documentation"
+.PP 
+.SS "typedef struct \fBapreq_param_t\fP  \fBapreq_param_t\fP"
+.PP
+Common data structure for params and file uploads 
+.SH "Function Documentation"
+.PP 
+.SS "static \fBAPR_INLINE\fP \fBapreq_charset_t\fP apreq_param_charset_get (\fBapreq_param_t\fP * p)\fC [static]\fP"
+.PP
+Gets the character encoding for this parameter. 
+.SS "static \fBAPR_INLINE\fP \fBapreq_charset_t\fP apreq_param_charset_set (\fBapreq_param_t\fP * p, unsigned char c)\fC [static]\fP"
+.PP
+Sets the character encoding for this parameter. 
+.SS "\fBapr_status_t\fP apreq_param_decode (\fBapreq_param_t\fP ** param, \fBapr_pool_t\fP * pool, const char * word, \fBapr_size_t\fP nlen, \fBapr_size_t\fP vlen)"
+.PP
+Url-decodes a name=value pair into a param.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIparam\fP points to the decoded parameter on success 
+.br
+\fIpool\fP Pool from which the param is allocated. 
+.br
+\fIword\fP Start of the name=value pair. 
+.br
+\fInlen\fP Length of urlencoded name. 
+.br
+\fIvlen\fP Length of urlencoded value.
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS + apreq_charset_t (<=APREQ_CHARSET_UTF8) on success. 
+.PP
+\fBAPREQ_ERROR_BADSEQ\fP or \fBAPREQ_ERROR_BADCHAR\fP on malformed input.
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+Unless vlen == 0, this function assumes there is exactly one character ('=') which separates the pair. 
+.RE
+.PP
+
+.SS "char* apreq_param_encode (\fBapr_pool_t\fP * pool, const \fBapreq_param_t\fP * param)"
+.PP
+Url-encodes the param into a name-value pair. 
+.PP
+\fBParameters:\fP
+.RS 4
+\fIpool\fP Pool which allocates the returned string. 
+.br
+\fIparam\fP Param to encode. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+name-value pair representing the param. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP unsigned apreq_param_is_tainted (const \fBapreq_param_t\fP * p)\fC [static]\fP"
+.PP
+\fBReturns:\fP
+.RS 4
+1 if the taint flag is set, 0 otherwise. 
+.RE
+.PP
+
+.SS "\fBapreq_param_t\fP* apreq_param_make (\fBapr_pool_t\fP * p, const char * name, const \fBapr_size_t\fP nlen, const char * val, const \fBapr_size_t\fP vlen)"
+.PP
+creates a param from name/value information 
+.SS "static \fBAPR_INLINE\fP void apreq_param_tainted_off (\fBapreq_param_t\fP * p)\fC [static]\fP"
+.PP
+Turns off the taint flag. 
+.SS "static \fBAPR_INLINE\fP void apreq_param_tainted_on (\fBapreq_param_t\fP * p)\fC [static]\fP"
+.PP
+Sets the tainted flag. 
+.SS "\fBapr_array_header_t\fP* apreq_params_as_array (\fBapr_pool_t\fP * p, const \fBapr_table_t\fP * t, const char * key)"
+.PP
+Returns an array of parameters (\fBapreq_param_t\fP *) matching the given key. The key is case-insensitive. 
+.PP
+\fBParameters:\fP
+.RS 4
+\fIp\fP Allocates the returned array. 
+.br
+\fIt\fP the parameter table returned by \fBapreq_args()\fP, \fBapreq_body()\fP or \fBapreq_params()\fP 
+.br
+\fIkey\fP Null-terminated search key, case insensitive. key==NULL fetches all parameters. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+an array of apreq_param_t* (pointers) 
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+Also parses the request if necessary. 
+.RE
+.PP
+
+.SS "const char* apreq_params_as_string (\fBapr_pool_t\fP * p, const \fBapr_table_t\fP * t, const char * key, \fBapreq_join_t\fP mode)"
+.PP
+Returns a ', ' -joined string containing all parameters for the requested key, an empty string if none are found. The key is case-insensitive.
+.PP
+\fBParameters:\fP
+.RS 4
+\fIp\fP Allocates the return string. 
+.br
+\fIt\fP the parameter table returned by \fBapreq_args()\fP, \fBapreq_body()\fP or \fBapreq_params()\fP 
+.br
+\fIkey\fP Null-terminated parameter name, case insensitive. key==NULL fetches all values. 
+.br
+\fImode\fP Join type- see \fBapreq_join()\fP. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+the joined string or NULL on error 
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+Also parses the request if necessary. 
+.RE
+.PP
+
+.SS "\fBapr_status_t\fP apreq_parse_query_string (\fBapr_pool_t\fP * pool, \fBapr_table_t\fP * t, const char * qs)"
+.PP
+Parse a url-encoded string into a param table. 
+.PP
+\fBParameters:\fP
+.RS 4
+\fIpool\fP pool used to allocate the param data. 
+.br
+\fIt\fP table to which the params are added. 
+.br
+\fIqs\fP Query string to url-decode. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+APR_SUCCESS if successful, error otherwise. 
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+This function uses [&;] as the set of tokens to delineate words, and will treat a word w/o '=' as a name-value pair with value-length = 0. 
+.RE
+.PP
+
+.SS "const \fBapreq_param_t\fP* apreq_upload (const \fBapr_table_t\fP * body, const char * name)"
+.PP
+Returns the first param in req->body which has both param->v.name matching key (case insensitive) and param->upload != NULL. 
+.PP
+\fBParameters:\fP
+.RS 4
+\fIbody\fP parameter table returned by \fBapreq_body()\fP or \fBapreq_params()\fP 
+.br
+\fIname\fP Parameter name. key == NULL returns first upload. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Corresponding upload, NULL if none found. 
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+Will parse the request as necessary. 
+.RE
+.PP
+
+.SS "const \fBapr_table_t\fP* apreq_uploads (const \fBapr_table_t\fP * body, \fBapr_pool_t\fP * pool)"
+.PP
+Returns a table of all params in req->body with non-NULL upload brigades. 
+.PP
+\fBParameters:\fP
+.RS 4
+\fIbody\fP parameter table returned by \fBapreq_body()\fP or \fBapreq_params()\fP 
+.br
+\fIpool\fP Pool which allocates the table struct. 
+.RE
+.PP
+\fBReturns:\fP
+.RS 4
+Upload table. 
+.RE
+.PP
+\fBRemarks:\fP
+.RS 4
+Will parse the request if necessary. 
+.RE
+.PP
+
+.SS "static \fBAPR_INLINE\fP \fBapreq_param_t\fP* apreq_value_to_param (const char * val)\fC [static]\fP"
+.PP
+Upgrades args and body table values to \fBapreq_param_t\fP structs. 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for libapreq2 from the source code.

@@ -1,0 +1,27 @@
+==================================================
+Build system (core C API) prerequisites
+
+                       apache2:  2.0.48
+                           apr:  0.9.4  (bundled with apache2 2.0.48)
+                           apu:  0.9.4  (bundled with apache2 2.0.48)
+                          perl:  5.6.1
+
+==================================================
+Perl glue (Apache::Request) prerequisites
+
+                  Apache::Test:  1.04  (Win32 requires version 1.06)
+           ExtUtils::MakeMaker:  6.15
+           ExtUtils::XSBuilder:  0.23
+                    Test::More:  0.47
+                      mod_perl:  1.999022
+                          perl:  5.6.1
+
+==================================================
+Additional prerequisites for apreq subversion builds
+
+           ExtUtils::XSBuilder:  0.23
+                      autoconf:  2.53
+                      automake:  1.6.0
+                       doxygen:  1.2
+                       libtool:  1.4.3
+                          perl:  5.6.1
