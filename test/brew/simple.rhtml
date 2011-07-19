@@ -1,0 +1,18 @@
+<%
+	setContentType("text/html")
+	myname <- ifelse(is.null(GET$name),'World',GET$name)
+%>
+<html>
+<head><title>A Simple Example</title></head>
+<body>
+<h1>Hello <%=myname%>!</h1></h1>
+<% if (myname=='World'){ %>
+		<form method="GET">What is your name?
+		<input name="name" type="text">
+		<input type="submit" value="Say it!">
+		</form>
+<% } else { %>
+Today is: <%=format(Sys.time())%><br>
+<a href="/brew/simple.rhtml">Click me!</a>
+<% } %>
+</body></html>

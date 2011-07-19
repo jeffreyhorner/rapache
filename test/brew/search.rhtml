@@ -1,0 +1,10 @@
+<HTML>
+<BODY>
+<H1>Brew Templating</H1>
+<% for (i in search()){ %>
+	<H2>Contents of <%=i%></H2>
+	<pre><% print(ls(i)) %></pre>
+<% } %>
+<% stop("foo") %>
+</BODY>
+</HTML>

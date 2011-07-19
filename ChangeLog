@@ -1,0 +1,269 @@
+2011-01-12 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.14
+
+2011-01-11 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Ensure .Call functions can work outside the context
+	of a web request.
+
+2010-12-08 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.13
+
+	* All R and CGI related functions are attached
+	to the search path in the named environment 'rapache'
+	placed just before the base environment.
+
+2010-10-23 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.12
+
+	* Replaced calls to apr_file_printf with apr_file_write
+
+2010-10-22 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.11
+
+	* The server error log file descriptor is used instead of
+	stderr for printing to the error log. Changed the calls to
+	use apr_file_printf and apr_file_flush.
+
+2010-10-04 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.10
+
+	* Added printing of apache conf filename and line number on
+	rApache startup error.
+
+	* Eliminated -Wall warnings
+
+	* Cleaned up error and warning reporting. Involved reworking
+	dispatch code.
+
+2010-03-26 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Noted an issue in test/http.conf.in when using a file in more than one
+	way
+
+	* Fixed a bug in undocumented directive RPreserveEnv.
+
+	* Fixed compile warning on bad first argument to fprintf
+
+2009-04-05 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+	
+	* Release 1.1.8
+
+2009-03-18 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Fixing a typo in test.R
+
+	* Preparing mod_R.c for R 2.9.0 and strict type checking.
+
+2009-01-22 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.7
+
+	* Added HTML manual in distribution, plus documentation for VM.
+
+2009-01-15 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.6
+
+	* Function handlers now have their closure environments point to
+	the RApache environment for the duration of the requst.
+
+	* Fixed accidental pointer dereference in EvalExprs().
+
+2009-01-09 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Fixed RSourceOnStartup; missing PROTECT().
+
+	* Removed non API code from EvalExprs().
+
+2008-12-05 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.5
+
+	* Fixed off-by-one bug in RApache_getServer().
+
+2008-10-22 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.4
+
+	* Fixed ROutputErrors reset
+
+	* Fixed RApacheInfo
+
+2008-10-09 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.3
+
+	* Fudged release process. Hopefully fixed now.
+
+2008-10-09 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.2
+
+2008-10-08 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* RApacheOutputErrors had no effect on functions that were
+	smart enough to trap errors with try, e.g. brew. The fix is to
+	test if those functions return an object of 'try-error'.
+
+	* If a request uses R's read functions to read the incoming POST
+	data, then we clear the pushback with .Internal(clearPushBack(stdin()))
+
+2008-10-07 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.1
+
+	* Updated .Call methods to use R_getEmbeddingDllInfo(void) which was
+	added in R 2.6.0.
+
+	* Updated RApacheOutputErrors by making the change per request. added
+	two new arguments... prefix and suffix to override module versions.
+
+2008-10-06 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Thanks to Robert Kofler for finding a bug in test/test.R.
+
+	* Thanks for Jeroen Ooms for all his great feedback. Really the first
+	user to share his successes/complaints about rapache with me.
+
+	* Added RApacheOutputErrors(status=TRUE) to allow users 
+	to change at will; the side-effect of which alters the HTTP
+	response status code. status=TRUE will return 200, status=FALSE
+	will return 500.
+
+
+2008-07-24 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.1.0
+
+	* Support for threaded mpm's.
+
+	* Set the response content type to html when R*Handler
+	directive is missing to force proper rendering of error
+	message.
+
+2008-07-23 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.0.8
+
+	* SetHandler r-* without an R*Handler directive would cause
+	apache to seg fault. Thanks to David Konerding.
+
+2008-06-10 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+	* Release 1.0.7
+
+	* apr_pstrcat was missing final argument of NULL. Thanks
+	to Aleksander Wawer.
+
+2008-06-01 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* configure now properly detects if apache was installed
+	with prefork mpm.
+
+	* HAVE_UINTPTR_T is defined to satisfy Rinterface.h
+	to properly export C stack variables.
+
+	* add sendBin(object) function for sending binary data.
+
+2008-05-28 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+	* Release 1.0.6
+
+	* Add output of Cstack_info() to r-info handler
+
+2008-05-28 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.0.5
+
+	* Turn off C stack checking after R has initialized.
+
+2008-04-23 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+	* Release 1.0.4
+
+	* Updated  embedding interface with const char *
+
+2008-04-02 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.0.3
+
+	* Added ChangeLog file
+
+	* Added maintainer mode flag to configure.
+
+	* test/test.R: Fixed form url; points to 'test/R'.
+
+	* tools/config_http.R: added to dist to find HTTP for testing.
+
+2008-02-20 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 1.0.2 (skipped 1.0.1)
+
+	* Don't cache the request handler call as we always need to find
+	the correct function from the environment.
+
+	* Added filename to SERVER variable.
+
+	* Fixed a bug where the class wasn't being set correctly for the
+	SERVER variables mtime and request_time
+
+
+2007-08-08 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Pre-release 1.0.0-useR2007: Major architectural changes
+
+	* Getting rid of RApache R package
+
+	* Exposing .Call() functions from mod_R.so
+
+	* Copying request record to R objects and placing
+	 in environment on the search path.
+
+2006-10-12 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 0.1.5 (actually never released)
+
+	* Big change! removing apache.write in favor of writing to stdout().
+
+2006-07-23 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 0.1.4
+
+	* Added apache.encode() and apache.decode() for en(de)coding html
+	entities
+
+	* R now uses Apache's tmp dir
+
+2006-03-24 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 0.1.3
+
+	* Now plays nicely with mod_cgi (thanks to Jeremy Stephens).
+	Apache runs cleanup code per-child after a fork and before
+	executing cgi scripts. This was not handled properly, and R/Apache
+	caused the child to segfault.
+
+2006-02-17 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 0.1.2
+
+	* Libraries and source files (specified with Rlibrary and Rsource
+	in the apache config) are now loaded only once (thanks to Jeremy
+	Stephens).
+
+	* Added mod_R version component to Apache response headers
+
+2005-09-30 Jeffrey Horner <jeff.horner@vanderbilt.edu>
+
+	* Release 0.1.1
+
+	* Fixed spelling of R_module (thanks to Kevin E. Thorpe) in README
+	and RApache/man/directives.Rd.
+
+	* Fixed compile error on Mac OS X (thanks to Jan de Leeuw).
+
+	* Fixed bug in as.list.apr_table (thanks to Gregoire Thomas) and
+	subsequently in as.list.ra_request_rec

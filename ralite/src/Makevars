@@ -1,2 +1,0 @@
-PKG_CPPFLAGS = `${APR_CONFIG} --cflags --cppflags` `${APREQ_CONFIG} --includes`
-PKG_LIBS = `${APREQ_CONFIG} --link-ld --ldflags --libs`
