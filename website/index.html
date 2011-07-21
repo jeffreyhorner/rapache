@@ -1,54 +1,77 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html>
+<!doctype html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
 <head>
-	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
-	<link rel="stylesheet" href="style.css" type="text/css" />
-	<title>the rapache project</title>
+
+	<!-- Basic Page Needs
+  ================================================== -->
+	<meta charset="utf-8" />
+	<title>rApache</title>
+	<meta name="description" content="">
+	<meta name="author" content="">
+	<!--[if lt IE 9]>
+		<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	
+	<!-- Mobile Specific Metas
+  ================================================== -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" /> 
+	
+	<!-- CSS
+  ================================================== -->
+	<link rel="stylesheet" href="stylesheets/base.css">
+	<link rel="stylesheet" href="stylesheets/skeleton.css">
+	<link rel="stylesheet" href="stylesheets/layout.css">
+	<link rel="stylesheet" href="stylesheets/docs.css">
+	
+	<!-- Favicons
+	================================================== -->
+	<link rel="shortcut icon" href="images/favicon.ico">
+	<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+	
 </head>
 <body>
-<div class="tri angle1"></div>
-<div class="tri angle2"></div>
-<div class="tri angle3"></div>
-<div id="menu">
-<ul>
-	<li><a title="home" href="index.html">home</a></li>
-	<li><a title="manual" href="manual.html">manual</a></li>
-	<li><a title="downloads" href="downloads.html">downloads</a></li>
-	<li><a title="links" href="links.html">links</a></li>
-</ul>
-</div>
-<div id="main">
- 
-<!--   M A I N   C O N T E N T   -->
-<h1><a title="and now for something completely different: littler" href="http://biostat.mc.vanderbilt.edu/LittleR">r</a>apache</h1>
 
+
+
+
+
+<!-- Primary Page Layout
+================================================== -->
+
+<div class="container">	
+    <div class="three columns sidebar">
+	<a title="rApache" label="rApache" href="http://www.rapache.net/"><img src="images/Logo.png" /></a>
+	<nav>
+	<ul>
+	    <li><a title="download" href="downloads.html">downloads</a></li>
+	    <li><a title="documentation" href="manual.html">documentation</a></li>
+	    <li><a title="discussion" href="discussion.html">discussion</a></li>
+	</ul>
+	</nav>
+    </div>
+
+    <div class="twelve columns content offset-by-one">
+ 
+<header><h1>Web Application Development with R and Apache</h1></header>
+<!--   M A I N   C O N T E N T   -->
 <p>
-First presented at <a href="http://depts.washington.edu/dsc2005/">DSC2005</a>, rapache is a project 
+First presented at <a href="http://depts.washington.edu/dsc2005/">DSC2005</a>, rApache is a project 
 supporting web application development using the <a href="http://www.r-project.org/">R statistical 
 language and environment</a> and the <a href="http://httpd.apache.org">Apache web server</a>. The 
 current release runs on UNIX/Linux and Mac OS X operating systems.
 </p>
 
-<h4> NEW!!! </h4>
-<p> rapache now supports Apache threaded web servers, but the <a href="http://httpd.apache.org/docs/2.2/mod/prefork.html">Apache Prefork Multi-Processing Module</a> is
-still recommended.
+<p>
+For some examples of interactive R web applications that use rApache, visit the website of <a href="http://www.jeroenooms.com/">Jeroen Ooms</a>. </p>
+<p><a href="http://www.jeroenooms.com/"><img src="http://www.stat.ucla.edu/~jeroen/images/ggplotv02.png"></a>
 </p>
 
-<p>To cite rapache, use the following:</p>
-
-<div class="citation"> Jeffrey Horner (2009). rapache: Web application development with R and Apache. http://biostat.mc.vanderbilt.edu/rapache/</div>
-
-<p> A BibTeX entry for LaTeX users is</p>
-<div class="citation"><pre>
-@Manual{,
-	title = {rapache: Web application development with R and Apache.},
-	author = {Jeffrey Horner},
-	year = {2009},
-	url = {http://biostat.mc.vanderbilt.edu/rapache/},
-}
-</pre></div>
 <!--   E N D   M A I N   C O N T E N T   -->
+</div>
 <hr>
- &copy; 2009 Jeffrey Horner
+ &copy; 2011 Vanderbilt University
 </div></body></html>
  
