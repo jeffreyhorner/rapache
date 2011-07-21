@@ -1,0 +1,26 @@
+#!/usr/bin/env Rscript
+library(brew)
+
+geshi <- file.path(getwd(),'bin/iogeshi.php')
+
+highlight <- function(text){ 
+	file <- tempfile()
+	cat('temp is ', file,'\n')
+	writeLines(text,file,sep='')
+	con <- pipe(paste(geshi,file),'r')
+	ret <- paste('<div id="codeblock">',paste(readLines(con),collapse='\n'),'</div>',collapse='\n')
+	close(con)
+	unlink(file)
+	ret
+}
+
+t <- file.path(getwd(),'webtemplates')
+h <- file.path(getwd(),'web')
+
+setwd(t)
+for (p in list.files(pattern='\\.html')){
+	inputfile <- file.path(t,p)
+	outputfile <- file.path(h,p)
+	cat(inputfile,'\n')
+	brew(inputfile,outputfile,tplParser=highlight)
+}

@@ -1,0 +1,22 @@
+<% inManual <- ifelse(length(grep('manual.html',inputfile)),TRUE,FALSE) -%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+	<link rel="stylesheet" href="style.css" type="text/css" />
+	<title>the rapache project</title>
+</head>
+<body>
+<div class="tri angle1"></div>
+<div class="tri angle2"></div>
+<div class="tri angle3"></div>
+<div id="menu">
+<ul>
+	<li><a title="home" href="index.html">home</a></li>
+	<li><a title="manual" href="manual.html">manual</a></li>
+	<li><a title="downloads" href="downloads.html">downloads</a></li>
+	<li><a title="discussion" href="discussion.html">discussion</a></li>
+	<li><a title="links" href="links.html">links</a></li>
+</ul>
+</div>
+<div id="<%=ifelse(inManual,'manual','main')%>">

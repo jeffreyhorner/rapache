@@ -1,0 +1,46 @@
+<% brew('header.rhtml') %> 
+<!--   M A I N   C O N T E N T   -->
+<h1>downloads</h1>
+
+<h3>Subversion</h3>
+
+<p>You can access the read-only full rapache respository here:</p>
+
+<a href="http://biostat.mc.vanderbilt.edu/svn/rapache">http://biostat.mc.vanderbilt.edu/svn/rapache</a>
+
+<h3>Tarballs</h3>
+
+<p>New tarballs are released when bugs are found or features are added.</p>
+
+<h4>NOTICE: rapache now supports threaded web servers, but prefork is still recommended.</h4>
+
+<p> The minor number has now been bumped to 1 to note the change.</p>
+
+<% 
+	direc <- '../web/files/'
+	url <- 'files/'
+	tarballs <- grep('^rapache-\\d+.\\d+.\\d+.tar.gz$',dir(direc),value=TRUE)
+	tsorts <- sort(as.integer(gsub('^rapache-(\\d+).(\\d+).(\\d+).tar.gz','\\1\\2\\3',tarballs,perl=TRUE)),index.return=TRUE,dec=TRUE)$ix
+	md5 <- paste(tarballs,'.md5sum',sep='')
+	iter1 <- TRUE
+%>
+
+<% for ( i in tsorts){ %>
+
+<p><a href="<%=paste(url,tarballs[i],sep='')%>"><%=tarballs[i]%></a> [<a href="<%=paste(url,md5[i],sep='')%>">MD5</a>]
+
+<% if (iter1 == TRUE){ %>
+(<a href="files/rapache-latest.tar.gz">rapache-latest.tar.gz</a> symlink) : <b>THIS IS THE LATEST RELEASE!!!</b> rolled from the svn directory <a href="http://biostat.mc.vanderbilt.edu/svn/rapache/branches/rapache-1-1-branch">branches/rapache-1-1-branch</a>.</p>
+
+<p>View the <a href="files/ChangeLog">ChangeLog</a>.</p>
+
+<p><b>Older releases</b></p>
+
+<%  
+	iter1 <- FALSE
+} else { 
+%>
+</p>
+<% } } %>
+<!--   E N D   M A I N   C O N T E N T   -->
+<% brew('footer.rhtml') %> 
