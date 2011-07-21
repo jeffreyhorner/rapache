@@ -1,5 +1,0 @@
-#! /bin/sh
-#
-# Created by configure
-
-./configure '--with-apache2-apxs=/home/hornerj/apache2.2.4/bin/apxs' "$@"

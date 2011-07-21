@@ -2,6 +2,8 @@
 # and define their autoconf $shlibpath_var to be DYLD_LIBRARY_PATH
 SHLIBPATH_VAR=@SHLIBPATH_VAR@
 
+ACLOCAL_AMFLAGS = -I m4
+
 APXS=@APXS@
 HTTPD=@HTTPD@
 DOCROOT=@DOCROOT@

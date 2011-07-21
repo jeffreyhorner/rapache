@@ -1,5 +1,6 @@
 AC_INIT(mod_R,1.0,jeff.horner@vanderbilt.edu)
 AC_CONFIG_AUX_DIR([tools])
+AC_CONFIG_MACRO_DIR([m4])
 # Automake initialization
 AM_INIT_AUTOMAKE( foreign no-texinfo.tex no-dependencies no-dist no-installinfo no-installman no-exeext )
 
