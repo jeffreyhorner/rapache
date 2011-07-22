@@ -175,4 +175,29 @@
 	}
 	
 	
-	
+	/* Local changes */
+	pre.code {
+	    font-family: "Droid Sans Mono", "DejaVu Sans Mono", Monaco, Consolas, "Lucida Console", monospace;
+	    font-size: 12px;
+	    line-height: 1.3em;
+	    margin: 12px 0;
+	    padding: 6px 10px;
+	    overflow-x: auto;
+	    background-color: #F4F4F4;
+	    border: 1px solid #DEDEDE;
+	}
+
+	/* Rdoc style */
+	div.rdoc {
+	    margin-left: 10px;
+	}
+	div.rdoc ul {
+		margin-left: 10px;
+		margin-bottom: 10px;
+	}
+	div.rdoc li {
+		margin-left: 10px;
+		margin-bottom: 0;
+	}
+	div.rdoc p {
+		margin: 0 0 10px 0;
