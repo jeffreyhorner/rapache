@@ -123,7 +123,7 @@
 	@media only screen and (max-width: 767px) {
 		header h1 { font-size: 34px; line-height: 37px; }
 		nav { position: relative; }
-		nav ul { display: none; }
+		/* nav ul { display: none; } */
 		#logo { text-align: left; }
 /* 		#whatAndWhy img { display: none; } */
 		nav .button { display: none; }
@@ -131,7 +131,7 @@
 	
 	/* Mobile Landscape */
 	@media only screen and (min-width: 480px) and (max-width: 767px) {
-		nav ul { display: none; }
+		/* nav ul { display: none; } */
 	}
 	
 	/* Non 960 */
