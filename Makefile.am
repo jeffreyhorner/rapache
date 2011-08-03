@@ -48,7 +48,7 @@ install: all
 	$(APREQ_INSTALL)
 
 $(DOCROOT)/httpd.conf: $(DOCROOT)/httpd.conf.in
-	$(RPROGBATCH) tools/config_http.R
+	$(RPROGBATCH) tools/config_http.R --args $(APXS) $(HTTPD)
 
 itest: all
 	@echo

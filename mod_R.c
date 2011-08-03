@@ -655,7 +655,10 @@ static void ShowMessage(const char *s){
 }
 static void WriteConsoleEx(const char *buf, int size, int errorFlag){
 	if (MR_Request.r){
-		if (!errorFlag) ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size);
+		if (!errorFlag) {
+		    /* ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size); */
+		    apr_brigade_write(MR_BBout,NULL,NULL,buf,size);
+		}
 		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
 	} else {
 		WriteConsoleStderr(buf,size,errorFlag);
@@ -766,26 +769,26 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
 
 static int SetUpRequest(const request_rec *r){
 
-	/* Acquire R mutex */
+    /* Acquire R mutex */
     if (MR_mutex != NULL && apr_thread_mutex_lock(MR_mutex) != APR_SUCCESS) {
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"RApache Mutex error!");
-		return 0;
-	}
+	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"RApache Mutex error!");
+	return 0;
+    }
 
-	/* Set current request_rec */
-	MR_Request.r = (request_rec *)r;
+    /* Set current request_rec */
+    MR_Request.r = (request_rec *)r;
 
-	/* Init reading */
-	MR_BBin = NULL;
+    /* Init reading */
+    MR_BBin = NULL;
 
-	/* Set output brigade */
-	if ((MR_BBout = apr_brigade_create(r->pool, r->connection->bucket_alloc)) == NULL){
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"RApache MR_BBout error!");
-		if (MR_mutex != NULL) apr_thread_mutex_unlock(MR_mutex);
-	   	return 0;
-	}
+    /* Set output brigade */
+    if ((MR_BBout = apr_brigade_create(r->pool, r->connection->bucket_alloc)) == NULL){
+	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"RApache MR_BBout error!");
+	if (MR_mutex != NULL) apr_thread_mutex_unlock(MR_mutex);
+	return 0;
+    }
 
-	return 1;
+    return 1;
 }
 
 /* No need to free any memory here since it was allocated out of the request pool */
@@ -829,27 +832,10 @@ static void TearDownRequest(int flush){
 			output = MR_Request.outputErrors;
 		}
 
-		if (output && MR_BBout){
-
-			/* Copy MR_BBerr to MR_BBout */
-			/* ap_fputs(MR_Request.r->output_filters,MR_BBout,msg); */
-			ap_fputs(MR_Request.r->output_filters,MR_BBout,"\n<!--\n");
-			for (bucket = APR_BRIGADE_FIRST(MR_BBerr); bucket != APR_BRIGADE_SENTINEL(MR_BBerr); bucket = APR_BUCKET_NEXT(bucket)) {
-				if (APR_BUCKET_IS_EOS(bucket)) {
-					break;
-				}
-
-				/* We can't do much with this. */
-				if (APR_BUCKET_IS_FLUSH(bucket)) {
-					continue;
-				}
-
-				/* read */
-				apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
-				ap_fwrite(MR_Request.r->output_filters,MR_BBout,data,len);
-			}
-
-			ap_fputs(MR_Request.r->output_filters,MR_BBout,"-->\n");
+		if (output){
+		    if(!APR_BRIGADE_EMPTY(MR_BBerr) && flush){
+			ap_filter_flush(MR_BBerr,MR_Request.r->output_filters);
+		    }
 		} else {
 			/* Write contents of MR_BBerr to log */
 			/* ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,msg); */
@@ -872,31 +858,14 @@ static void TearDownRequest(int flush){
 				if (status != APR_SUCCESS){
 					fprintf(stderr,"WARNING! apr_file_write returned %d\n",status);
 				}
-				apr_file_flush(MR_Request.r->server->error_log);
-
 			}
+			apr_file_flush(MR_Request.r->server->error_log);
 		}
 
 		apr_brigade_cleanup(MR_BBerr);
 		apr_brigade_destroy(MR_BBerr);
 	}
 	MR_BBerr = NULL;
-
-	/* It's possible that errors were redirected to the output stream, so
-	 * clean up writing for good.
-	 */
-	if (MR_BBout){
-
-		/* A reason not to flush when the brigade is not empty is to
-		 * preserve error conditons
-		 */
-		if(!APR_BRIGADE_EMPTY(MR_BBout) && flush){
-			ap_filter_flush(MR_BBout,MR_Request.r->output_filters);
-		}
-		apr_brigade_cleanup(MR_BBout);
-		apr_brigade_destroy(MR_BBout);
-	}
-	MR_BBout = NULL;
 
 	bzero(&MR_Request,sizeof(RApacheRequest));
 	MR_Request.outputErrors = -1;
@@ -948,9 +917,9 @@ static void RApacheError(char *msg){
 		if (output && MR_BBout){
 			char *prefix = (MR_Request.errorPrefix)? MR_Request.errorPrefix : (char *)MR_ErrorPrefix;
 			char *suffix = (MR_Request.errorSuffix)? MR_Request.errorSuffix : (char *)MR_ErrorSuffix;
-			ap_fputs(MR_Request.r->output_filters,MR_BBout,prefix);
-			ap_fputs(MR_Request.r->output_filters,MR_BBout,"Oops!!! <b>rApache</b> has something to tell you. View source and read the HTML comments at the end.");
-			ap_fputs(MR_Request.r->output_filters,MR_BBout,suffix);
+			apr_brigade_puts(MR_BBout,NULL,NULL,prefix);
+			apr_brigade_puts(MR_BBout,NULL,NULL,"Oops!!! <b>rApache</b> has something to tell you. View source and read the HTML comments at the end.");
+			apr_brigade_puts(MR_BBout,NULL,NULL,suffix);
 		} else {
 			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"rApache Notice!");
 		}
@@ -1475,7 +1444,7 @@ static SEXP MyfindFun(SEXP symb, SEXP envir){
 	return R_UnboundValue;
 }
 
-#define PUTS(s) ap_fputs(MR_Request.r->output_filters,MR_BBout,s)
+#define PUTS(s) apr_brigade_puts(MR_BBout,NULL,NULL,s)
 #define EXEC(s) ParseEval(s,envir,&errorOccurred); if (errorOccurred) return RApacheResponseError(NULL)
 static int RApacheInfo()
 {
@@ -2079,9 +2048,8 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 			for(i = 0; i < len; i++) {
 				s = translateChar(STRING_ELT(object, i));
 				/* n = con->write(s, sizeof(char), strlen(s) + 1, con); */
-				/* XXX: apache write */
-				n = ap_fwrite(MR_Request.r->output_filters,MR_BBout,s,strlen(s)+1);
-				if(!n) {
+				/* n = ap_fwrite(MR_Request.r->output_filters,MR_BBout,s,strlen(s)+1); */
+				if (apr_brigade_write(MR_BBout,NULL,NULL,s,strlen(s)+1) != APR_SUCCESS) {
 					warning("problem writing to connection");
 					break;
 				}
@@ -2234,10 +2202,11 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 			PROTECT(ans = allocVector(RAWSXP, size*len));
 			memcpy(RAW(ans), buf, size*len);
 		} else { */
-			/* XXX: apache write */
 			/* n = con->write(buf, size, len, con); */
-			n = ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size*len);
-			if(n < len) warning("problem writing to connection");
+			/* n = ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size*len); */
+			if (apr_brigade_write(MR_BBout,NULL,NULL,buf,size*len) != APR_SUCCESS) {
+			    warning("problem writing to connection");
+			}
 		/* } */
 		Free(buf);
 	}
