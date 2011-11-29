@@ -1,5 +1,5 @@
 /*
-**  Copyright 2005  The Apache Software Foundation
+**  Copyright 2011  Jeffrey Horner
 **
 **  Licensed under the Apache License, Version 2.0 (the "License");
 **  you may not use this file except in compliance with the License.
@@ -13,16 +13,13 @@
 **  See the License for the specific language governing permissions and
 **  limitations under the License.
 */
-/*
- * $Id: mod_R.c 471 2011-01-12 16:04:36Z hornerj $
- */
 
 /*************************************************************************
  *
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.14"
+#define MOD_R_VERSION "1.1.15"
 #define SVNID "$Id: mod_R.c 471 2011-01-12 16:04:36Z hornerj $"
 #include "mod_R.h" 
 
@@ -1270,6 +1267,7 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 		}
 	}
 
+	PROTECT(h->envir);
 	PROTECT(h->expr = ParseText(text,&parseError));
 	Free(text);
 
@@ -1280,10 +1278,10 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 			defineVar(install(".rAenv"),h->envir,h->envir);
 		}
 		R_PreserveObject(h->expr);
-		UNPROTECT(1);
+		UNPROTECT(2);
 		return 1;
 	} else {
-		UNPROTECT(1);
+		UNPROTECT(2);
 		return 0;
 		/* Uh Oh! */
 	}
