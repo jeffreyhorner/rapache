@@ -1,5 +1,5 @@
 /*
-**  Copyright 2011  Jeffrey Horner
+**  Copyright 2011 Vanderbilt University
 **
 **  Licensed under the Apache License, Version 2.0 (the "License");
 **  you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@
  *
  *************************************************************************/
 #define MOD_R_VERSION "1.1.15"
-#define SVNID "$Id: mod_R.c 471 2011-01-12 16:04:36Z hornerj $"
 #include "mod_R.h" 
 
 #include <sys/types.h>
@@ -113,6 +112,7 @@ typedef enum {
 typedef struct {
 	char *file;
 	char *function;
+	char *evalcode;
 	char *package;
 	char *handlerKey;
 	int preserveEnv;
@@ -248,6 +248,8 @@ static void AP_register_hooks (apr_pool_t *p);
  */
 static const char *AP_cmd_RHandler(cmd_parms *cmd, void *conf, const char *handler);
 static const char *AP_cmd_RFileHandler(cmd_parms *cmd, void *conf, const char *handler);
+static const char *AP_cmd_REval(cmd_parms *cmd, void *conf, const char *tmpcode);
+static const char *AP_cmd_RFileEval(cmd_parms *cmd, void *conf, const char *tmpcode);
 static const char *AP_cmd_REvalOnStartup(cmd_parms *cmd, void *conf, const char *evalstr);
 static const char *AP_cmd_RSourceOnStartup(cmd_parms *cmd, void *conf, const char *evalstr);
 static const char *AP_cmd_ROutputErrors(cmd_parms *cmd, void *mconfig);
@@ -322,6 +324,8 @@ static void PrintTraceback(void);
 static const command_rec MR_cmds[] = {
 	AP_INIT_TAKE1("RHandler", AP_cmd_RHandler, NULL, OR_OPTIONS, "R function to handle request. "),
 	AP_INIT_TAKE1("RFileHandler", AP_cmd_RFileHandler, NULL, OR_OPTIONS, "File containing R code or function to handle request."),
+	AP_INIT_TAKE1("REval", AP_cmd_REval, NULL, OR_OPTIONS, "R code to evaluate on each request. "),
+	AP_INIT_TAKE1("RFileEval", AP_cmd_RFileEval, NULL, OR_OPTIONS, "File and code to evalueate on each request."),
 	AP_INIT_TAKE1("REvalOnStartup", AP_cmd_REvalOnStartup, NULL, OR_OPTIONS,"R expressions to evaluate on start."),
 	AP_INIT_TAKE1("RSourceOnStartup", AP_cmd_RSourceOnStartup, NULL, OR_OPTIONS,"File containing R expressions to evaluate on start."),
 	AP_INIT_NO_ARGS("ROutputErrors", AP_cmd_ROutputErrors, NULL, OR_OPTIONS, "Option to print error messages to output."),
@@ -426,7 +430,7 @@ static const char *AP_cmd_RHandler(cmd_parms *cmd, void *conf, const char *handl
 		c->package = apr_pstrmemdup(cmd->pool,handler,part - handler);
 		apr_table_add(
 			MR_OnStartup,
-			apr_psprintf( cmd->pool, "%s on line %u of %s",
+			apr_psprintf( cmd->pool, "e:%s on line %u of %s",
 				d->directive,d->line_num,d->filename),
 			apr_psprintf(cmd->pool,"library(%s)",c->package));
 		function = part + 2;
@@ -460,6 +464,65 @@ static const char *AP_cmd_RFileHandler(cmd_parms *cmd, void *conf, const char *h
 	return NULL;
 }
 
+static const char *AP_cmd_REval(cmd_parms *cmd, void *conf, const char *tmpcode){
+	const char *part, *code;
+	RApacheDirective *c = (RApacheDirective *)conf;
+	ap_directive_t *d = cmd->directive;
+	InitRApachePool();
+
+	if (ap_strchr(tmpcode,'/')){
+		fprintf(stderr,"\n\tWARNING! %s seems to contain a file. If this is true, then use the RFileEval directive instead.\n",tmpcode);
+		fflush(stderr);
+	}
+
+	c->handlerKey = apr_pstrdup(cmd->pool,tmpcode);
+	part = ap_strstr(tmpcode,"::");
+	if (part) {
+		c->package = apr_pstrmemdup(cmd->pool,tmpcode,part - tmpcode);
+		apr_table_add(
+			MR_OnStartup,
+			apr_psprintf( cmd->pool, "e:%s on line %u of %s",
+				d->directive,d->line_num,d->filename),
+			apr_psprintf(cmd->pool,"library(%s)",c->package));
+	}
+	c->evalcode = c->handlerKey;
+	apr_table_add(
+		MR_OnStartup,
+		apr_psprintf( cmd->pool, "p:%s on line %u of %s",
+			d->directive,d->line_num,d->filename),
+		c->evalcode);
+
+	return NULL;
+}
+
+static const char *AP_cmd_RFileEval(cmd_parms *cmd, void *conf, const char *filecode){
+    const char *part;
+    RApacheDirective *c = (RApacheDirective *)conf;
+    apr_finfo_t finfo;
+    ap_directive_t *d = cmd->directive;
+    InitRApachePool();
+
+    c->handlerKey = apr_pstrdup(cmd->pool,filecode);
+
+    part = ap_strstr(filecode,":");
+    if (part) {
+	c->file = apr_pstrmemdup(cmd->pool,filecode,part - filecode);
+	c->evalcode = apr_pstrdup(cmd->pool,part+1);
+	apr_table_add(
+		MR_OnStartup,
+		apr_psprintf( cmd->pool, "p:%s on line %u of %s",
+		    d->directive,d->line_num,d->filename),
+		c->evalcode);
+    } else {
+	return apr_pstrdup(cmd->pool,"RFileEval: Takes a filename and an expression!");
+    }
+
+    if (apr_stat(&finfo,c->file,APR_FINFO_TYPE,cmd->pool) != APR_SUCCESS){
+	return apr_psprintf(cmd->pool,"RFileEval: %s file not found!",c->file);
+    }
+    return NULL;
+}
+
 static const char *AP_cmd_REvalOnStartup(cmd_parms *cmd, void *conf, const char *evalstr){
 	ap_directive_t *d = cmd->directive;
 
@@ -467,7 +530,7 @@ static const char *AP_cmd_REvalOnStartup(cmd_parms *cmd, void *conf, const char 
 
 	apr_table_add(
 		MR_OnStartup,
-		apr_psprintf( cmd->pool, "%s on line %u of %s",
+		apr_psprintf( cmd->pool, "e:%s on line %u of %s",
 			d->directive,d->line_num,d->filename),
 		evalstr
 	);
@@ -605,6 +668,17 @@ static int AP_hook_request_handler (request_rec *r)
 			PrintTraceback();
 			return RApacheResponseError(NULL);
 		}
+	} else if (h->directive->evalcode){
+	    PROTECT(h->envir);
+	    evalError=1;
+	    ret = ParseEval(h->directive->evalcode,h->envir,&evalError);
+	    UNPROTECT(1);
+
+	    if (evalError) {
+		    /*PrintWarnings();*/
+		    PrintTraceback();
+		    return RApacheResponseError(NULL);
+	    }
 	}
 
 	/*PrintWarnings();*/
@@ -1399,8 +1473,8 @@ static void InitRApacheEnv(){
 	defineVar(install("FILES"),R_NilValue,MR_RApacheEnv);
 	defineVar(install("SERVER"),R_NilValue,MR_RApacheEnv);
 
-	/* Lock environment AND bindings except for CGI vars.*/
-	R_LockEnvironment(MR_RApacheEnv, TRUE); 
+	/* Lock environment and bindings except for CGI vars.*/
+	R_LockEnvironment(MR_RApacheEnv, TRUE);
 
 	R_unLockBinding(install("GET"),MR_RApacheEnv);
 	R_unLockBinding(install("POST"),MR_RApacheEnv);
@@ -1409,15 +1483,26 @@ static void InitRApacheEnv(){
 	R_unLockBinding(install("SERVER"),MR_RApacheEnv);
 }
 
+/* Every key must be prefixed with either "e:" or "p:" to indicate if the
+ * value should be evaluated or parsed.
+ */
 static int OnStartupCallback(void *rec, const char *key, const char *value){
 	SEXP val;
 	int evalError=1;
 
-	val = ParseEval(value,R_GlobalEnv,&evalError);
-	if (evalError){
-		fprintf(stderr," From directive %s.\n",key);
-		exit(-1);
-	};
+	if (key[0] == 'e' && key[1] == ':'){
+	    val = ParseEval(value,R_GlobalEnv,&evalError);
+	    if (evalError){
+		    fprintf(stderr," From directive %s.\n",key+2);
+		    exit(-1);
+	    }
+	} else if (key[0] == 'p' && key[1] == ':'){
+	    val = ParseText(value,&evalError);
+	    if (evalError){
+		    fprintf(stderr,"Parse error in '%s' from directive %s.\n",value,key+2);
+		    exit(-1);
+	    }
+	}
 
 	return 1;
 }
@@ -1486,7 +1571,7 @@ PUTS("<a name=\"Top\"> </a>");
 PUTS("<a href=\"http://www.r-project.org/\"><img class=\"map\" alt=\"R Language Home Page\" src=\"http://www.r-project.org/Rlogo.jpg\"/></a>");
 
 /* RApache version info */
-PUTS("<div class=\"h\">RApache version "); PUTS(MOD_R_VERSION); PUTS("<h4>"); PUTS(SVNID); PUTS("</h4></div>");
+PUTS("<div class=\"h\">RApache version "); PUTS(MOD_R_VERSION); PUTS("</div>");
 
 PUTS("<div class=\"map\">");
 PUTS("<p>jump to:</p>");
