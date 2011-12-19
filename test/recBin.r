@@ -56,8 +56,14 @@ cat('Upload a file: <input type=file name=fileUpload><br>\n')
 cat('Upload another file: <input type=file name=anotherFile><br>\n')
 cat('<input type=submit name=Submit>')
 
-cat("<hr>\n")
-while(length(x <- receiveBin(40)) > 0){
-    cat('raw:', x,'<br>\n')
-    cat('char:', rawToChar(x),'<br>\n')
-} 
+cat("<hr><pre>\n")
+while(length(x <- receiveBin(30)) > 0){
+    cat(' raw:', x,'\nchar:',sep=' ')
+    for (i in 1:length(x)){
+	if (x[i] == 0) cat(' \\0')
+	else if (x[i] == 13) cat(' \\r')
+	else if (x[i] == 10) cat(' \\n')
+	else cat(' ',rawToChar(x[i]))
+    }
+    cat('\n')
+}

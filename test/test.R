@@ -3,9 +3,10 @@ hrefify <- function(title) gsub('[\\.()]','_',title,perl=TRUE)
 scrub <- function(str){ 
 	if (is.null(str)) return('NULL')
 	if (length(str) == 0) return('length 0 string')
-	cat("\n<!-- before as.character: (",str,")-->\n",sep='')
-	str <- as.character(str)
-	cat("\n<!-- after as.character: (",str,")-->\n",sep='')
+	#cat("\n<!-- before as.character: (",str,")-->\n",sep='')
+	str <- try(as.character(str))
+	if (inherits(str,'try-error')) return('try-error')
+	#cat("\n<!-- after as.character: (",str,")-->\n",sep='')
 	str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); 
 	str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); 
 	if (length(str) == 0 || is.null(str) || str == '')
@@ -76,6 +77,10 @@ if (!is.null(FILES)){
 	}
 }
 zebra("SERVER Variables",SERVER)
+zebra("Search Path",search())
+zebra(".libPaths",.libPaths())
+zebra("DLLs",capture.output(str(getLoadedDLLs())))
+zebra("rapache Environment",ls('rapache'))
 cat("</BODY></HTML>\n")
 
 OK

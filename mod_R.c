@@ -211,6 +211,7 @@ sendBin <- function(object, con=stdout(), size=NA_integer_, endian=.Platform$end
 	swap <- endian != .Platform$endian\n\
 	if (!is.vector(object) || mode(object) == 'list') stop('can only write vector objects')\n\
 	.Call('RApache_sendBin',object,size,swap)}\n\
+receiveBin <- function(length=0) if(length==0) raw(0) else .Call('RApache_receiveBin',length)\n\
 RApacheOutputErrors <- function(status=TRUE,prefix=NULL,suffix=NULL) .Call('RApache_outputErrors',status,prefix,suffix)\n\
 .ResetCGIVars <- function(){\n\
 	re <- as.environment('rapache')\n\
@@ -314,6 +315,7 @@ static SEXP MyfindFun(SEXP fun, SEXP envir);
 static int RApacheInfo();
 static SEXP AprTableToList(apr_table_t *);
 static void PrintTraceback(void);
+static int ReadRequestBody(unsigned char *buf, int size);
 
 /*************************************************************************
  *
@@ -465,7 +467,7 @@ static const char *AP_cmd_RFileHandler(cmd_parms *cmd, void *conf, const char *h
 }
 
 static const char *AP_cmd_REval(cmd_parms *cmd, void *conf, const char *tmpcode){
-	const char *part, *code;
+	const char *part;
 	RApacheDirective *c = (RApacheDirective *)conf;
 	ap_directive_t *d = cmd->directive;
 	InitRApachePool();
@@ -750,57 +752,62 @@ static void WriteConsoleStderr(const char *buf, int size, int errorFlag){
 
 /* according to R 2.7.2 the true size of buf is size+1 */
 static int ReadConsole(const char *prompt, unsigned char *buf, int size, int addHist){
-	apr_size_t len, bpos=0;
-	apr_status_t rv;
-	apr_bucket *bucket;
-	const char *data;
+    int len = ReadRequestBody(buf,size);
+    buf[len] = '\0';
+    return len;
+}
 
-	if (!MR_Request.r){
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"Can't read with R since MR_Request.r is NULL!");
+static int ReadRequestBody(unsigned char *buf, int size){
+    apr_size_t len, bpos=0;
+    apr_status_t rv;
+    apr_bucket *bucket;
+    const char *data;
+
+    if (!MR_Request.r){
+	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"Can't read with R since MR_Request.r is NULL!");
+	return 0;
+    }
+
+    if (MR_Request.postParsed){
+	RApacheError("Can't read with R since libapreq already started!");
+	return 0;
+    }
+
+    MR_Request.readStarted = 1;
+
+    if (MR_BBin == NULL){
+	MR_BBin = apr_brigade_create(MR_Request.r->pool, MR_Request.r->connection->bucket_alloc);
+    }
+    rv = ap_get_brigade(MR_Request.r->input_filters, MR_BBin, AP_MODE_READBYTES,
+	    APR_BLOCK_READ, size);
+
+    if (rv != APR_SUCCESS) {
+	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"ReadConsole() returned an error!");
+	return 0;
+    }
+    for (bucket = APR_BRIGADE_FIRST(MR_BBin); bucket != APR_BRIGADE_SENTINEL(MR_BBin); bucket = APR_BUCKET_NEXT(bucket)) {
+	if (APR_BUCKET_IS_EOS(bucket)) {
+	    if (bpos == 0) { /* end of stream and no data , so return NULL */
+		apr_brigade_cleanup(MR_BBin);
 		return 0;
+	    } else { /* We've read some data, so go ahead and return it */
+		break;
+	    }
 	}
 
-	if (MR_Request.postParsed){
-		RApacheError("Can't read with R since libapreq already started!");
-		return 0;
+	/* We can't do much with this. */
+	if (APR_BUCKET_IS_FLUSH(bucket)) {
+	    continue;
 	}
 
-	MR_Request.readStarted = 1;
+	/* read */
+	apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
+	memcpy(buf+bpos,data,len);
+	bpos += len;
+    }
+    apr_brigade_cleanup(MR_BBin);
 
-	if (MR_BBin == NULL){
-		MR_BBin = apr_brigade_create(MR_Request.r->pool, MR_Request.r->connection->bucket_alloc);
-	}
-	rv = ap_get_brigade(MR_Request.r->input_filters, MR_BBin, AP_MODE_READBYTES,
-			APR_BLOCK_READ, size);
-
-	if (rv != APR_SUCCESS) {
-		ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"ReadConsole() returned an error!");
-		return 0;
-	}
-	for (bucket = APR_BRIGADE_FIRST(MR_BBin); bucket != APR_BRIGADE_SENTINEL(MR_BBin); bucket = APR_BUCKET_NEXT(bucket)) {
-		if (APR_BUCKET_IS_EOS(bucket)) {
-			if (bpos == 0) { /* end of stream and no data , so return NULL */
-				apr_brigade_cleanup(MR_BBin);
-				return 0;
-			} else { /* We've read some data, so go ahead and return it */
-				break;
-			}
-		}
-
-		/* We can't do much with this. */
-		if (APR_BUCKET_IS_FLUSH(bucket)) {
-			continue;
-		}
-
-		/* read */
-		apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
-		memcpy(buf+bpos,data,len);
-		bpos += len;
-	}
-	apr_brigade_cleanup(MR_BBin);
-
-	buf[bpos] = '\0';
-	return (int)bpos;
+    return (int)bpos;
 }
 
 /*************************************************************************
@@ -2072,235 +2079,261 @@ static void swapb(void *result, int size)
 }
 
 SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
-	SEXP ans = R_NilValue;
-	int i, j, size, swap, len, n = 0;
-	const char *s;
-	char *buf;
-	/* Rboolean wasopen = TRUE, isRaw = FALSE;
-	Rconnection con = NULL; */
+    SEXP ans = R_NilValue;
+    int i, j, size, swap, len;
+    const char *s;
+    char *buf;
+    /* Rboolean wasopen = TRUE, isRaw = FALSE;
+       Rconnection con = NULL; */
 
-	if (!MR_Request.r) return R_NilValue;
+    if (!MR_Request.r) return R_NilValue;
 
-	/* checkArity(op, args); */
-	/* object = CAR(args); */
-	if(!isVectorAtomic(object))
-		error("'x' is not an atomic vector type");
+    /* checkArity(op, args); */
+    /* object = CAR(args); */
+    if(!isVectorAtomic(object))
+	error("'x' is not an atomic vector type");
 
-	/*
-	if(TYPEOF(CADR(args)) == RAWSXP) {
-		isRaw = TRUE;
-	} else {
-		con = getConnection(asInteger(CADR(args)));
-		if(con->text) error(_("can only write to a binary connection"));
-		wasopen = con->isopen;
-		if(!con->canwrite)
-			error(_("cannot write to this connection"));
-	} */
+    /*
+       if(TYPEOF(CADR(args)) == RAWSXP) {
+       isRaw = TRUE;
+       } else {
+       con = getConnection(asInteger(CADR(args)));
+       if(con->text) error(_("can only write to a binary connection"));
+       wasopen = con->isopen;
+       if(!con->canwrite)
+       error(_("cannot write to this connection"));
+       } */
 
-	size = asInteger(ssize);
-	swap = asLogical(sswap);
+    size = asInteger(ssize);
+    swap = asLogical(sswap);
 
-	if(swap == NA_LOGICAL)
-		error("invalid '%s' argument"), "swap";
+    if(swap == NA_LOGICAL)
+	error("invalid 'swap' argument");
 
-	len = LENGTH(object);
-	/*
-	if(len == 0) {
-		if(isRaw) return allocVector(RAWSXP, 0); else return R_NilValue;
-	} */
-	if (len == 0) return R_NilValue;
+    len = LENGTH(object);
+    /*
+       if(len == 0) {
+       if(isRaw) return allocVector(RAWSXP, 0); else return R_NilValue;
+       } */
+    if (len == 0) return R_NilValue;
 
-	/* if(!wasopen)
-		if(!con->open(con)) error(_("cannot open the connection")); */
+    /* if(!wasopen)
+       if(!con->open(con)) error(_("cannot open the connection")); */
 
 
-	if(TYPEOF(object) == STRSXP) {
-		/* if(isRaw) {
-			Rbyte *bytes;
-			int np, outlen;
-			for(i = 0, outlen = 0; i < len; i++) 
-				outlen += strlen(translateChar(STRING_ELT(object, i))) + 1;
-			PROTECT(ans = allocVector(RAWSXP, outlen));
-			bytes = RAW(ans);
-			for(i = 0, np = 0; i < len; i++) {
-				s = translateChar(STRING_ELT(object, i));
-				memcpy(bytes+np, s, strlen(s) + 1);
-				np +=  strlen(s) + 1;
-			}
-		} else { */
-			for(i = 0; i < len; i++) {
-				s = translateChar(STRING_ELT(object, i));
-				/* n = con->write(s, sizeof(char), strlen(s) + 1, con); */
-				/* n = ap_fwrite(MR_Request.r->output_filters,MR_BBout,s,strlen(s)+1); */
-				if (apr_brigade_write(MR_BBout,NULL,NULL,s,strlen(s)+1) != APR_SUCCESS) {
-					warning("problem writing to connection");
-					break;
-				}
-			}
-		/* } */
-	} else {
-		switch(TYPEOF(object)) {
-			case LGLSXP:
-			case INTSXP:
-				if(size == NA_INTEGER) size = sizeof(int);
-				switch (size) {
-					case sizeof(signed char):
-					case sizeof(short):
-					case sizeof(int):
+    if(TYPEOF(object) == STRSXP) {
+	/* if(isRaw) {
+	   Rbyte *bytes;
+	   int np, outlen;
+	   for(i = 0, outlen = 0; i < len; i++) 
+	   outlen += strlen(translateChar(STRING_ELT(object, i))) + 1;
+	   PROTECT(ans = allocVector(RAWSXP, outlen));
+	   bytes = RAW(ans);
+	   for(i = 0, np = 0; i < len; i++) {
+	   s = translateChar(STRING_ELT(object, i));
+	   memcpy(bytes+np, s, strlen(s) + 1);
+	   np +=  strlen(s) + 1;
+	   }
+	   } else { */
+	for(i = 0; i < len; i++) {
+	    s = translateChar(STRING_ELT(object, i));
+	    /* n = con->write(s, sizeof(char), strlen(s) + 1, con); */
+	    /* n = ap_fwrite(MR_Request.r->output_filters,MR_BBout,s,strlen(s)+1); */
+	    if (apr_brigade_write(MR_BBout,NULL,NULL,s,strlen(s)+1) != APR_SUCCESS) {
+		warning("problem writing to connection");
+		break;
+	    }
+	}
+	/* } */
+    } else {
+	switch(TYPEOF(object)) {
+	    case LGLSXP:
+	    case INTSXP:
+		if(size == NA_INTEGER) size = sizeof(int);
+		switch (size) {
+		    case sizeof(signed char):
+		    case sizeof(short):
+		    case sizeof(int):
 #if SIZEOF_LONG == 8
-					case sizeof(long):
+		    case sizeof(long):
 #elif SIZEOF_LONG_LONG == 8
-					case sizeof(_lli_t):
+		    case sizeof(_lli_t):
 #endif
-						break;
-					default:
-						error("size %d is unknown on this machine", size);
-				}
-				break;
-			case REALSXP:
-				if(size == NA_INTEGER) size = sizeof(double);
-				switch (size) {
-					case sizeof(double):
-					case sizeof(float):
-#if SIZEOF_LONG_DOUBLE > SIZEOF_DOUBLE
-					case sizeof(long double):
-#endif
-						break;
-					default:
-						error("size %d is unknown on this machine", size);
-				}
-				break;
-			case CPLXSXP:
-				if(size == NA_INTEGER) size = sizeof(Rcomplex);
-				if(size != sizeof(Rcomplex))
-					error("size changing is not supported for complex vectors");
-				break;
-			case RAWSXP:
-				if(size == NA_INTEGER) size = 1;
-				if(size != 1)
-					error("size changing is not supported for raw vectors");
-				break;
-			default:
-				error("unimplemented type in sendBin");
+			break;
+		    default:
+			error("size %d is unknown on this machine", size);
 		}
-		buf = R_chk_calloc(len, size); /* R_alloc(len, size); */
-		switch(TYPEOF(object)) {
-			case LGLSXP:
-			case INTSXP:
-				switch (size) {
-					case sizeof(int):
-						memcpy(buf, INTEGER(object), size * len);
-						break;
+		break;
+	    case REALSXP:
+		if(size == NA_INTEGER) size = sizeof(double);
+		switch (size) {
+		    case sizeof(double):
+		    case sizeof(float):
+#if SIZEOF_LONG_DOUBLE > SIZEOF_DOUBLE
+		    case sizeof(long double):
+#endif
+			break;
+		    default:
+			error("size %d is unknown on this machine", size);
+		}
+		break;
+	    case CPLXSXP:
+		if(size == NA_INTEGER) size = sizeof(Rcomplex);
+		if(size != sizeof(Rcomplex))
+		    error("size changing is not supported for complex vectors");
+		break;
+	    case RAWSXP:
+		if(size == NA_INTEGER) size = 1;
+		if(size != 1)
+		    error("size changing is not supported for raw vectors");
+		break;
+	    default:
+		error("unimplemented type in sendBin");
+	}
+	buf = R_chk_calloc(len, size); /* R_alloc(len, size); */
+	switch(TYPEOF(object)) {
+	    case LGLSXP:
+	    case INTSXP:
+		switch (size) {
+		    case sizeof(int):
+			memcpy(buf, INTEGER(object), size * len);
+			break;
 #if SIZEOF_LONG == 8
-					case sizeof(long):
-						{
-							long l1;
-							for (i = 0, j = 0; i < len; i++, j += size) {
-								l1 = (long) INTEGER(object)[i];
-								memcpy(buf + j, &l1, size);
-							}
-							break;
-						}
-#elif SIZEOF_LONG_LONG == 8
-					case sizeof(_lli_t):
-						{
-							_lli_t ll1;
-							for (i = 0, j = 0; i < len; i++, j += size) {
-								ll1 = (_lli_t) INTEGER(object)[i];
-								memcpy(buf + j, &ll1, size);
-							}
-							break;
-						}
-#endif
-					case 2:
-						{
-							short s1;
-							for (i = 0, j = 0; i < len; i++, j += size) {
-								s1 = (short) INTEGER(object)[i];
-								memcpy(buf + j, &s1, size);
-							}
-							break;
-						}
-					case 1:
-						for (i = 0; i < len; i++)
-							buf[i] = (signed char) INTEGER(object)[i];
-						break;
-					default:
-						error("size %d is unknown on this machine", size);
-				}
-				break;
-			case REALSXP:
-				switch (size) {
-					case sizeof(double):
-						memcpy(buf, REAL(object), size * len);
-						break;
-					case sizeof(float):
-						{
-							float f1;
-							for (i = 0, j = 0; i < len; i++, j += size) {
-								f1 = (float) REAL(object)[i];
-								memcpy(buf+j, &f1, size);
-							}
-							break;
-						}
-#if SIZEOF_LONG_DOUBLE > SIZEOF_DOUBLE
-					case sizeof(long double):
-						{
-							/* some systems have problems with memcpy from
-							   the address of an automatic long double,
-							   e.g. ix86/x86_64 Linux with gcc4 */
-							static long double ld1;
-							for (i = 0, j = 0; i < len; i++, j += size) {
-								ld1 = (long double) REAL(object)[i];
-								memcpy(buf+j, &ld1, size);
-							}
-							break;
-						}
-#endif
-					default:
-						error("size %d is unknown on this machine", size);
-				}
-				break;
-			case CPLXSXP:
-				memcpy(buf, COMPLEX(object), size * len);
-				break;
-			case RAWSXP:
-				memcpy(buf, RAW(object), len); /* size = 1 */
-				break;
-		}
-
-		if(swap && size > 1) {
-			if (TYPEOF(object) == CPLXSXP)
-				for(i = 0; i < len; i++) {
-					int sz = size/2;
-					swapb(buf+sz*2*i, sz);
-					swapb(buf+sz*(2*i+1), sz);
-				}
-			else 
-				for(i = 0; i < len; i++) swapb(buf+size*i, size);
-		}
-
-		/* write it now */
-		/* if(isRaw) {
-			PROTECT(ans = allocVector(RAWSXP, size*len));
-			memcpy(RAW(ans), buf, size*len);
-		} else { */
-			/* n = con->write(buf, size, len, con); */
-			/* n = ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size*len); */
-			if (apr_brigade_write(MR_BBout,NULL,NULL,buf,size*len) != APR_SUCCESS) {
-			    warning("problem writing to connection");
+		    case sizeof(long):
+			{
+			    long l1;
+			    for (i = 0, j = 0; i < len; i++, j += size) {
+				l1 = (long) INTEGER(object)[i];
+				memcpy(buf + j, &l1, size);
+			    }
+			    break;
 			}
-		/* } */
-		Free(buf);
+#elif SIZEOF_LONG_LONG == 8
+		    case sizeof(_lli_t):
+			{
+			    _lli_t ll1;
+			    for (i = 0, j = 0; i < len; i++, j += size) {
+				ll1 = (_lli_t) INTEGER(object)[i];
+				memcpy(buf + j, &ll1, size);
+			    }
+			    break;
+			}
+#endif
+		    case 2:
+			{
+			    short s1;
+			    for (i = 0, j = 0; i < len; i++, j += size) {
+				s1 = (short) INTEGER(object)[i];
+				memcpy(buf + j, &s1, size);
+			    }
+			    break;
+			}
+		    case 1:
+			for (i = 0; i < len; i++)
+			    buf[i] = (signed char) INTEGER(object)[i];
+			break;
+		    default:
+			error("size %d is unknown on this machine", size);
+		}
+		break;
+	    case REALSXP:
+		switch (size) {
+		    case sizeof(double):
+			memcpy(buf, REAL(object), size * len);
+			break;
+		    case sizeof(float):
+			{
+			    float f1;
+			    for (i = 0, j = 0; i < len; i++, j += size) {
+				f1 = (float) REAL(object)[i];
+				memcpy(buf+j, &f1, size);
+			    }
+			    break;
+			}
+#if SIZEOF_LONG_DOUBLE > SIZEOF_DOUBLE
+		    case sizeof(long double):
+			{
+			    /* some systems have problems with memcpy from
+			       the address of an automatic long double,
+			       e.g. ix86/x86_64 Linux with gcc4 */
+			    static long double ld1;
+			    for (i = 0, j = 0; i < len; i++, j += size) {
+				ld1 = (long double) REAL(object)[i];
+				memcpy(buf+j, &ld1, size);
+			    }
+			    break;
+			}
+#endif
+		    default:
+			error("size %d is unknown on this machine", size);
+		}
+		break;
+	    case CPLXSXP:
+		memcpy(buf, COMPLEX(object), size * len);
+		break;
+	    case RAWSXP:
+		memcpy(buf, RAW(object), len); /* size = 1 */
+		break;
 	}
 
-	/* if(!wasopen) con->close(con);
-	 if(isRaw) {
-		R_Visible = TRUE;
-		UNPROTECT(1);
-	} else R_Visible = FALSE; */
+	if(swap && size > 1) {
+	    if (TYPEOF(object) == CPLXSXP)
+		for(i = 0; i < len; i++) {
+		    int sz = size/2;
+		    swapb(buf+sz*2*i, sz);
+		    swapb(buf+sz*(2*i+1), sz);
+		}
+	    else 
+		for(i = 0; i < len; i++) swapb(buf+size*i, size);
+	}
 
-	return ans;
+	/* write it now */
+	/* if(isRaw) {
+	   PROTECT(ans = allocVector(RAWSXP, size*len));
+	   memcpy(RAW(ans), buf, size*len);
+	   } else { */
+	/* n = con->write(buf, size, len, con); */
+	/* n = ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size*len); */
+	if (apr_brigade_write(MR_BBout,NULL,NULL,buf,size*len) != APR_SUCCESS) {
+	    warning("problem writing to connection");
+	}
+	/* } */
+	Free(buf);
+    }
+
+    /* if(!wasopen) con->close(con);
+       if(isRaw) {
+       R_Visible = TRUE;
+       UNPROTECT(1);
+       } else R_Visible = FALSE; */
+
+    return ans;
+}
+
+SEXP RApache_receiveBin(SEXP llen){
+    apr_size_t len, size;
+    unsigned char *buf;
+    SEXP ans;
+
+    size = asInteger(llen);
+
+    /* We manage allocation ourselves since it's possible that either
+     * apache or R would keep it around for longer than necessary. We
+     * certainly don't want to use up twice as much memory for the 
+     * raw message body.
+     */
+    buf = Calloc(size,unsigned char);
+
+    if (buf == NULL){
+	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"memory error");
+	return allocVector(RAWSXP,0);
+    }
+    len = ReadRequestBody(buf,size);
+
+    ans = allocVector(RAWSXP,len);
+    memcpy(RAW(ans),buf,len);
+    Free(buf);
+    return ans;
 }
 
 SEXP RApache_outputErrors(SEXP status,SEXP prefix, SEXP suffix){
@@ -2342,6 +2375,7 @@ static void RegisterCallSymbols() {
 	{"RApache_parseCookies",(DL_FUNC) &RApache_parseCookies,0},
 	{"RApache_getServer",(DL_FUNC) &RApache_getServer,0},
 	{"RApache_sendBin",(DL_FUNC) &RApache_sendBin,3},
+	{"RApache_receiveBin",(DL_FUNC) &RApache_receiveBin,1},
 	{"RApache_outputErrors",(DL_FUNC) &RApache_outputErrors,3},
 	{NULL, NULL, 0}
 	};
