@@ -7,10 +7,9 @@ cat('tr.e { background-color: #eeeeee; border-spacing: 0px; }\n')
 cat('tr.o { background-color: #ffffff; border-spacing: 0px; }\n')
 cat('</style></head><BODY><H1>R Shell for RApache</H1>\n')
 cat('<form enctype=multipart/form-data method="POST">\n')
-cat('<textarea cols=80 rows=10 id="code" name="code"></textarea><br>')
-cat('<input type=submit name=Submit>')
+cat('<input type="text" cols=80 rows=1 id="code" name="code"><br>')
 if (!is.null(POST$code)){
     cat("<hr><pre>\n")
-    try(eval(parse(text=POST$code)))
+    print(try(eval(parse(text=POST$code))))
     cat("</pre>\n")
 }

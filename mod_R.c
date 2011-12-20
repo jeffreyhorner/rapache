@@ -515,6 +515,15 @@ static const char *AP_cmd_RFileEval(cmd_parms *cmd, void *conf, const char *file
 		apr_psprintf( cmd->pool, "p:%s on line %u of %s",
 		    d->directive,d->line_num,d->filename),
 		c->evalcode);
+	part = ap_strstr(c->evalcode,"::");
+	if (part) {
+		c->package = apr_pstrmemdup(cmd->pool,c->evalcode,part - c->evalcode);
+		apr_table_add(
+			MR_OnStartup,
+			apr_psprintf( cmd->pool, "e:%s on line %u of %s",
+				d->directive,d->line_num,d->filename),
+			apr_psprintf(cmd->pool,"library(%s)",c->package));
+	}
     } else {
 	return apr_pstrdup(cmd->pool,"RFileEval: Takes a filename and an expression!");
     }
@@ -727,6 +736,7 @@ static void ShowMessage(const char *s){
 	(ptr_R_WriteConsoleEx)(s,strlen(s),1);
 }
 static void WriteConsoleEx(const char *buf, int size, int errorFlag){
+	if (!size) return; /* seems to mess with output filtering if size is zero, so ignore. */
 	if (MR_Request.r){
 		if (!errorFlag) {
 		    /* ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size); */
@@ -1709,6 +1719,9 @@ SEXP RApache_setHeader(SEXP header, SEXP value){
 	if (value == R_NilValue){
 		apr_table_unset(MR_Request.r->headers_out,key);
 	} else {
+		if (!isString(value)){
+		    value = coerceVector(value,STRSXP);
+		}
 		val = CHAR(STRING_PTR(value)[0]);
 		if (!val) return NewLogical(FALSE);
 		apr_table_set(MR_Request.r->headers_out,key,val);
@@ -2139,7 +2152,7 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 	    s = translateChar(STRING_ELT(object, i));
 	    /* n = con->write(s, sizeof(char), strlen(s) + 1, con); */
 	    /* n = ap_fwrite(MR_Request.r->output_filters,MR_BBout,s,strlen(s)+1); */
-	    if (apr_brigade_write(MR_BBout,NULL,NULL,s,strlen(s)+1) != APR_SUCCESS) {
+	    if (apr_brigade_write(MR_BBout,NULL,NULL,s,strlen(s)) != APR_SUCCESS) {
 		warning("problem writing to connection");
 		break;
 	    }
