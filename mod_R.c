@@ -155,11 +155,6 @@ typedef struct {
 /* Current request_rec */
 static RApacheRequest MR_Request = { NULL, 0, 0, NULL, NULL, NULL, NULL , NULL, -1, NULL, NULL};
 
-/* Option to turn on errors in output */
-static int MR_OutputErrors = 0;
-static const char *MR_ErrorPrefix = "<div style=\"background-color:#eee; padding: 20px 20px 20px 20px; font-size: 14pt; border: 2px solid red;\"><p>";
-static const char *MR_ErrorSuffix = "</p></div>";
-
 /* Number of times apache has parsed config files; we'll do stuff on second pass */
 static int MR_ConfigPass = 1;
 
@@ -212,7 +207,7 @@ sendBin <- function(object, con=stdout(), size=NA_integer_, endian=.Platform$end
 	if (!is.vector(object) || mode(object) == 'list') stop('can only write vector objects')\n\
 	.Call('RApache_sendBin',object,size,swap)}\n\
 receiveBin <- function(length=0) if(length==0) raw(0) else .Call('RApache_receiveBin',length)\n\
-RApacheOutputErrors <- function(status=TRUE,prefix=NULL,suffix=NULL) .Call('RApache_outputErrors',status,prefix,suffix)\n\
+RApacheOutputErrors <- function(status=TRUE,prefix=NULL,suffix=NULL) warning('RApacheOutputErrors has been deprecated!')\n\
 .ResetCGIVars <- function(){\n\
 	re <- as.environment('rapache')\n\
 	delayedAssign('GET', .Call('RApache_parseGet'),re,re)\n\
@@ -568,7 +563,7 @@ static const char *AP_cmd_RSourceOnStartup(cmd_parms *cmd, void *conf, const cha
 }
 
 static const char *AP_cmd_ROutputErrors(cmd_parms *cmd, void *conf){
-	MR_OutputErrors = 1;
+	fprintf(stderr,"Warning: ROutputErrors has been deprecated!");
 	return NULL;
 }
 
@@ -733,31 +728,30 @@ static apr_status_t AP_child_exit(void *data){
  *
  *************************************************************************/
 static void ShowMessage(const char *s){
-	(ptr_R_WriteConsoleEx)(s,strlen(s),1);
+    (ptr_R_WriteConsoleEx)(s,strlen(s),1);
 }
 static void WriteConsoleEx(const char *buf, int size, int errorFlag){
-	if (!size) return; /* seems to mess with output filtering if size is zero, so ignore. */
-	if (MR_Request.r){
-		if (!errorFlag) {
-		    /* ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size); */
-		    apr_brigade_write(MR_BBout,NULL,NULL,buf,size);
-		}
-		else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
-	} else {
-		WriteConsoleStderr(buf,size,errorFlag);
+    if (MR_Request.r){
+	if (!errorFlag) {
+	    /* ap_fwrite(MR_Request.r->output_filters,MR_BBout,buf,size); */
+	    apr_brigade_write(MR_BBout,NULL,NULL,buf,size);
 	}
+	else RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
+    } else {
+	WriteConsoleStderr(buf,size,errorFlag);
+    }
 }
 
-static void WriteConsoleErrorOnly(const char *buf, int size, int errorFlag){
+    static void WriteConsoleErrorOnly(const char *buf, int size, int errorFlag){
 	if (MR_Request.r)
-		RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
+	    RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
 	else
-		WriteConsoleStderr(buf,size,errorFlag);
-}
+	    WriteConsoleStderr(buf,size,errorFlag);
+    }
 
 static void WriteConsoleStderr(const char *buf, int size, int errorFlag){
-	fprintf(stderr,"%*s",size,buf);
-	fflush(stderr);
+    fprintf(stderr,"%*s",size,buf);
+    fflush(stderr);
 }
 
 /* according to R 2.7.2 the true size of buf is size+1 */
@@ -881,82 +875,67 @@ static int SetUpRequest(const request_rec *r){
 
 /* No need to free any memory here since it was allocated out of the request pool */
 static void TearDownRequest(int flush){
-	int output,evalError;
-	apr_bucket *bucket;
-	apr_size_t len;
-	const char *data;
-	apr_status_t status;
+    int evalError;
+    apr_bucket *bucket;
+    apr_size_t len;
+    const char *data;
+    apr_status_t status;
 
-	/* Clean up reading */
-	if (MR_BBin){
-		if (MR_Request.readStarted) {
-			/* TODO: check if this succeeds */
-			ParseEval(".Internal(clearPushBack(stdin()))",R_GlobalEnv,&evalError);
-		}
-		apr_brigade_cleanup(MR_BBin);
-		apr_brigade_destroy(MR_BBin);
+    /* Clean up reading */
+    if (MR_BBin){
+	if (MR_Request.readStarted) {
+	    /* TODO: check if this succeeds */
+	    ParseEval(".Internal(clearPushBack(stdin()))",R_GlobalEnv,&evalError);
 	}
-	MR_BBin = NULL;
+	apr_brigade_cleanup(MR_BBin);
+	apr_brigade_destroy(MR_BBin);
+    }
+    MR_BBin = NULL;
 
-	/* Clean up writing, e.g. flush output */
-	if (MR_BBout){
+    /* Clean up writing, e.g. flush output */
+    if (MR_BBout){
 
-		/* A reason not to flush when the brigade is not empty is to
-		 * preserve error conditons
-		 */
-		if(!APR_BRIGADE_EMPTY(MR_BBout) && flush){
-			ap_filter_flush(MR_BBout,MR_Request.r->output_filters);
-		}
+	/* A reason not to flush when the brigade is not empty is to
+	 * preserve error conditons
+	 */
+	if(!APR_BRIGADE_EMPTY(MR_BBout) && flush){
+	    ap_filter_flush(MR_BBout,MR_Request.r->output_filters);
 	}
+	apr_brigade_cleanup(MR_BBout);
+	apr_brigade_destroy(MR_BBout);
+    }
+    MR_BBout = NULL;
 
+    /* Output errors */
+    if (MR_BBerr){
+	/* Write contents of MR_BBerr to log */
+	for (bucket = APR_BRIGADE_FIRST(MR_BBerr); bucket != APR_BRIGADE_SENTINEL(MR_BBerr); bucket = APR_BUCKET_NEXT(bucket)) {
+	    if (APR_BUCKET_IS_EOS(bucket)) {
+		break;
+	    }
 
-	/* Output errors */
-	if (MR_BBerr){
-		if (MR_Request.outputErrors==-1){
-			/* Module-wide config */
-			output = MR_OutputErrors;
-		} else {
-			/* Per-request config */
-			output = MR_Request.outputErrors;
-		}
+	    /* We can't do much with this. */
+	    if (APR_BUCKET_IS_FLUSH(bucket)) {
+		continue;
+	    }
 
-		if (output){
-		    if(!APR_BRIGADE_EMPTY(MR_BBerr) && flush){
-			ap_filter_flush(MR_BBerr,MR_Request.r->output_filters);
-		    }
-		} else {
-			/* Write contents of MR_BBerr to log */
-			/* ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,msg); */
-			for (bucket = APR_BRIGADE_FIRST(MR_BBerr); bucket != APR_BRIGADE_SENTINEL(MR_BBerr); bucket = APR_BUCKET_NEXT(bucket)) {
-				if (APR_BUCKET_IS_EOS(bucket)) {
-					break;
-				}
-
-				/* We can't do much with this. */
-				if (APR_BUCKET_IS_FLUSH(bucket)) {
-					continue;
-				}
-
-				/* read */
-				status = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
-				if (status != APR_SUCCESS){
-					fprintf(stderr,"WARNING! apr_bucket_read returned %d\n",status);
-				}
-				status = apr_file_write(MR_Request.r->server->error_log,data,&len);
-				if (status != APR_SUCCESS){
-					fprintf(stderr,"WARNING! apr_file_write returned %d\n",status);
-				}
-			}
-			apr_file_flush(MR_Request.r->server->error_log);
-		}
-
-		apr_brigade_cleanup(MR_BBerr);
-		apr_brigade_destroy(MR_BBerr);
+	    /* read */
+	    status = apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
+	    if (status != APR_SUCCESS){
+		fprintf(stderr,"WARNING! apr_bucket_read returned %d\n",status);
+	    }
+	    status = apr_file_write(MR_Request.r->server->error_log,data,&len);
+	    if (status != APR_SUCCESS){
+		fprintf(stderr,"WARNING! apr_file_write returned %d\n",status);
+	    }
 	}
-	MR_BBerr = NULL;
+	apr_file_flush(MR_Request.r->server->error_log);
+	apr_brigade_cleanup(MR_BBerr);
+	apr_brigade_destroy(MR_BBerr);
+    }
+    MR_BBerr = NULL;
 
-	bzero(&MR_Request,sizeof(RApacheRequest));
-	MR_Request.outputErrors = -1;
+    bzero(&MR_Request,sizeof(RApacheRequest));
 
     if (MR_mutex != NULL) apr_thread_mutex_unlock(MR_mutex);
 }
@@ -965,162 +944,132 @@ static void TearDownRequest(int flush){
  * value.
  */
 static int RApacheResponseError(char *msg){
-	int output;
-	if (MR_Request.outputErrors==-1){
-		/* Module-wide config */
-		output = MR_OutputErrors;
-	} else {
-		/* Per-request config */
-		output = MR_Request.outputErrors;
-	}
-
-	if (msg) RApacheError(msg);
-	if (output){
-		TearDownRequest(1);
-		return DONE; 
-	} else {
-		TearDownRequest(0); /* delete all buffered output */
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
+    if (msg) RApacheError(msg);
+    TearDownRequest(0); /* delete all buffered output */
+    return HTTP_INTERNAL_SERVER_ERROR;
 }
 
 static void RApacheError(char *msg){
-	int output;
 
-	if (!msg) return;
+    if (!msg) return;
 
-	if (MR_BBerr == NULL){
-		/* Allocated out of Global rApache pool */
-		if ((MR_BBerr = apr_brigade_create(MR_Pool, MR_Bucket_Alloc)) == NULL){
-			fprintf(stderr,"FATAL ERROR! RApacheError cannot create MR_BBerr brigade\n");
-			exit(-1);
-		}
-		if (MR_Request.outputErrors==-1){
-			/* Module-wide config */
-			output = MR_OutputErrors;
-		} else {
-			/* Per-request config */
-			output = MR_Request.outputErrors;
-		}
-		if (output && MR_BBout){
-			char *prefix = (MR_Request.errorPrefix)? MR_Request.errorPrefix : (char *)MR_ErrorPrefix;
-			char *suffix = (MR_Request.errorSuffix)? MR_Request.errorSuffix : (char *)MR_ErrorSuffix;
-			apr_brigade_puts(MR_BBout,NULL,NULL,prefix);
-			apr_brigade_puts(MR_BBout,NULL,NULL,"Oops!!! <b>rApache</b> has something to tell you. View source and read the HTML comments at the end.");
-			apr_brigade_puts(MR_BBout,NULL,NULL,suffix);
-		} else {
-			ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"rApache Notice!");
-		}
+    if (MR_BBerr == NULL){
+	/* Allocated out of Global rApache pool */
+	if ((MR_BBerr = apr_brigade_create(MR_Pool, MR_Bucket_Alloc)) == NULL){
+	    fprintf(stderr,"FATAL ERROR! RApacheError cannot create MR_BBerr brigade\n");
+	    exit(-1);
 	}
-	if (apr_brigade_puts(MR_BBerr,NULL,NULL,msg) != APR_SUCCESS){
-		fprintf(stderr,"FATAL ERROR! RApacheError cannot write to MR_BBerr brigade\n");
-		exit(-1);
-	}
+	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"rApache Notice!");
+    }
+    if (apr_brigade_puts(MR_BBerr,NULL,NULL,msg) != APR_SUCCESS){
+	fprintf(stderr,"FATAL ERROR! RApacheError cannot write to MR_BBerr brigade\n");
+	exit(-1);
+    }
 }
 
 static void init_R(apr_pool_t *p){
-	char *argv[] = {"mod_R", "--gui=none", "--slave", "--silent", "--vanilla","--no-readline"};
-	int argc = sizeof(argv)/sizeof(argv[0]);
-	int threaded;
-	apr_status_t rv;
+    char *argv[] = {"mod_R", "--gui=none", "--slave", "--silent", "--vanilla","--no-readline"};
+    int argc = sizeof(argv)/sizeof(argv[0]);
+    int threaded;
+    apr_status_t rv;
 
-	if (MR_InitStatus != 0) return;
+    if (MR_InitStatus != 0) return;
 
-	MR_InitStatus = 1;
+    MR_InitStatus = 1;
 
-	InitRApachePool(); /* possibly done already if REvalOnStartup or RSourceOnStartup set */
+    InitRApachePool(); /* possibly done already if REvalOnStartup or RSourceOnStartup set */
 
-	/* Setup thread mutex if we're running in a threaded server.*/
-	rv = ap_mpm_query(AP_MPMQ_IS_THREADED,&threaded);
+    /* Setup thread mutex if we're running in a threaded server.*/
+    rv = ap_mpm_query(AP_MPMQ_IS_THREADED,&threaded);
+    if (rv != APR_SUCCESS){
+	fprintf(stderr,"Fatal Error: Can't query the server to dermine if it's threaded!\n");
+	exit(-1);
+    }
+
+    if (threaded){
+	rv = apr_thread_mutex_create(&MR_mutex,APR_THREAD_MUTEX_DEFAULT,MR_Pool);
 	if (rv != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: Can't query the server to dermine if it's threaded!\n");
-		exit(-1);
+	    fprintf(stderr,"Fatal Error: unable to create R mutex!\n");
+	    exit(-1);
 	}
+    }
 
-	if (threaded){
-		rv = apr_thread_mutex_create(&MR_mutex,APR_THREAD_MUTEX_DEFAULT,MR_Pool);
-		if (rv != APR_SUCCESS){
-			fprintf(stderr,"Fatal Error: unable to create R mutex!\n");
-			exit(-1);
-		}
-	}
+    if (apr_env_set("R_HOME",R_HOME,p) != APR_SUCCESS){
+	fprintf(stderr,"Fatal Error: could not set R_HOME from init!\n");
+	exit(-1);
+    }
 
-	if (apr_env_set("R_HOME",R_HOME,p) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not set R_HOME from init!\n");
-		exit(-1);
-	}
+    /* Don't let R set up its own signal handlers */
+    R_SignalHandlers = 0;
 
-	/* Don't let R set up its own signal handlers */
-	R_SignalHandlers = 0;
+    InitTempDir(p);
 
-	InitTempDir(p);
+    Rf_initEmbeddedR(argc, argv);
 
-	Rf_initEmbeddedR(argc, argv);
+    /* redirect R's inputs and outputs. Print to stderr during startup.  */
+    R_Consolefile = NULL;
+    R_Outputfile = NULL;
+    ptr_R_Suicide = Suicide;
+    ptr_R_ShowMessage = ShowMessage;
+    ptr_R_WriteConsole = NULL;
+    ptr_R_WriteConsoleEx = WriteConsoleStderr;
+    ptr_R_ReadConsole = ReadConsole;
+    ptr_R_ResetConsole = ptr_R_FlushConsole = ptr_R_ClearerrConsole = NoOpConsole;
+    ptr_R_Busy = NoOpBusy;
+    ptr_R_CleanUp = NoOpCleanUp;
+    ptr_R_ShowFiles = NoOpShowFiles;
+    ptr_R_ChooseFile = NoOpChooseFile;
+    ptr_R_EditFile = NoOpEditFile;
+    ptr_R_loadhistory = ptr_R_savehistory = ptr_R_addhistory = NoOpHistoryFun;
 
-	/* redirect R's inputs and outputs. Print to stderr during startup.  */
-	R_Consolefile = NULL;
-	R_Outputfile = NULL;
-	ptr_R_Suicide = Suicide;
-	ptr_R_ShowMessage = ShowMessage;
-	ptr_R_WriteConsole = NULL;
-	ptr_R_WriteConsoleEx = WriteConsoleStderr;
-	ptr_R_ReadConsole = ReadConsole;
-	ptr_R_ResetConsole = ptr_R_FlushConsole = ptr_R_ClearerrConsole = NoOpConsole;
-	ptr_R_Busy = NoOpBusy;
-	ptr_R_CleanUp = NoOpCleanUp;
-	ptr_R_ShowFiles = NoOpShowFiles;
-	ptr_R_ChooseFile = NoOpChooseFile;
-	ptr_R_EditFile = NoOpEditFile;
-	ptr_R_loadhistory = ptr_R_savehistory = ptr_R_addhistory = NoOpHistoryFun;
+    #ifdef CSTACK_DEFNS
+    /* Don't do any stack checking */
+    R_CStackLimit = -1;
+    #endif
 
-	#ifdef CSTACK_DEFNS
-	/* Don't do any stack checking */
-	R_CStackLimit = -1;
-	#endif
+    RegisterCallSymbols();
 
-	RegisterCallSymbols();
+    InitRApacheEnv();
 
-	InitRApacheEnv();
+    /* Execute all *OnStartup code */
+    apr_table_do(OnStartupCallback,NULL,MR_OnStartup,NULL);
+    apr_table_clear(MR_OnStartup);
 
-	/* Execute all *OnStartup code */
-	apr_table_do(OnStartupCallback,NULL,MR_OnStartup,NULL);
-	apr_table_clear(MR_OnStartup);
+    /* For the RFile directive */
+    if (!(MR_ParsedFileCache = apr_hash_make(MR_Pool))){
+	fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_Pool!\n");
+	exit(-1);
+    }
 
-	/* For the RFile directive */
-	if (!(MR_ParsedFileCache = apr_hash_make(MR_Pool))){
-		fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_Pool!\n");
-		exit(-1);
-	}
+    /* Handler Cache */
+    if (!(MR_HandlerCache = apr_hash_make(MR_Pool))){
+	fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_Pool!\n");
+	exit(-1);
+    }
 
-	/* Handler Cache */
-	if (!(MR_HandlerCache = apr_hash_make(MR_Pool))){
-		fprintf(stderr,"Fatal Error: could not apr_hash_make() from MR_Pool!\n");
-		exit(-1);
-	}
+    /* Initialize libapreq2 */
+    apreq_initialize(MR_Pool);
 
-	/* Initialize libapreq2 */
-	apreq_initialize(MR_Pool);
-
-	/* Lastly, now redirect R's output */
-	ptr_R_WriteConsoleEx = WriteConsoleEx;
-	ptr_R_WriteConsole = NULL;
+    /* Lastly, now redirect R's output */
+    ptr_R_WriteConsoleEx = WriteConsoleEx;
+    ptr_R_WriteConsole = NULL;
 }
 
 void InitRApachePool(void){
 
-	if (MR_Pool) return;
+    if (MR_Pool) return;
 
-	if (apr_pool_create(&MR_Pool,NULL) != APR_SUCCESS){
-		fprintf(stderr,"Fatal Error: could not apr_pool_create(MR_Pool)!\n");
-		exit(-1);
-	}
-	MR_Bucket_Alloc = apr_bucket_alloc_create(MR_Pool);
+    if (apr_pool_create(&MR_Pool,NULL) != APR_SUCCESS){
+	fprintf(stderr,"Fatal Error: could not apr_pool_create(MR_Pool)!\n");
+	exit(-1);
+    }
+    MR_Bucket_Alloc = apr_bucket_alloc_create(MR_Pool);
 
-	/* Table to hold *OnStartup code. Allocate 8 entries. */
-	if (!(MR_OnStartup = apr_table_make(MR_Pool,8))){
-		fprintf(stderr,"Fatal Error: could not apr_table_make(MR_Pool)!\n");
-		exit(-1);
-	}
+    /* Table to hold *OnStartup code. Allocate 8 entries. */
+    if (!(MR_OnStartup = apr_table_make(MR_Pool,8))){
+	fprintf(stderr,"Fatal Error: could not apr_table_make(MR_Pool)!\n");
+	exit(-1);
+    }
 
 }
 
@@ -2349,32 +2298,6 @@ SEXP RApache_receiveBin(SEXP llen){
     return ans;
 }
 
-SEXP RApache_outputErrors(SEXP status,SEXP prefix, SEXP suffix){
-	if (isLogical(status)){
-	   	if ((LOGICAL(status)[0] == TRUE)){
-			MR_Request.outputErrors = 1;
-		} else {
-			MR_Request.outputErrors = 0;
-		}
-	} else {
-		warning("ROutputErrors called with non-logical status!");
-	}
-
-	if (isString(prefix)){
-		MR_Request.errorPrefix = apr_pstrdup(MR_Request.r->pool,CHAR(STRING_PTR(prefix)[0]));
-	} else if (!isNull(prefix)) {
-		warning("ROutputErrors called with non-string prefix!");
-	}
-
-	if (isString(suffix)){
-		MR_Request.errorSuffix = apr_pstrdup(MR_Request.r->pool,CHAR(STRING_PTR(suffix)[0]));
-	} else if (!isNull(suffix)) {
-		warning("ROutputErrors called with non-string suffix!");
-	}
-
-	return R_NilValue;
-}
-
 static void RegisterCallSymbols() {
 	R_CallMethodDef callMethods[]  = {
 	{"RApache_setHeader", (DL_FUNC) &RApache_setHeader, 2},
@@ -2389,7 +2312,6 @@ static void RegisterCallSymbols() {
 	{"RApache_getServer",(DL_FUNC) &RApache_getServer,0},
 	{"RApache_sendBin",(DL_FUNC) &RApache_sendBin,3},
 	{"RApache_receiveBin",(DL_FUNC) &RApache_receiveBin,1},
-	{"RApache_outputErrors",(DL_FUNC) &RApache_outputErrors,3},
 	{NULL, NULL, 0}
 	};
 	R_registerRoutines(R_getEmbeddingDllInfo(),NULL,callMethods,NULL,NULL);
