@@ -1899,8 +1899,8 @@ static SEXP parsePost(int returnPost) {
 		return (returnPost)?AprTableToList(MR_Request.postTable):MR_Request.filesVar;
 	}
 
-	/* Don't parse if not a POST */
-	if (strcmp(MR_Request.r->method,"POST") != 0) {
+	/* Don't parse if not a POST or PUT */
+	if (strcmp(MR_Request.r->method,"POST") != 0 && strcmp(MR_Request.r->method,"PUT") != 0) {
 		MR_Request.postTable = NULL;
 		MR_Request.filesVar = R_NilValue;
 		return R_NilValue;
