@@ -1,0 +1,2 @@
+# Add missing modules here
+#LoadModule mime_module /usr/lib/apache2/modules/mod_mime.so
