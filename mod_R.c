@@ -325,8 +325,8 @@ static const command_rec MR_cmds[] = {
 	AP_INIT_TAKE1("RFileEval", AP_cmd_RFileEval, NULL, OR_OPTIONS, "File and code to evalueate on each request."),
 	AP_INIT_TAKE1("REvalOnStartup", AP_cmd_REvalOnStartup, NULL, OR_OPTIONS,"R expressions to evaluate on start."),
 	AP_INIT_TAKE1("RSourceOnStartup", AP_cmd_RSourceOnStartup, NULL, OR_OPTIONS,"File containing R expressions to evaluate on start."),
-	AP_INIT_NO_ARGS("ROutputErrors", AP_cmd_ROutputErrors, NULL, OR_OPTIONS, "Option to print error messages to output."),
-	AP_INIT_NO_ARGS("RPreserveEnv", AP_cmd_RPreserveEnv, NULL, OR_OPTIONS, "Option to preserve handler environment across requests."),
+	AP_INIT_NO_ARGS("ROutputErrors", AP_cmd_ROutputErrors, NULL, OR_OPTIONS, "Deprecated. Option to print error messages to output."),
+	AP_INIT_NO_ARGS("RPreserveEnv", AP_cmd_RPreserveEnv, NULL, OR_OPTIONS, "Deprecated. Option to preserve handler environment across requests."),
 	{ NULL},
 };
 
@@ -1954,7 +1954,7 @@ SEXP RApache_parsePost(){ return parsePost(1); }
 
 SEXP RApache_parseFiles(){ return parsePost(0); }
 
-SEXP RApache_parseCookies(SEXP sreq){
+SEXP RApache_parseCookies(){
 	const char *cookies;
 
 	if (!MR_Request.r) return R_NilValue;
