@@ -1,6 +1,7 @@
 app <- function(env){
     req <- Request$new(env)
     res <- Response$new()
+    cat('hello',file=stderr())
     envstr <- paste(capture.output(str(as.list(env)),file=NULL),collapse='\n')
     poststr <- paste(capture.output(str(req$POST()),file=NULL),collapse='\n')
     getstr <- paste(capture.output(str(req$GET()),file=NULL),collapse='\n')
