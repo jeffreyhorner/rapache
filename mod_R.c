@@ -115,7 +115,7 @@ typedef struct {
 	char *evalcode;
 	char *package;
 	char *handlerKey;
-	int preserveEnv;
+	char *cmdpath;
 } RApacheDirective;
 
 typedef struct {
@@ -143,6 +143,7 @@ typedef struct {
 	int outputErrors;
 	char *errorPrefix;
 	char *errorSuffix;
+	RApacheHandler *handler;
 } RApacheRequest;
 
 /*************************************************************************
@@ -153,7 +154,7 @@ typedef struct {
  *************************************************************************/
 
 /* Current request_rec */
-static RApacheRequest MR_Request = { NULL, 0, 0, NULL, NULL, NULL, NULL , NULL, -1, NULL, NULL};
+static RApacheRequest MR_Request = { NULL, 0, 0, NULL, NULL, NULL, NULL , NULL, -1, NULL, NULL, NULL};
 
 /* Number of times apache has parsed config files; we'll do stuff on second pass */
 static int MR_ConfigPass = 1;
@@ -206,7 +207,7 @@ sendBin <- function(object, con=stdout(), size=NA_integer_, endian=.Platform$end
 	swap <- endian != .Platform$endian\n\
 	if (!is.vector(object) || mode(object) == 'list') stop('can only write vector objects')\n\
 	.Call('RApache_sendBin',object,size,swap)}\n\
-receiveBin <- function(length=0) if(length==0) raw(0) else .Call('RApache_receiveBin',length)\n\
+receiveBin <- function(length=8192) if(length==0) raw(0) else .Call('RApache_receiveBin',length)\n\
 RApacheOutputErrors <- function(status=TRUE,prefix=NULL,suffix=NULL) warning('RApacheOutputErrors has been deprecated!')\n\
 .ResetCGIVars <- function(){\n\
 	re <- as.environment('rapache')\n\
@@ -435,6 +436,7 @@ static const char *AP_cmd_RHandler(cmd_parms *cmd, void *conf, const char *handl
 		function = handler;
 	}
 	c->function = apr_pstrdup(cmd->pool,function);
+	c->cmdpath = apr_pstrdup(cmd->pool,cmd->path);
 
 	return NULL;
 }
@@ -458,6 +460,7 @@ static const char *AP_cmd_RFileHandler(cmd_parms *cmd, void *conf, const char *h
 	if (apr_stat(&finfo,c->file,APR_FINFO_TYPE,cmd->pool) != APR_SUCCESS){
 		return apr_psprintf(cmd->pool,"RFileHandler: %s file not found!",c->file);
 	}
+	c->cmdpath = apr_pstrdup(cmd->pool,cmd->path);
 	return NULL;
 }
 
@@ -489,6 +492,7 @@ static const char *AP_cmd_REval(cmd_parms *cmd, void *conf, const char *tmpcode)
 			d->directive,d->line_num,d->filename),
 		c->evalcode);
 
+	c->cmdpath = apr_pstrdup(cmd->pool,cmd->path);
 	return NULL;
 }
 
@@ -526,6 +530,7 @@ static const char *AP_cmd_RFileEval(cmd_parms *cmd, void *conf, const char *file
     if (apr_stat(&finfo,c->file,APR_FINFO_TYPE,cmd->pool) != APR_SUCCESS){
 	return apr_psprintf(cmd->pool,"RFileEval: %s file not found!",c->file);
     }
+    c->cmdpath = apr_pstrdup(cmd->pool,cmd->path);
     return NULL;
 }
 
@@ -568,8 +573,7 @@ static const char *AP_cmd_ROutputErrors(cmd_parms *cmd, void *conf){
 }
 
 static const char *AP_cmd_RPreserveEnv(cmd_parms *cmd, void *conf){
-	RApacheDirective *c = (RApacheDirective *)conf;
-	c->preserveEnv = 1;
+	fprintf(stderr,"Warning: RPreserveEnv has been deprecated!");
 	return NULL;
 }
 
@@ -594,110 +598,75 @@ static void AP_hook_child_init(apr_pool_t *p, server_rec *s){
 
 static int AP_hook_request_handler (request_rec *r)
 {
-	RApacheHandlerType handlerType = 0;
-	RApacheHandler *h;
-	SEXP ret;
-	int evalError=1,fileParsed=1;
+    RApacheHandlerType handlerType = 0;
+    RApacheHandler *h;
+    SEXP ret=R_NilValue;
+    int evalError=1,fileParsed=1;
 
-	/* Only handle our handlers */
-	if (strcmp(r->handler,"r-handler")==0) handlerType = R_HANDLER;
-	else if (strcmp(r->handler,"r-script")==0) handlerType = R_SCRIPT;
-	else if (strcmp(r->handler,"r-info")==0) handlerType = R_INFO;
-	else return DECLINED;
+    /* Only handle our handlers */
+    if (strcmp(r->handler,"r-handler")==0) handlerType = R_HANDLER;
+    else if (strcmp(r->handler,"r-script")==0) handlerType = R_SCRIPT;
+    else if (strcmp(r->handler,"r-info")==0) handlerType = R_INFO;
+    else return DECLINED;
 
-	if (!SetUpRequest(r)) return HTTP_INTERNAL_SERVER_ERROR;
+    if (!SetUpRequest(r)) return HTTP_INTERNAL_SERVER_ERROR;
+    h = MR_Request.handler;
 
-	if (handlerType == R_INFO){
-		int val = RApacheInfo();
-		TearDownRequest(1);
-		return val;
-	}
+    if (handlerType == R_INFO){
+	int val = RApacheInfo();
+	TearDownRequest(1);
+	return val;
+    }
 
-	/* Get cached handler object from request */
-	h = GetHandlerFromRequest(r);
+    RefreshRApacheEnv(); /* ensures we're on search path, updates CGI vars, etc. */
 
-	if (!h) return RApacheResponseError(NULL);
+    /* Prepare file if needed */
+    if (h->directive->file){
+	fileParsed = 1;
+	if (!PrepareFileExprs(h,r,&fileParsed)) return RApacheResponseError(NULL);
 
-	RefreshRApacheEnv(); /* ensures we're on search path, updates CGI vars, etc. */
+	if (fileParsed || (!h->directive->function && !h->directive->evalcode)){
+	    if (h->envir) R_ReleaseObject(h->envir);
+	    h->envir = NewEnv(R_GlobalEnv);
+	    R_PreserveObject(h->envir);
 
-	/* Prepare file if needed */
-	if (h->directive->file){
-		fileParsed = 1;
-		if (!PrepareFileExprs(h,r,&fileParsed)) return RApacheResponseError(NULL);
-		
-		/* Preserved environments are per file */
-		if (h->directive->preserveEnv){
-		   if (!h->parsedFile->envir) R_PreserveObject(h->parsedFile->envir = NewEnv(R_GlobalEnv));
-		   h->envir = h->parsedFile->envir;
-		} else {
-		   h->envir = NewEnv(R_GlobalEnv);
-		}
-
-		/* Do we need to eval parsed file?
-		 * Yes, if env is not preserved.
-		 * Yes, if file newly parsed.
-		 * Yes, if there's no function to eval.
-		 */
-		if (!h->directive->preserveEnv || fileParsed || !h->directive->function){
-			PROTECT(h->envir);
-			PROTECT(h->parsedFile->exprs); /* already preserved in PrepareFileExprs, but... */
-			evalError = 1;
-			ret = EvalExprs(h->parsedFile->exprs,h->envir,&evalError);
-			UNPROTECT(2);
-			if (evalError) {
-				/*PrintWarnings();*/
-				PrintTraceback();
-				return RApacheResponseError(NULL);
-			}
-		}
-	} else {
-
-		/* No file means a function found in the either a global 
-		 * environment or an attached package.
-		 */ 
-		h->envir = NewEnv(R_GlobalEnv);
-	}
-
-	/* Eval handler expression if set */
-	if (h->directive->function){
-		if (!PrepareHandlerExpr(h,r,handlerType)) {
-			return RApacheResponseError(NULL);
-		}
-		PROTECT(h->envir);
-		PROTECT(h->expr);
-		evalError=1;
-		ret = EvalExprs(h->expr,h->envir,&evalError);
-		UNPROTECT(2);
-
-		if (evalError) {
-			/*PrintWarnings();*/
-			PrintTraceback();
-			return RApacheResponseError(NULL);
-		}
-	} else if (h->directive->evalcode){
-	    PROTECT(h->envir);
-	    evalError=1;
-	    ret = ParseEval(h->directive->evalcode,h->envir,&evalError);
-	    UNPROTECT(1);
-
+	    evalError = 1;
+	    ret = EvalExprs(h->parsedFile->exprs,h->envir,&evalError);
 	    if (evalError) {
-		    /*PrintWarnings();*/
-		    PrintTraceback();
-		    return RApacheResponseError(NULL);
+		/*PrintWarnings();*/
+		PrintTraceback();
+		return RApacheResponseError(NULL);
 	    }
 	}
+    } else {
+	h->envir = R_GlobalEnv;
+    }
 
-	/*PrintWarnings();*/
-
-	if (IS_INTEGER(ret) && LENGTH(ret) == 1){
-		TearDownRequest(1);
-		return asInteger(ret);
-	} else if (inherits(ret,"try-error")){
-		return RApacheResponseError(apr_psprintf(r->pool,"Function %s returned an object of 'try-error'.\n",h->directive->function));
-	} else {
-		TearDownRequest(1);
-		return DONE; /* user didn't specify return code, so presume done.*/
+    /* Eval handler expression if set */
+    if (h->directive->function || h->directive->evalcode){
+	if (!PrepareHandlerExpr(h,r,handlerType)) {
+	    return RApacheResponseError(NULL);
 	}
+	ret = EvalExprs(h->expr,h->envir,&evalError);
+
+	if (evalError) {
+	    /*PrintWarnings();*/
+	    PrintTraceback();
+	    return RApacheResponseError(NULL);
+	}
+    }
+
+    /*PrintWarnings();*/
+
+    if (IS_INTEGER(ret) && LENGTH(ret) == 1){
+	TearDownRequest(1);
+	return asInteger(ret);
+    } else if (inherits(ret,"try-error")){
+	return RApacheResponseError(apr_psprintf(r->pool,"Function %s returned an object of 'try-error'.\n",h->directive->function));
+    } else {
+	TearDownRequest(1);
+	return DONE; /* user didn't specify return code, so presume done.*/
+    }
 }
 
 static apr_status_t AP_child_exit(void *data){
@@ -742,12 +711,12 @@ static void WriteConsoleEx(const char *buf, int size, int errorFlag){
     }
 }
 
-    static void WriteConsoleErrorOnly(const char *buf, int size, int errorFlag){
-	if (MR_Request.r)
-	    RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
-	else
-	    WriteConsoleStderr(buf,size,errorFlag);
-    }
+static void WriteConsoleErrorOnly(const char *buf, int size, int errorFlag){
+    if (MR_Request.r)
+	RApacheError(apr_pstrmemdup(MR_Request.r->pool,buf,size));
+    else
+	WriteConsoleStderr(buf,size,errorFlag);
+}
 
 static void WriteConsoleStderr(const char *buf, int size, int errorFlag){
     fprintf(stderr,"%*s",size,buf);
@@ -865,9 +834,16 @@ static int SetUpRequest(const request_rec *r){
 
     /* Set output brigade */
     if ((MR_BBout = apr_brigade_create(r->pool, r->connection->bucket_alloc)) == NULL){
-	ap_log_rerror(APLOG_MARK,APLOG_ERR,0,r,"RApache MR_BBout error!");
-	if (MR_mutex != NULL) apr_thread_mutex_unlock(MR_mutex);
+	RApacheError("RApache MR_BBout error!");
+	TearDownRequest(0);
 	return 0;
+    }
+
+    MR_Request.handler = GetHandlerFromRequest(r);
+
+    if (!MR_Request.handler){
+	TearDownRequest(0);
+       	return 0;
     }
 
     return 1;
@@ -1192,6 +1168,7 @@ static SEXP EvalExprs(SEXP exprs, SEXP env, int *evalError){
 	}
 
 	PROTECT(exprs);
+	PROTECT(env);
 	if (isLanguage(exprs)){
 		lastval = R_tryEval(exprs,env,evalError);
 	} else if (isExpression(exprs) && length(exprs)){
@@ -1204,7 +1181,7 @@ static SEXP EvalExprs(SEXP exprs, SEXP env, int *evalError){
 		fprintf(stderr,"Internal Error! EvalExprs() called with bad exprs\n");
 		fflush(stderr);
 	}
-	UNPROTECT(1);
+	UNPROTECT(2);
 	return(lastval);
 }
 
@@ -1282,51 +1259,55 @@ static int PrepareFileExprs(RApacheHandler *h, const request_rec *r, int *filePa
  * This version is better suited to printing warnings,errors, and traceback.
  */
 static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handlerType){
-	static char const fmt1[]="%s()";
-	static char const fmt2[]="%s::%s()";
-	static char const fmt3[]="%s(file='%s',envir=.rAenv)";
-	static char const fmt4[]="%s::%s(file='%s',envir=.rAenv)";
-	char *text;
-	int parseError;
+    static char const fmt1[]="%s()";
+    static char const fmt2[]="%s::%s()";
+    static char const fmt3[]="%s(file='%s',envir=.rAenv)";
+    static char const fmt4[]="%s::%s(file='%s',envir=.rAenv)";
+    char *text;
+    int parseError=1;
 
-	if (handlerType == R_SCRIPT){
+    if (!h->expr){
+	if (h->directive->function){
+	    if (handlerType == R_SCRIPT){
 		if (h->directive->package){
-			text = Calloc(strlen(fmt4)+strlen(h->directive->package)+strlen(h->directive->function)+strlen(r->filename),char);
-			sprintf(text,fmt4,h->directive->package,h->directive->function,r->filename);
+		    text = Calloc(strlen(fmt4)+strlen(h->directive->package)+strlen(h->directive->function)+strlen(r->filename),char);
+		    sprintf(text,fmt4,h->directive->package,h->directive->function,r->filename);
 		} else{
-			text = Calloc(strlen(fmt3)+strlen(h->directive->function)+strlen(r->filename),char);
-			sprintf(text,fmt3,h->directive->function,r->filename);
+		    text = Calloc(strlen(fmt3)+strlen(h->directive->function)+strlen(r->filename),char);
+		    sprintf(text,fmt3,h->directive->function,r->filename);
 		}
-	} else {
+	    } else {
 		if (h->directive->package){
-			text = Calloc(strlen(fmt2)+strlen(h->directive->package)+strlen(h->directive->function),char);
-			sprintf(text,fmt2,h->directive->package,h->directive->function);
+		    text = Calloc(strlen(fmt2)+strlen(h->directive->package)+strlen(h->directive->function),char);
+		    sprintf(text,fmt2,h->directive->package,h->directive->function);
 		} else{
-			text = Calloc(strlen(fmt1)+strlen(h->directive->function),char);
-			sprintf(text,fmt1,h->directive->function);
+		    if (h->directive->file && MyfindFun(install(h->directive->function),h->envir) == R_UnboundValue){
+			RApacheError(apr_psprintf(MR_Request.r->pool,"Cannot find function '%s' in file '%s'\n",h->directive->function,h->directive->file));
+			return 0;
+		    }
+		    text = Calloc(strlen(fmt1)+strlen(h->directive->function),char);
+		    sprintf(text,fmt1,h->directive->function);
 		}
+	    }
+	    h->expr = ParseText(text,&parseError);
+	    Free(text);
+	} else if (h->directive->evalcode){
+	    h->expr = ParseText(h->directive->evalcode,&parseError);
 	}
 
-	PROTECT(h->envir);
-	PROTECT(h->expr = ParseText(text,&parseError));
-	Free(text);
+	if (!parseError)
+	    R_PreserveObject(h->expr);
+	else
+	    return 0;
+    }
 
-	if (!parseError) {
-		if (handlerType == R_SCRIPT){
-			/* Monkey with expression and place the environment in there */
-			defineVar(install(".rAfile"),mkString(r->filename),h->envir);
-			defineVar(install(".rAenv"),h->envir,h->envir);
-		}
-		R_PreserveObject(h->expr);
-		UNPROTECT(2);
-		return 1;
-	} else {
-		UNPROTECT(2);
-		return 0;
-		/* Uh Oh! */
-	}
-	/* not reached */
-	return 0;
+    if (handlerType == R_SCRIPT){
+	/* Monkey with expression and place the environment in there */
+	defineVar(install(".rAfile"),mkString(r->filename),h->envir);
+	defineVar(install(".rAenv"),h->envir,h->envir);
+    }
+
+    return 1;
 }
 
 static void RefreshRApacheEnv(){
@@ -1577,7 +1558,7 @@ EXEC("lapply(attr(installed.packages(),'dimnames')[[1]],zebrifyPackage)");
 /* Footer */
 PUTS("<h2><a name=\"License\"></a>License</h2>");
 PUTS("<pre>");
-PUTS("Copyright 2005  The Apache Software Foundation\n");
+PUTS("Copyright 2011-2012 Vanderbilt University\n");
 PUTS("\n");
 PUTS("Licensed under the Apache License, Version 2.0 (the \"License\");\n");
 PUTS("you may not use this file except in compliance with the License.\n");
@@ -1979,7 +1960,7 @@ SEXP RApache_parseCookies(){
 #define OFFMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
 #define TIMMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[1] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
 SEXP RApache_getServer(){
-	int len = 33, i = 0;
+	int len = 34, i = 0;
 	SEXP names, val, class;
 	if (!MR_Request.r) return R_NilValue;
 	if (MR_Request.serverVar) return MR_Request.serverVar;
@@ -2020,6 +2001,7 @@ SEXP RApache_getServer(){
 	TIMMBR("mtime",MR_Request.r->mtime);
 	STRMBR("remote_ip",MR_Request.r->connection->remote_ip);
 	STRMBR("remote_host",MR_Request.r->connection->remote_host);
+	STRMBR("cmd_path",MR_Request.handler->directive->cmdpath);
 
 	SET_NAMES(MR_Request.serverVar,names);
 	UNPROTECT(2);
