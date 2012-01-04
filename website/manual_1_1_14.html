@@ -56,11 +56,11 @@
     </div>
 
     <div class="twelve columns content offset-by-one">
-<header><h1>documentation for version 1.1.15</h1></header>
+<header><h1>documentation</h1></header>
 
 <p><i>
 This manual covers installation, configuration, and various uses
-for rApache version 1.1.15. <a href="manual_1_1_14.html">Read this manual</a> for all prior versions. This
+of the rApache software distribution and supporting packages. This
 document is intended to contain the most up-to-date information about
 rApache. Comments, suggestions should be forwarded to <a
 href="mailto:jeff.horner@vanderbilt.edu">the maintainer</a>.
@@ -99,12 +99,8 @@ module, Java Server Pages, and Python's psp module. brew can be used
 stand-alone as well, so it's not part of the distribution.
 </p>
 
-<h4><a name="Rook"></a>1.1 <a title="Back to top" href="#top">Rook Support</a></h4>
-<p>
-<a href="http://cran.us.r-project.org/web/packages/Rook/index.html">Rook</a> is an R package that defines a specification and set of convenience objects for running R web applications on various web servers without the need to modify your code. Thus, you can write and run Rook apps within R using the built-in Rhttpd web server, and now you can also deploy them on apache web servers with rApache 1.1.15.
-</p>
 
-<h4><a name="Security"></a>1.2 <a title="Back to top" href="#top">Security</a></h4>
+<h4><a name="Security"></a>1.1 <a title="Back to top" href="#top">Security</a></h4>
 
 <p>
 As with any web server-side scripting environment, rApache is at
@@ -216,10 +212,19 @@ $ R CMD config --ldflags
 
 In the output above, <b>/usr/lib/R/lib</strong> is the directory you will want to place in /etc/ld.so.conf.
 
-<h4><a name="ROutputErrors"></a>3.2 <a title="Back to top" href="#top">ROutputErrors</a> (DEPRECATED)</style></h4>
+<h4><a name="ROutputErrors"></a>3.2 <a title="Back to top" href="#top">ROutputErrors</a></h4>
 <p>
-In prior releases, ROutputErrors would send all warning and error messages to the browser. This has been deprecated and will be removed from the next rApache release. All warnings and errors are now always sent through the apache logging system.
+The presence of this directive tells rApache to turn R errors into HTML and print them to the browser rather than to apache's error log file. Note that this alters the HTTP response status code sent to the browser. When ROutputErrors is placed in the apache config file, 200 OK is returned. When it is omitted from the config file, 500 INTERNAL_SERVER_ERROR is returned.
+
+Here's a config snippet:
 </p>
+<pre class="code">
+# Place this in the config file to turn error messages into HTML which
+# are printed in the browser. Without this, all warning and error messages
+# are printed to the Apache error log file.
+
+ROutputErrors
+</pre>
 
 <h4><a name="r_info"></a>3.3 <a title="Back to top" href="#top">SetHandler r-info</a></h4>
 
@@ -235,7 +240,7 @@ SetHandler r-info
 &lt;/Location&gt;
 </pre>
 
-<a href="RApacheInfo.html">View a sample here.</a>
+<a href="files/RApacheInfo.html">View a sample here.</a>
 
 <h4><a name="REvalOnStartup"></a>3.4 <a title="Back to top" href="#top">REvalOnStartup</a></h4>
 
@@ -359,34 +364,7 @@ are happy with the functionality, you may want to place it in a package
 use RSourceOnStartup and turn it into a function call instead for more
 efficiency. </p>
 
-<h5><a name="REval"></a>3.6.5 <a title="Back to top" href="#top">REval and RFileEval</a></h5>
-
-<p>These two will take arbitrary R expressions and run them on each request. They are similar to RHandler and RFileHandler. For instance the above RHandler configuration example can be converted to use REval:
-</p>
-
-<pre class="code">
-# Specify foo as the function to run. Probably created 
-# by REvalOnStartup or RSourceOnStartup
-
-RHandler "foo()"
-
-# Run the function bar located in the package foo
-
-RHandler "foo::bar()"
-</pre>
-
-<p>and similarly for RFileHandler:</p>
-
-<pre class="code">
-# Call the function foo within the file bar.R
-
-RFileHandler "/var/www/R/bar.R:foo()"
-</pre>
-
-<p>Note that a single colon is used to separate the filename from the expression to be evaluated.  Note also that <strong>r-script</strong> is ignored in this case and <strong>r-handler</strong> is presumed.</p>
-
-
-<h5><a name="Example_Configurations"></a>3.6.6 <a title="Back to top" href="#top">Example Configurations</a></h5>
+<h5><a name="Example_Configurations"></a>3.6.5 <a title="Back to top" href="#top">Example Configurations</a></h5>
 
 <p>By far the easiest configuration will be the brew example. Each file under /var/www/brew
 is treated as a brew script:</p>
@@ -418,17 +396,6 @@ is treated as a brew script:</p>
 &lt;Location /test/helloworld&gt;
         SetHandler r-handler
         RFileHandler /path/to/R/scripts/helloworld.r
-&lt;/Location&gt;
-</pre>
-
-<p>Deploying a Rook application:</p>
-<pre class="code">
-# Run the Rook application named 'app'. On each request, the expression 
-# 'Rook::Server$call(app)' is evaluated in an environment populated by
-# rookapp.R. 'app' is expected to be found in that environment.
-&lt;Location /test/RookApp&gt;
-        SetHandler r-handler
-        RFileEval /path/to/Rook/App/rookapp.R:Rook::Server$call(app)
 &lt;/Location&gt;
 </pre>
 
@@ -567,25 +534,23 @@ sendBin(object=readBin(t,'raw',n=file.info(t)$size))
 <ul><li>NULL</ul></li>
 </div>
 
-<h4><a name="receiveBin"></a>4.7 <a title="Back to top" href="#top">receiveBin</a></h4>
-
-<p>Reads data from the browser, if any. Returns a length zero raw vector when there's no more data to read.
+<h4><a name="RApacheOutputErrors"></a>4.7 <a title="Back to top" href="#top">RApacheOutputErrors</a></h4>
+<p>Determines where rApache sends error output: to the browser or to the apache error log. Overrides the module-wide apache config directive ROutputErrors. It also governs which HTTP response code to send to the requestor, either 200 when status=TRUE or 500 status=FALSE.</p>
 <div class="rdoc">
 <pre class="code">
-receiveBin(length=8192)
+# Turn warnings and errors into HTML comments
+RApacheOutputErrors(status=TRUE,prefix=&#39;&amp;lt!--\n&#39;,suffix=&#39;--&amp;gt\n&#39;)
 </pre>
 
 <p>Arguments:</p>
 <ul>
-  <li><strong>length</strong> integer.  The number of bytes to read from the request. The default is 8192.</li>
+  <li><strong>status</strong> logical. TRUE sends errors to the browser: FALSE sends to the apache log file.</li>
+  <li><strong>prefix</strong> string. Effective only when status=TRUE. Prepended to each error message sent to the browser</li>
+  <li><strong>suffix</strong> string. Effective only when status=TRUE. Appended to each error message sent to the browser</li>
 </ul>
-
 <p>Returns:</p>
-<ul><li>a raw vector with a length of zero or the number of bytes actually read.</ul></li>
+<ul><li>NULL.</li></ul>
 </div>
-
-<h4><a name="RApacheOutputErrors"></a>4.8 <a title="Back to top" href="#top">RApacheOutputErrors</a> (DEPRECATED)</h4>
-<p>This function has been deprecated and will be removed from the next rApache release. It invokes a warning if it is called.</p>
 
 <h3><a name="rapache_Variables"></a>5. <a title="Back to top" href="#top">rApache Variables</a></h3>
 
@@ -759,7 +724,6 @@ List of 30
 
     <p><strong>path_info</strong>  Character. The suffix portion  of 
     the url after it has been matched to an asset that the web server knows about. An asset is either a file or an url defined by an Apache Location directive.</p>
-    <p><strong>cmd_path</strong>  Character. The path taken from the corresponding configuration directive.</p>
 
     <p><strong>args</strong>  Character. The HTTP GET data extracted from this
     request. </p>
