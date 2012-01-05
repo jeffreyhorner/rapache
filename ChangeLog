@@ -1,3 +1,43 @@
+2011-12-30 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Some refactoring plus adding cmd_path to SERVER
+
+2011-12-29 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Deprecated undocumented RPreserveEnv directive
+
+2011-12-27 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Parse PUT requests through libapreq2
+
+2011-12-22 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Deperecating ROutputErrors, some code formatting as well
+
+2011-12-20 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Bare bones Rook support
+
+2011-12-19 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Refactoring reading from request
+
+2011-12-13 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Two new directives: RFileEval and REval.
+
+2011-11-29 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Really fix protection issues
+
+2011-08-03 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Making all output buffered
+
+2011-03-21 Jeffrey Horner <hornerj@Anna-Horners-iMac.local>
+
+	* Adding RApache_recBin
+
 2011-01-12 Jeffrey Horner <jeff.horner@vanderbilt.edu>
 
 	* Release 1.1.14
