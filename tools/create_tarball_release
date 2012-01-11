@@ -1,0 +1,7 @@
+#!/bin/bash
+# Call this from the top level dir like so:
+# ./tools/create_tarball_release
+# Will create the tarball in the top level dir
+MOD_R_VERSION=`grep "define MOD_R_VERSION" mod_R.c | awk '{print $3}' | tr -d \"`
+echo creating version $MOD_R_VERSION
+git archive --format=tar --prefix=rapache-${MOD_R_VERSION}/ HEAD | gzip >rapache-${MOD_R_VERSION}.tar.gz
