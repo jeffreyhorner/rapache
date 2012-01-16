@@ -19,7 +19,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.15"
+#define MOD_R_VERSION "1.1.16"
 #include "mod_R.h" 
 
 #include <sys/types.h>
@@ -286,7 +286,7 @@ static void NoOpHistoryFun(SEXP a, SEXP b, SEXP c, SEXP d){ };
  */
 static void init_config_pass(apr_pool_t *p);
 static void init_R(apr_pool_t *);
-static int SetUpRequest(const request_rec *);
+static int SetUpRequest(const request_rec *,RApacheHandlerType);
 static void TearDownRequest(int flush);
 static RApacheHandler *GetHandlerFromRequest(const request_rec *r);
 static int RApacheResponseError(char *msg);
@@ -609,7 +609,7 @@ static int AP_hook_request_handler (request_rec *r)
     else if (strcmp(r->handler,"r-info")==0) handlerType = R_INFO;
     else return DECLINED;
 
-    if (!SetUpRequest(r)) return HTTP_INTERNAL_SERVER_ERROR;
+    if (!SetUpRequest(r,handlerType)) return HTTP_INTERNAL_SERVER_ERROR;
     h = MR_Request.handler;
 
     if (handlerType == R_INFO){
@@ -818,7 +818,7 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
 	return(h);
 }
 
-static int SetUpRequest(const request_rec *r){
+static int SetUpRequest(const request_rec *r,RApacheHandlerType handlerType){
 
     /* Acquire R mutex */
     if (MR_mutex != NULL && apr_thread_mutex_lock(MR_mutex) != APR_SUCCESS) {
@@ -839,11 +839,13 @@ static int SetUpRequest(const request_rec *r){
 	return 0;
     }
 
-    MR_Request.handler = GetHandlerFromRequest(r);
+    if (handlerType != R_INFO){
+	MR_Request.handler = GetHandlerFromRequest(r);
 
-    if (!MR_Request.handler){
-	TearDownRequest(0);
-       	return 0;
+	if (!MR_Request.handler){
+	    TearDownRequest(0);
+	    return 0;
+	}
     }
 
     return 1;
