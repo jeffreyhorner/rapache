@@ -1268,28 +1268,38 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
     char *text;
     int parseError=1;
 
+    if (handlerType == R_SCRIPT){
+	if (h->directive->package){
+	    text = Calloc(strlen(fmt4)+strlen(h->directive->package)+
+		          strlen(h->directive->function)+
+			  strlen(r->filename),char);
+	    sprintf(text,fmt4,h->directive->package,h->directive->function,
+		    r->filename);
+	} else{
+	    text = Calloc(strlen(fmt3)+strlen(h->directive->function)+
+		          strlen(r->filename),char);
+	    sprintf(text,fmt3,h->directive->function,r->filename);
+	}
+	if (h->expr) R_ReleaseObject(h->expr);
+	h->expr = ParseText(text,&parseError);
+	Free(text);
+	/* Monkey with expression and place the environment in there */
+	defineVar(install(".rAfile"),mkString(r->filename),h->envir);
+	defineVar(install(".rAenv"),h->envir,h->envir);
+    }
+
     if (!h->expr){
 	if (h->directive->function){
-	    if (handlerType == R_SCRIPT){
-		if (h->directive->package){
-		    text = Calloc(strlen(fmt4)+strlen(h->directive->package)+strlen(h->directive->function)+strlen(r->filename),char);
-		    sprintf(text,fmt4,h->directive->package,h->directive->function,r->filename);
-		} else{
-		    text = Calloc(strlen(fmt3)+strlen(h->directive->function)+strlen(r->filename),char);
-		    sprintf(text,fmt3,h->directive->function,r->filename);
+	    if (h->directive->package){
+		text = Calloc(strlen(fmt2)+strlen(h->directive->package)+strlen(h->directive->function),char);
+		sprintf(text,fmt2,h->directive->package,h->directive->function);
+	    } else{
+		if (h->directive->file && MyfindFun(install(h->directive->function),h->envir) == R_UnboundValue){
+		    RApacheError(apr_psprintf(MR_Request.r->pool,"Cannot find function '%s' in file '%s'\n",h->directive->function,h->directive->file));
+		    return 0;
 		}
-	    } else {
-		if (h->directive->package){
-		    text = Calloc(strlen(fmt2)+strlen(h->directive->package)+strlen(h->directive->function),char);
-		    sprintf(text,fmt2,h->directive->package,h->directive->function);
-		} else{
-		    if (h->directive->file && MyfindFun(install(h->directive->function),h->envir) == R_UnboundValue){
-			RApacheError(apr_psprintf(MR_Request.r->pool,"Cannot find function '%s' in file '%s'\n",h->directive->function,h->directive->file));
-			return 0;
-		    }
-		    text = Calloc(strlen(fmt1)+strlen(h->directive->function),char);
-		    sprintf(text,fmt1,h->directive->function);
-		}
+		text = Calloc(strlen(fmt1)+strlen(h->directive->function),char);
+		sprintf(text,fmt1,h->directive->function);
 	    }
 	    h->expr = ParseText(text,&parseError);
 	    Free(text);
@@ -1301,12 +1311,6 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 	    R_PreserveObject(h->expr);
 	else
 	    return 0;
-    }
-
-    if (handlerType == R_SCRIPT){
-	/* Monkey with expression and place the environment in there */
-	defineVar(install(".rAfile"),mkString(r->filename),h->envir);
-	defineVar(install(".rAenv"),h->envir,h->envir);
     }
 
     return 1;
