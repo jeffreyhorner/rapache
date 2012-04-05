@@ -48,6 +48,7 @@ if(is.null(GET)){
 }
 
 setCookie('called',called,expires=Sys.time()+100)
+setCookie('anotherCookie','foo',expires=Sys.time()+100)
 
 cat('<HTML><head><style type="text/css">\n') 
 cat('table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }')

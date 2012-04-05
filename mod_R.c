@@ -1679,7 +1679,7 @@ SEXP RApache_setContentType(SEXP stype){
 }
 
 SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP sdomain, SEXP therest){
-	const char *name, *value, *cookie;
+	const char *name, *value, *cookie, *cookies;
 	char strExpires[APR_RFC822_DATE_LEN];
 	apr_time_t texpires;
 
@@ -1727,7 +1727,14 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 	if (!apr_table_get(MR_Request.r->headers_out,"Cache-Control"))
 		apr_table_set(MR_Request.r->headers_out,"Cache-Control","nocache=\"set-cookie\"");
 
-	apr_table_set(MR_Request.r->headers_out,"Set-Cookie",cookie);
+	cookies = apr_table_get(MR_Request.r->headers_out, "Set-Cookie");
+
+	if (cookies == NULL)
+      cookies = cookie;
+   else
+		cookies = apr_pstrcat(MR_Request.r->pool,cookies,"\n",cookie,NULL);
+
+   apr_table_set(MR_Request.r->headers_out,"Set-Cookie",cookies);
 
 	return NewLogical(TRUE);
 }
