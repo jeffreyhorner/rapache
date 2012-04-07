@@ -1727,14 +1727,7 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 	if (!apr_table_get(MR_Request.r->headers_out,"Cache-Control"))
 		apr_table_set(MR_Request.r->headers_out,"Cache-Control","nocache=\"set-cookie\"");
 
-	cookies = apr_table_get(MR_Request.r->headers_out, "Set-Cookie");
-
-	if (cookies == NULL)
-      cookies = cookie;
-   else
-		cookies = apr_pstrcat(MR_Request.r->pool,cookies,"\n",cookie,NULL);
-
-   apr_table_set(MR_Request.r->headers_out,"Set-Cookie",cookies);
+        apr_table_add(MR_Request.r->headers_out,"Set-Cookie",cookie);
 
 	return NewLogical(TRUE);
 }
