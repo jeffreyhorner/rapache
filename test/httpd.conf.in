@@ -108,6 +108,11 @@ ROutputErrors
         RFileHandler @DOCROOT@/recBin.r
 </Location>
 
+<Location /test/relocation>
+        SetHandler r-handler
+        RFileHandler @DOCROOT@/relocation.R::handler
+</Location>
+
 #<Directory @DOCROOT@/brew>
 #	SetHandler r-script
 #	RHandler brew::brew
