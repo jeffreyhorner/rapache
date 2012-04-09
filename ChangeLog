@@ -1,3 +1,9 @@
+2012-04-09 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Call apr_table_add for Set-Cookie headers; really fixes cookie bug.
+
+	* Release 1.1.19
+
 2012-04-05 jeffreyhorner <jeffrey.horner@gmail.com>
 
 	* Fix single cookie bug
