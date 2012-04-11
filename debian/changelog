@@ -1,13 +1,21 @@
+libapache2-mod-r-base (1.1.20-ppa0) lucid; urgency=low
+
+  * Binary package release for rApache 1.1.15
+
+ -- Jeffrey Horner <jeffrey.horner@gmail.com>  Thu, 05 Jan 2012 11:08:00 -0600
+
 libapache2-mod-r-base (1.1.15-ppa2) lucid; urgency=low
 
   * Binary package release for rApache 1.1.15
 
  -- Jeffrey Horner <jeffrey.horner@gmail.com>  Thu, 05 Jan 2012 11:08:00 -0600
+
 libapache2-mod-r-base (1.1.14-ppa3) lucid; urgency=low
 
   * Binary package release for rApache 1.1.14
 
  -- Jeffrey Horner <jeffrey.horner@gmail.com>  Wed, 12 Jan 2011 11:08:00 -0600
+
 libapache2-mod-r-base (1.1.13-ppa3) lucid; urgency=low
 
   * Binary package release for rApache 1.1.13

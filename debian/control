@@ -7,7 +7,7 @@ Standards-Version: 3.7.2
 
 Package: libapache2-mod-r-base
 Architecture: any
-Depends: apache2-mpm-prefork | apache2-mpm-worker, apache2.2-common, libapreq2, r-base-core, ${shlibs:Depends}
+Depends: apache2-mpm-prefork | apache2-mpm-worker | apache2-mpm-itk, apache2.2-common, libapreq2, r-base-core, ${shlibs:Depends}
 Description: Apache module for running server-side R programs
  This package provides the R module for the Apache 2 webserver. Note
  that it will work with either Apache's prefork or worker MPM. Prefork
