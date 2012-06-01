@@ -561,7 +561,7 @@ static const char *AP_cmd_RSourceOnStartup(cmd_parms *cmd, void *conf, const cha
    }
    apr_table_add(
          MR_OnStartup,
-         apr_psprintf( cmd->pool, "%s on line %u of %s",
+         apr_psprintf( cmd->pool, "e:%s on line %u of %s",
             d->directive,d->line_num,d->filename),
          apr_psprintf(cmd->pool,"source('%s')",file)
          );
