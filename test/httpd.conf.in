@@ -86,9 +86,6 @@ DocumentRoot "@DOCROOT@"
 #	Allow from all
 </Directory>
 
-# Output RApache messages to browser
-ROutputErrors
-
 <Location /RApacheInfo>
 	SetHandler r-info
 </Location>
@@ -117,6 +114,12 @@ ROutputErrors
 #	SetHandler r-script
 #	RHandler brew::brew
 #</Directory>
+
+REvalOnStartup "my.source <- function(file,env) with(data=env,source(file))"
+<Directory @DOCROOT@/r-files>
+	SetHandler r-script
+	RHandler my.source
+</Directory>
 
 #<Location /test/RookTest>
 #        SetHandler r-handler
