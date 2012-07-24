@@ -112,6 +112,7 @@ typedef enum {
 
 typedef struct {
    char *file;
+   char *dirname;
    char *function;
    char *evalcode;
    char *package;
@@ -145,6 +146,7 @@ typedef struct {
    char *errorPrefix;
    char *errorSuffix;
    RApacheHandler *handler;
+   char *oldwd;
 } RApacheRequest;
 
 /*************************************************************************
@@ -155,7 +157,7 @@ typedef struct {
  *************************************************************************/
 
 /* Current request_rec */
-static RApacheRequest MR_Request = { NULL, 0, 0, NULL, NULL, NULL, NULL , NULL, -1, NULL, NULL, NULL};
+static RApacheRequest MR_Request = { NULL, 0, 0, NULL, NULL, NULL, NULL , NULL, -1, NULL, NULL, NULL,NULL};
 
 /* Number of times apache has parsed config files; we'll do stuff on second pass */
 static int MR_ConfigPass = 1;
@@ -313,6 +315,7 @@ static int RApacheInfo();
 static SEXP AprTableToList(apr_table_t *);
 static void PrintTraceback(void);
 static int ReadRequestBody(unsigned char *buf, int size);
+static char *dirname(const char *path, apr_pool_t *p);
 
 /*************************************************************************
  *
@@ -462,6 +465,10 @@ static const char *AP_cmd_RFileHandler(cmd_parms *cmd, void *conf, const char *h
       return apr_psprintf(cmd->pool,"RFileHandler: %s file not found!",c->file);
    }
    c->cmdpath = apr_pstrdup(cmd->pool,cmd->path);
+
+   /* Cache directory of file */
+   c->dirname = dirname(c->file,cmd->pool);
+
    return NULL;
 }
 
@@ -532,6 +539,10 @@ static const char *AP_cmd_RFileEval(cmd_parms *cmd, void *conf, const char *file
       return apr_psprintf(cmd->pool,"RFileEval: %s file not found!",c->file);
    }
    c->cmdpath = apr_pstrdup(cmd->pool,cmd->path);
+
+   /* Cache directory of file */
+   c->dirname = dirname(c->file,cmd->pool);
+ 
    return NULL;
 }
 
@@ -604,6 +615,9 @@ static int AP_hook_request_handler (request_rec *r)
    SEXP ret=R_NilValue;
    int evalError=1,fileParsed=1;
 
+   if (apr_filepath_get(&MR_Request.oldwd,APR_FILEPATH_NATIVE,r->pool) != APR_SUCCESS)
+      return HTTP_INTERNAL_SERVER_ERROR;
+
    /* Only handle our handlers */
    if (strcmp(r->handler,"r-handler")==0) handlerType = R_HANDLER;
    else if (strcmp(r->handler,"r-script")==0) handlerType = R_SCRIPT;
@@ -623,6 +637,11 @@ static int AP_hook_request_handler (request_rec *r)
 
    /* Prepare file if needed */
    if (h->directive->file){
+
+      /* Set working directory to dirname of file */
+      if (apr_filepath_set(h->directive->dirname,MR_Pool) != APR_SUCCESS)
+         return RApacheResponseError(NULL);
+
       fileParsed = 1;
       if (!PrepareFileExprs(h,r,&fileParsed)) return RApacheResponseError(NULL);
 
@@ -808,7 +827,7 @@ static RApacheHandler *GetHandlerFromRequest(const request_rec *r){
       apr_hash_set(MR_HandlerCache,d->handlerKey,APR_HASH_KEY_STRING,h);
    }
 
-   if (h == NULL || (d->file == NULL && d->function == NULL)){
+   if (h == NULL || (d->file == NULL && d->function == NULL && d->evalcode == NULL)){
       ap_set_content_type((request_rec *)r,"text/html");
       RApacheError(apr_psprintf(r->pool,"Invalid RApache Directive: %s",d->handlerKey));
       return NULL;
@@ -859,6 +878,10 @@ static void TearDownRequest(int flush){
    apr_size_t len;
    const char *data;
    apr_status_t status;
+
+   /* Change to oldwd */
+   if (MR_Request.oldwd != NULL)
+      apr_filepath_set(MR_Request.oldwd,MR_Pool);
 
    /* Clean up reading */
    if (MR_BBin){
@@ -1071,6 +1094,16 @@ void init_config_pass(apr_pool_t *p){
       *((int *)cfg_pass) = 2;
    }
    MR_ConfigPass = *((int *)cfg_pass);
+}
+
+static char *dirname(const char *path, apr_pool_t *p){
+   int i=0, j;
+
+   while(path[i] != '\0'){
+      if (path[i] == '/') j = i;
+      i++;
+   }
+   return (j > 0)? apr_pstrndup(p,path,j) : NULL;
 }
 
 /*************************************************************************
@@ -1287,6 +1320,8 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
       /* Monkey with expression and place the environment in there */
       defineVar(install(".rAfile"),mkString(r->filename),h->envir);
       defineVar(install(".rAenv"),h->envir,h->envir);
+
+      apr_filepath_set(dirname(r->filename,r->pool),r->pool);
    }
 
    if (!h->expr){

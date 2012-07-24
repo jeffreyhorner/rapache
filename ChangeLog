@@ -1,3 +1,7 @@
+2012-07-24 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Set working directory for r-script, RFileEval, and RFileHandler.
+
 2012-06-01 jeffreyhorner <jeffrey.horner@gmail.com>
 
 	* RSourceOnStartup bug fixed by donkang75.
