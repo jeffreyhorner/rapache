@@ -19,7 +19,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.1.21"
+#define MOD_R_VERSION "1.2.0"
 #include "mod_R.h" 
 
 #include <sys/types.h>
@@ -2041,7 +2041,11 @@ SEXP RApache_getServer(){
    OFFMBR("read_length",MR_Request.r->read_length);
    TIMMBR("request_time",MR_Request.r->request_time);
    TIMMBR("mtime",MR_Request.r->mtime);
+#if (AP_SERVER_MAJORVERSION_NUMBER == 2 && AP_SERVER_MINORVERSION_NUMBER == 4)
+   STRMBR("remote_ip",MR_Request.r->connection->client_ip);
+#elif (AP_SERVER_MAJORVERSION_NUMBER == 2 && AP_SERVER_MINORVERSION_NUMBER == 2)
    STRMBR("remote_ip",MR_Request.r->connection->remote_ip);
+#endif
    STRMBR("remote_host",MR_Request.r->connection->remote_host);
    STRMBR("cmd_path",MR_Request.handler->directive->cmdpath);
 
