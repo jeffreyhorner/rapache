@@ -56,15 +56,19 @@
     </div>
 
     <div class="twelve columns content offset-by-one">
-<header><h1>documentation for version 1.1.15</h1></header>
+<header><h1>documentation for version 1.2.0</h1></header>
 
 <p><i>
 This manual covers installation, configuration, and various uses
-for rApache version 1.1.15. <a href="manual_1_1_14.html">Read this manual</a> for all prior versions. This
+for rApache version 1.2.0. <a href="manual_1_1_14.html">Read this manual</a> for all prior versions. This
 document is intended to contain the most up-to-date information about
 rApache. Comments, suggestions should be forwarded to <a
 href="mailto:jeff.horner@vanderbilt.edu">the maintainer</a>.
 </i></p>
+
+<h3><a href="#top">Changes in 1.2.0</a></h3>
+<p> The major change, and hence the bump in the minor version, is that the working directory is sensibly set in for those
+using <strong>RFileEval</strong>, <strong>RFileHandler</strong>, and handlers using <strong>r-script</strong>.
 
 <h3><a href="#top">Changes in 1.1.15</a></h3>
 <ol>
@@ -111,7 +115,7 @@ stand-alone as well, so it's not part of the distribution.
 
 <h4><a name="Rook"></a>1.1 <a title="Back to top" href="#top">Rook Support</a></h4>
 <p>
-<a href="http://cran.us.r-project.org/web/packages/Rook/index.html">Rook</a> is an R package that defines a specification and set of convenience objects for running R web applications on various web servers without the need to modify your code. Thus, you can write and run Rook apps within R using the built-in Rhttpd web server, and now you can also deploy them on apache web servers with rApache 1.1.15.
+<a href="http://cran.us.r-project.org/web/packages/Rook/index.html">Rook</a> is an R package that defines a specification and set of convenience objects for running R web applications on various web servers without the need to modify your code. Thus, you can write and run Rook apps within R using the built-in Rhttpd web server and deploy them on rApache.
 </p>
 
 <h4><a name="Security"></a>1.2 <a title="Back to top" href="#top">Security</a></h4>
