@@ -19,7 +19,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.2.0"
+#define MOD_R_VERSION "1.2.1"
 #include "mod_R.h" 
 
 #include <sys/types.h>
@@ -646,18 +646,20 @@ static int AP_hook_request_handler (request_rec *r)
       if (!PrepareFileExprs(h,r,&fileParsed)) return RApacheResponseError(NULL);
 
       if (fileParsed || (!h->directive->function && !h->directive->evalcode)){
-         if (h->envir) R_ReleaseObject(h->envir);
-         h->envir = NewEnv(R_GlobalEnv);
-         R_PreserveObject(h->envir);
+         if (h->parsedFile->envir) R_ReleaseObject(h->parsedFile->envir);
+         h->parsedFile->envir = NewEnv(R_GlobalEnv);
+         R_PreserveObject(h->parsedFile->envir);
+         
 
          evalError = 1;
-         ret = EvalExprs(h->parsedFile->exprs,h->envir,&evalError);
+         ret = EvalExprs(h->parsedFile->exprs,h->parsedFile->envir,&evalError);
          if (evalError) {
             /*PrintWarnings();*/
             PrintTraceback();
             return RApacheResponseError(NULL);
          }
       }
+      h->envir = h->parsedFile->envir;
    } else {
       h->envir = R_GlobalEnv;
    }
@@ -702,11 +704,11 @@ static apr_status_t AP_child_exit(void *data){
       MR_InitStatus = 0;
    }
 
-   if (MR_Pool) {
+   /*if (MR_Pool) {
       apr_bucket_alloc_destroy(MR_Bucket_Alloc);
       apr_pool_destroy(MR_Pool);
       MR_Pool = NULL;
-   }
+   } */
 
    return APR_SUCCESS;
 }
@@ -1154,15 +1156,12 @@ static SEXP NewInteger(int i){
 }
 
 static SEXP NewEnv(SEXP enclos){
-   SEXP env;
-   PROTECT(env = allocSExp(ENVSXP));
-
-   SET_FRAME(env, R_NilValue);
-   SET_ENCLOS(env, (enclos)? enclos: R_GlobalEnv);
-   SET_HASHTAB(env, R_NilValue);
-   SET_ATTRIB(env, R_NilValue);
-
-   UNPROTECT(1);
+   SEXP cmd, env, tf;
+   int evalError;
+   PROTECT(tf = NewLogical(1));
+   PROTECT(cmd = lang3(findFun(install("new.env"),R_BaseEnv),tf,enclos));
+   env = R_tryEval(cmd,R_GlobalEnv,&evalError);
+   UNPROTECT(2);
 
    return env;
 }
@@ -1188,9 +1187,12 @@ SEXP ParseEval(const char *code, SEXP env, int *evalError){
       exit(-1);
    }
 
+   PROTECT(env);
    exprs = ParseText(code,evalError);
+   PROTECT(exprs);
    if (*evalError) return R_NilValue;
    val = EvalExprs(exprs,env,evalError);
+   UNPROTECT(2);
    return val;
 }
 
@@ -1500,7 +1502,18 @@ static int OnStartupCallback(void *rec, const char *key, const char *value){
 static SEXP MyfindFun(SEXP symb, SEXP envir){
    SEXP fun;
    SEXPTYPE t;
+
+   if (symb == NULL || envir == NULL)
+      return R_UnboundValue;
+
+   if (symb == R_NilValue || envir == R_NilValue)
+      return R_UnboundValue;
+
+   PROTECT(symb);
+   PROTECT(envir);
    fun = findVar(symb,envir);
+   UNPROTECT(2);
+
    t = TYPEOF(fun);
 
    /* eval promise if need be */
@@ -1904,8 +1917,9 @@ static int FileUploadsCallback(void *ft,const char *key, const char *val){
 
 static SEXP parsePost(int returnPost) {
    apreq_parser_t *psr;
+   apreq_parser_function_t pfn;
    apr_bucket_brigade *bb;
-   const char *tmpdir;
+   const char *tmpdir, *content_type;
    apr_status_t s;
    const apr_table_t *uploads;
    SEXP filenames;
@@ -1929,6 +1943,17 @@ static SEXP parsePost(int returnPost) {
       return R_NilValue;
    }
 
+   /* Don't try to parse if no parser function for content type */
+   content_type = apr_table_get(MR_Request.r->headers_in,"Content-Type");
+   pfn = apreq_parser(content_type);
+   if (!pfn){
+      MR_Request.postTable = NULL;
+      MR_Request.filesVar = R_NilValue;
+      RApacheError(apr_psprintf(MR_Request.r->pool,"No apreq2 parser for '%s'\n",content_type));
+      return R_NilValue;
+   }
+      
+
    /* Start parse */
    MR_Request.postParsed=1;
 
@@ -1937,8 +1962,8 @@ static SEXP parsePost(int returnPost) {
    psr = apreq_parser_make(
          MR_Request.r->pool,
          MR_Request.r->connection->bucket_alloc,
-         apr_table_get(MR_Request.r->headers_in,"Content-Type"),
-         apreq_parser(apr_table_get(MR_Request.r->headers_in,"Content-Type")),
+         content_type,
+         pfn,
          0, /* brigade_limit */
          tmpdir,
          NULL,
