@@ -681,8 +681,11 @@ static int AP_hook_request_handler (request_rec *r)
    /*PrintWarnings();*/
 
    if (IS_INTEGER(ret) && LENGTH(ret) == 1){
+      int result = asInteger(ret);
       TearDownRequest(1);
-      return asInteger(ret);
+      /* Set status to HTTP_mumble */
+      if (result != OK) r->status = result;
+      return result;
    } else if (inherits(ret,"try-error")){
       return RApacheResponseError(apr_psprintf(r->pool,"Function %s returned an object of 'try-error'.\n",h->directive->function));
    } else {
