@@ -1,3 +1,9 @@
+2013-01-10 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Release 1.2.2
+
+	* Set r->status if handler will return something other than OK
+
 2012-10-01 jeffreyhorner <jeffrey.horner@gmail.com>
 
 	* Release 1.2.1
@@ -5,7 +11,7 @@
 	* Don't parse POST paylod if apreq2 doesn't have a parser for the 
 	given content type.
 
-	* More R protections>
+	* More R protections.
 
 	* Allow RFileHandlers to share environments if the handlers are
 	defined in the same file.
