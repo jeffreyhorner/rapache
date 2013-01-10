@@ -197,6 +197,7 @@ static SEXP MR_RApacheEnv;
  */
 
 static const char MR_RApacheSource[] = "\
+setStatus <- function(status) .Call('RApache_setStatus',as.integer(status))\n\
 setContentType <- function(type) .Call('RApache_setContentType',type)\n\
 setHeader <- function(header,value) .Call('RApache_setHeader',header,value)\n\
 setCookie <- function(name=NULL,value='',expires=NULL,path=NULL,domain=NULL,...){\n\
@@ -1718,6 +1719,12 @@ SEXP RApache_setHeader(SEXP header, SEXP value){
    return NewLogical(TRUE);
 }
 
+SEXP RApache_setStatus(SEXP status){
+   if (!MR_Request.r) return NewLogical(FALSE);
+   MR_Request.r->status = asInteger(status);
+   return NewLogical(TRUE);
+}
+
 SEXP RApache_setContentType(SEXP stype){
    const char *ctype;
 
@@ -2357,6 +2364,7 @@ SEXP RApache_receiveBin(SEXP llen){
 static void RegisterCallSymbols() {
    R_CallMethodDef callMethods[]  = {
       {"RApache_setHeader", (DL_FUNC) &RApache_setHeader, 2},
+      {"RApache_setStatus", (DL_FUNC) &RApache_setStatus, 1},
       {"RApache_setContentType", (DL_FUNC) &RApache_setContentType, 1},
       {"RApache_setCookie",(DL_FUNC) &RApache_setCookie,6},
       {"RApache_urlEnDecode",(DL_FUNC) &RApache_urlEnDecode,2},

@@ -110,6 +110,11 @@ DocumentRoot "@DOCROOT@"
         RFileHandler @DOCROOT@/relocation.R::handler
 </Location>
 
+<Location /test/failale>
+        SetHandler r-handler
+        RFileHandler @DOCROOT@/failale.R::handler
+</Location>
+
 #<Directory @DOCROOT@/brew>
 #	SetHandler r-script
 #	RHandler brew::brew
