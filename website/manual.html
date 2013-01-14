@@ -56,29 +56,15 @@
     </div>
 
     <div class="twelve columns content offset-by-one">
-<header><h1>documentation for version 1.2.0</h1></header>
+<header><h1>documentation for version 1.2.3</h1></header>
 
 <p><i>
 This manual covers installation, configuration, and various uses
-for rApache version 1.2.0. <a href="manual_1_1_14.html">Read this manual</a> for all prior versions. This
+for rApache version 1.2.3. <a href="manual_1_2_2.html">Read this manual</a> for all prior versions. This
 document is intended to contain the most up-to-date information about
 rApache. Comments, suggestions should be forwarded to <a
 href="mailto:jeff.horner@vanderbilt.edu">the maintainer</a>.
 </i></p>
-
-<h3><a href="#top">Changes in 1.2.0</a></h3>
-<p> The major change, and hence the bump in the minor version, is that the working directory is sensibly set in for those
-using <strong>RFileEval</strong>, <strong>RFileHandler</strong>, and handlers using <strong>r-script</strong>.
-
-<h3><a href="#top">Changes in 1.1.15</a></h3>
-<ol>
-    <li><strong>ROutputErrors</strong> and <strong>RApacheOutputErrors()</strong> are deprecated and will be removed in the next release.
-    </li>
-    <li>The undocumented <strong>RPreserveEnv</strong> is deprecated.</li>
-    <li> There are two new apache directives <strong>REval</strong> and <strong>RFileEval</strong>, described below.
-    </li>
-    <li><strong>receiveBin()</strong> is a new R level function for reading the HTTP request input body.</li>
-</ol>
 
 <h3><a name="Introduction"></a>1. <a title="Back to top" href="#top">Introduction</a></h3>
 <p>
@@ -228,11 +214,6 @@ $ R CMD config --ldflags
 </pre>
 
 In the output above, <b>/usr/lib/R/lib</strong> is the directory you will want to place in /etc/ld.so.conf.
-
-<h4><a name="ROutputErrors"></a>3.2 <a title="Back to top" href="#top">ROutputErrors</a> (DEPRECATED)</style></h4>
-<p>
-In prior releases, ROutputErrors would send all warning and error messages to the browser. This has been deprecated and will be removed from the next rApache release. All warnings and errors are now always sent through the apache logging system.
-</p>
 
 <h4><a name="r_info"></a>3.3 <a title="Back to top" href="#top">SetHandler r-info</a></h4>
 
@@ -587,18 +568,22 @@ sendBin(object=readBin(t,'raw',n=file.info(t)$size))
 <pre class="code">
 receiveBin(length=8192)
 </pre>
+</div>
 
+<h4><a name="setStatus"></a>4.8 <a title="Back to top" href="#top">setStatus</a></h4>
+<p>Allows handlers to set the <a href="http://en.wikipedia.org/wiki/List_of_HTTP_status_codes">HTTP Status code</a> for the response.</p>
+<div class="rdoc">
+<pre class="code">
+setStatus(status=200L)
+</pre>
 <p>Arguments:</p>
 <ul>
-  <li><strong>length</strong> integer.  The number of bytes to read from the request. The default is 8192.</li>
+  <li><strong>status</strong> integer.</li>
 </ul>
 
 <p>Returns:</p>
-<ul><li>a raw vector with a length of zero or the number of bytes actually read.</ul></li>
+<ul><li>logical vector. TRUE if successsfull, FALSE on failure.</ul></li>
 </div>
-
-<h4><a name="RApacheOutputErrors"></a>4.8 <a title="Back to top" href="#top">RApacheOutputErrors</a> (DEPRECATED)</h4>
-<p>This function has been deprecated and will be removed from the next rApache release. It invokes a warning if it is called.</p>
 
 <h3><a name="rapache_Variables"></a>5. <a title="Back to top" href="#top">rApache Variables</a></h3>
 
@@ -899,6 +884,7 @@ List of 30
 <h3><a name="rapache_Cookbook"></a>6. <a title="Back to top" href="#top">rApache Cookbook</a></h3>
 <p> For a complete look at an rApache application, download the <a href="useR2007brew.tgz">useR2007 application</a> which uses <a href="http://biostat.mc.vanderbilt.edu/Hmisc">Hmisc</a> and <a href="http://www.rforge.net/brew/">brew</a> for power and sample size calculations.</p>
 
+<h3><a name="exerciseAll"></a>6.1 <a title="Back to top" href="#top">Exercising All Functionality</a></h3>
 <p>The following code exercises all rApache functionality by just echoing what was sent from the browser. Copy and paste the following code to a file and then set up apache with the following configuration. You should then be able to point your browser at http://example.com/rapachetest (replacing example.com with your own hostname).</p>
 
 <pre class="code">
@@ -994,6 +980,20 @@ cat(&quot;&lt;/BODY&gt;&lt;/HTML&gt;\n&quot;)
 
 DONE
 </pre>
+
+<h3><a name="customErrorMessage"></a>6.2 <a title="Back to top" href="#top">Custom Error Messages</a></h3>
+<p>You can have handlers create custom HTTP error responses by using the <b>setStatus()</b> function. For instance, here's an example that sends a custom message for 500 "Internal Server Error":</p>
+
+<pre class="code">
+handler <- function() {
+   setContentType("text/plain")
+   setStatus(500L)
+   cat("Hi, I'm a 'Fail Ale'!\n")
+   OK
+}
+</pre>
+
+
 	<!-- testing for user input -->
 	<!-- uploading files -->
 <h3><a name="License"></a>7. License</h3>
