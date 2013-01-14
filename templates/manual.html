@@ -1,0 +1,984 @@
+<!doctype html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
+<head>
+
+	<!-- Basic Page Needs
+  ================================================== -->
+	<meta charset="utf-8" />
+	<title>rApache</title>
+	<meta name="description" content="">
+	<meta name="author" content="">
+	<!--[if lt IE 9]>
+		<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+	
+	<!-- Mobile Specific Metas
+  ================================================== -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" /> 
+	
+	<!-- CSS
+  ================================================== -->
+	<link rel="stylesheet" href="stylesheets/base.css">
+	<link rel="stylesheet" href="stylesheets/skeleton.css">
+	<link rel="stylesheet" href="stylesheets/layout.css">
+	<link rel="stylesheet" href="stylesheets/docs.css">
+	
+	<!-- Favicons
+	================================================== -->
+	<link rel="shortcut icon" href="images/favicon.ico">
+	<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+	
+</head>
+<body>
+
+<!-- Primary Page Layout
+================================================== -->
+
+<div class="container">	
+    <div class="three columns sidebar">
+	&nbsp;
+	<nav>
+	<a title="rApache" label="Back to rApache home" href="index.html"><img title="Back to rApache home" src="images/Logo.png" /></a>
+	<ul>
+	<li><a href="#Installation">Installation</a></li>
+	<li><a href="#Configuring_rapache">Configuration</a></li>
+	<li><a href="#rapache_Functions">Functions</a></li>
+	<li><a href="#rapache_Variables">Variables</a></li>
+	<li><a href="#rapache_Cookbook">Example Code</a></li>
+	<li><a href="#License">License</a></li>
+	<li><a href="#Citing">Citation</a></li>
+	<li><a href="#Thanks">Thanks</a></li>
+	</ul>
+	</nav>
+    </div>
+
+    <div class="twelve columns content offset-by-one">
+<header><h1>documentation</h1></header>
+
+<p><i>
+This manual covers installation, configuration, and various uses
+of the rApache software distribution and supporting packages. This
+document is intended to contain the most up-to-date information about
+rApache. Comments, suggestions should be forwarded to <a
+href="mailto:jeff.horner@vanderbilt.edu">the maintainer</a>.
+</i></p>
+
+<h3><a name="Introduction"></a>1. <a title="Back to top" href="#top">Introduction</a></h3>
+<p>
+rApache is a project supporting web application development using
+the <a href="http://www.r-project.org/">R statistical language and
+environment</a> and the <a href="http://httpd.apache.org">Apache
+web server</a>. The current software distribution runs on
+UNIX/Linux and Mac OS X operating systems. Apache servers with
+threaded Multi-Processing Modules are now supported, but the  the
+<a href="http://httpd.apache.org/docs/2.2/mod/prefork.html">Apache
+Prefork Multi-Processing Module</a> is still recommended (refer to the
+<a href="http://httpd.apache.org/docs/2.2/mpm.html">Multi-Processing
+Modules</a> chapter from Apache for more about this).
+</p>
+
+<p>
+The rApache software distribution provides the Apache module named mod_R that embeds the R
+interpreter inside the web server.  It also comes bundled with <a
+href="http://httpd.apache.org/apreq/">libapreq</a>, an Apache module
+for manipulating client request data. Together, they provide the glue
+to transform R into a server-side scripting environment.
+</p>
+
+<p>
+Another important project that's not bundled with rApache, but
+plays an important role in server-side scripting, is the R package
+<a href="http://www.rforge.net/brew">brew</a> (also available on <a
+href="http://cran.r-project.org/mirrors.html">CRAN</a>). It implements
+a templating framework for report generation, and it's perfect for
+generating HTML on the fly. it's syntax is similar to PHP, Ruby's erb
+module, Java Server Pages, and Python's psp module. brew can be used
+stand-alone as well, so it's not part of the distribution.
+</p>
+
+
+<h4><a name="Security"></a>1.1 <a title="Back to top" href="#top">Security</a></h4>
+
+<p>
+As with any web server-side scripting environment, rApache is at
+the mercy of YOU THE PROGRAMMER. If you allow your R code to accept
+information from a 3rd party, then it is up to you to vet that information
+appropriately. So, the author maintains that rApache is more or less as
+secure as other popular web scripting environments such as PHP, Ruby on
+Rails, etc.
+</p>
+
+<h3><a name="Installation"></a>2. <a title="Back to top" href="#top">Installation</a></h3>
+
+<p>rApache follows the typical GNU/Linux source install procedure: run '<b>configure</strong>', then '<b>make</strong>', and '<b>make install</strong>' from the shell.</p>
+
+<p><i>At the moment, rApache is a source-only downloadable package. I've made attempts in the past to
+learn the Debian packaging system but have not quite got it down yet. If anyone is interested in providing binary 
+packages, for any Linux distribution, please <a href="mailto:jeff.horner@vanderbilt.edu">email me</a>.</i></p>
+
+<p>Requirements for installing and using rApache are as follows:</p>
+
+<ol>
+	<li> R built and installed as a shared library (see the 
+		<a href="http://cran.r-project.org/doc/manuals/R-exts.html#Embedding-R-under-Unix_002dalikes">Writing R Extensions</a>
+		 manual for more info).</li>
+	<li> Apache 2.2.x or later installed with module loading support.</li>
+	<li> <a href="http://httpd.apache.org/apreq/">libapreq2</a> 2.05 or higher. This
+		comes bundled with rApache and will be installed by default if not automatically found 
+		by configure or overridden with the configure flag --with-apreq2-config.</li>
+</ol>
+
+
+<h4><a name="Running_configure"></a>2.1 <a title="Back to top" href="#top">Running configure</a></h4>
+<p>configure does it's best to probe your system to meet the above requirements. Failing that, you should use the following flags:</p>
+<ul>
+	<li><strong>--with-R</strong> the full path to R</li>
+	<li><strong>--with-apache2-apxs</strong> the full path to the Apache extension tool</li>
+	<li><strong>--with-apreq2-config</strong> the full path to the libapreq2 utility</li>
+</ul>
+<p>Here's an example with some common argument values:</p>
+<pre class="code">
+./configure \
+    --with-R=/usr/bin/R \
+    --with-apache2-apxs=/usr/bin/apxs2 \
+    --with-apreq2-config=/usr/bin/apreq2-config
+</pre>
+
+<h4><a name="Running_make"></a>2.2 <a title="Back to top" href="#top">Running make</a></h4>
+<p>Running make with no target will build rApache. Use 'make install' to install. The following make targets are also available:</p>
+<ul>
+	<li><strong>itest</strong> will run apache within a single process. You should see a message on the output to point your browser to http://localhost:8181/index.html where you can test out your rApache build before it is installed. In order to stop apache, either type Control-C or Control-\.</li>
+	<li><strong>test</strong> will run apache in multi-process mode. Run 'make stop' to stop apache.</li>
+	<li><strong>stop</strong> will stop apache after it was started with 'make test'.</li>
+	<li><strong>valgrind</strong> will run apache with valgrind in single-process mode.</li>
+	<li><strong>debug</strong> will run apache with gdb in single-process mode. Besure to look for the lines that say, "Copy/paste the following line to gdb". You'll need the 'run -x -f ...' command to start apache within the debugger.</li>
+</ul>
+<h4><a name="Quick_Install_DebianUbuntu"></a>2.3 <a title="Back to top" href="#top">Quick Install for Debian/Ubuntu</a></h4>
+<p>Run the following as root or use sudo before each command:<p>
+<pre class="code">
+apt-get install r-base-dev apache2-mpm-prefork apache2-prefork-dev
+wget http://biostat.mc.vanderbilt.edu/rapache/files/rapache-latest.tar.gz
+rapachedir=`tar tzf rapache-latest.tar.gz   | head -1`
+tar xzvf rapache-latest.tar.gz
+cd $rapachedir
+./configure
+make
+make install
+</pre>
+
+<h3><a name="Configuring_rapache"></a>3. <a title="Back to top" href="#top">Configuring rApache</a></h3>
+<!-- what to place in your apache2 config file -->
+
+<p> This chapter details what to put in your Apache server configuration
+file(s). If you install Apache from source, then you will only have to
+edit the main file httpd.conf. If you install from a binary distribution, chances are
+the configuration is split among multiple files, so you may want to research your distribution's
+config layout before making any changes.</p>
+
+<h4><a name="R_module"></a>3.1 <a title="Back to top" href="#top">R_module</a></h4>
+<p>
+This is how Apache loads mod_R (<b>must be placed first before any rApache directives</strong>):
+</p>
+<pre class="code">
+# All Apache modules are loaded this way. The most important thing to
+# remember is that the string "R_module" is case sensitive, so get it
+# right in the config file.
+
+LoadModule R_module           /apache/module/path/mod_R.so
+</pre>
+<p>
+<a href="http://httpd.apache.org/docs/2.2/mod/mod_so.html#loadmodule">LoadModule</a> is an apache directive that links in object files that contain module structures. rApache's module structure is named "R_Module".
+</p>
+
+<p><b>NOTE:</strong> 
+
+When attempting to start apache2 on some UNIX systems, you may see an error message similar to this one:
+
+<pre class="code">
+apache2: Syntax error on line 186 of /etc/apache2/apache2.conf: Cannot load 
+/usr/lib/apache2/modules/mod_R.so into server: libR.so: cannot open shared 
+object file: No such file or directory
+</pre>
+
+To fix this, you will want to instruct your run-time linker, ld.so, on where to find libR.so. The easiest way to do this is by adding the directory to the /etc/ld.so.conf file and re-running ldconfig as root. If you don't know the location you can easily find out by running:
+
+<pre class="code">
+$ R CMD config --ldflags
+-L/usr/lib/R/lib -lR
+</pre>
+
+In the output above, <b>/usr/lib/R/lib</strong> is the directory you will want to place in /etc/ld.so.conf.
+
+<h4><a name="ROutputErrors"></a>3.2 <a title="Back to top" href="#top">ROutputErrors</a></h4>
+<p>
+The presence of this directive tells rApache to turn R errors into HTML and print them to the browser rather than to apache's error log file. Note that this alters the HTTP response status code sent to the browser. When ROutputErrors is placed in the apache config file, 200 OK is returned. When it is omitted from the config file, 500 INTERNAL_SERVER_ERROR is returned.
+
+Here's a config snippet:
+</p>
+<pre class="code">
+# Place this in the config file to turn error messages into HTML which
+# are printed in the browser. Without this, all warning and error messages
+# are printed to the Apache error log file.
+
+ROutputErrors
+</pre>
+
+<h4><a name="r_info"></a>3.3 <a title="Back to top" href="#top">SetHandler r-info</a></h4>
+
+<p> When configuring rApache for the first time, you may want to add the
+following directive to ensure that your system is working. It produces
+a report about R and Apache when you visit the url at /RApacheInfo. For
+production systems, you might want to leave it out.  </p>
+
+<pre class="code"><%%
+# Prints out a nice report about R running within Apache
+<Location /RApacheInfo>
+SetHandler r-info
+</Location>
+%%></pre>
+
+<a href="files/RApacheInfo.html">View a sample here.</a>
+
+<h4><a name="REvalOnStartup"></a>3.4 <a title="Back to top" href="#top">REvalOnStartup</a></h4>
+
+<p> This directive takes one argument: a string containing R expressions
+to evaluate upon startup.  Any number of these directives can appear
+throughout the config files, and they are evaluated in the global
+environment in the order they appear. Useful for setting options and
+loading libraries like so: </p>
+
+<pre class="code">
+# Load required DBI and RMySQL packages
+
+REvalOnStartup "library(DBI); library(RMySQL)"
+</pre>
+
+<h4><a name="RSourceOnStartup"></a>3.5 <a title="Back to top" href="#top">RSourceOnStartup</a></h4>
+
+<p> Sometimes you want to evaluate quite a bit of code on
+startup. Equivalent to calling source() in the global environment.
+Just like REvalOnStartup, these directives can appear anywhere in the
+config files and they are evaluated in the order that they appear.  </p>
+
+<pre class="code">
+# Configure system with startup file
+
+RSourceOnStartup "/var/www/lib/R/startup.R"
+</pre>
+
+<h4><a name="R_Handlers"></a>3.6 <a title="Back to top" href="#top">R Handlers</a></h4>
+
+<p><i> It's important to read through the following section carefully as
+it will easily cause the most confusion.  You have two Apache directives,
+two rApache directives, and two SetHandler options to learn.  </i></p>
+
+<h5><a name="Location_Directory"></a>3.6.1 <a title="Back to top" href="#top">Difference in Location and Directory</a></h5>
+
+<p> The Apache directives <a href="http://httpd.apache.org/docs/2.2/mod/core.html#location">Location</a>
+and <a href="http://httpd.apache.org/docs/2.2/mod/core.html#directory">Directory</a>
+are used here to match up urls and files to R handlers. Certainly,
+Apache is very configurable and other directives exist to provide more
+fine-grained control over urls and files, but please refer to the 
+<a href="http://httpd.apache.org/docs/2.2/">Apache documentation</a> for
+further info.  </p>
+
+<p>"Location" is used to define the behavior of url's that do not map to files on the filesytem. In rApache, they can be used to invoke an R handler. For instance, suppose we have set up rApache on the site example.com and added the following "Location" directive as in section 2.3:
+
+<pre class="code"><%%
+<Location /Risneat>
+    SetHandler r-info
+</Location>
+%%></pre>
+
+<p>
+Then, the url http://example.com/Risneat will invoke the handler r-info, but that url doesn't map to any
+file on the filesystem.
+</p>
+
+<p>"Directory" is used to define the behavior of files on the filesystem. In rApache, they can be
+used to evaluate files containing R expressions through an R handler like so:</p>
+
+<pre class="code"><%%
+# Any file under /var/www/brew is passed through the function brew located in
+# the package brew
+<Directory /var/www/brew>
+    SetHandler r-script
+    RHandler brew::brew
+</Directory>
+%%></pre>
+
+<p>
+Suppose example.com's Apache DocumentRoot was /var/www/, then the file /var/www/brew/foo.html maps to
+the url http://example.com/brew/foo.html and is run throuh the R package brew.
+</p>
+
+<h5><a name="handler_script"></a>3.6.2 <a title="Back to top" href="#top">Difference in r-handler and r-script</a></h5>
+
+<p> <strong>r-handler</strong>, <strong>r-script</strong>, and <strong>r-info</strong> are valid arguments to Apache's <a href="http://httpd.apache.org/docs/2.2/mod/core.html#sethandler">SetHandler</a> directive ("r-info" is already described in section 2.3). Calling SetHandler forces url's to be parsed through the named handler.
+
+<p><strong>r-handler</strong> is used when you want to call an R function without arguments. You can also specify a particular file as well (see below). It is generally used within Location directives.</p>
+
+<p><strong>r-script</strong> is used when you want to call an R function with 2 arguments: the first is the full path to the file, and the second is an R environment. It is generally used within Directory directives.</p>
+
+<p> Using either of these requires that the function or script return a suitable HTTP response code. For most cases this will be the value OK, which sends an HTTP response code of 200 to the browser. If the function or script would like to signal an error condition, then it should return an object with an S3 class of 'try-error' (read the R documentation for try and tryCatch for further info on the 'try-error' class).
+
+<h5><a name="RHandler"></a>3.6.3 <a title="Back to top" href="#top">RHandler</a></h5>
+
+<p> RHandler is used to specify an R function to handle incoming web requests. The function must exist either in an attached package or it must be found on the R search path. You can use the "::" to preface the function with the package name, just as in R. Examples:</p>
+
+<pre class="code">
+# Specify foo as the function to run. Probably created 
+# by REvalOnStartup or RSourceOnStartup
+
+RHandler foo
+
+# Run the function bar located in the package foo
+
+RHandler foo::bar
+</pre>
+
+<h5><a name="RFileHandler"></a>3.6.4 <a title="Back to top" href="#top">RFileHandler</a></h5>
+
+<p> RFileHandler is used to specify a file and/or the function to handle
+incoming web requests. The "::" notation is used to specifiy the file and
+the function together. Absolute paths to files are expected. Examples:
+</p>
+
+<pre class="code">
+# Hello world example. equivalent to calling source('/var/www/R/hello.R')
+# on each request.
+
+RFileHandler /var/www/R/hello.R
+
+# Call the function foo within the file bar.R
+
+RFileHandler /var/www/R/bar.R::foo
+</pre>
+
+<p> Another note about RFileHandler. Each file specified is parsed only
+when its timestamp changes. This is useful for debugging, and once you
+are happy with the functionality, you may want to place it in a package
+use RSourceOnStartup and turn it into a function call instead for more
+efficiency. </p>
+
+<h5><a name="Example_Configurations"></a>3.6.5 <a title="Back to top" href="#top">Example Configurations</a></h5>
+
+<p>By far the easiest configuration will be the brew example. Each file under /var/www/brew
+is treated as a brew script:</p>
+
+<pre class="code"><%%
+# Any file under /var/www/brew is passed through the function brew located in
+# the package brew.
+<Directory /var/www/brew>
+	SetHandler r-script
+	RHandler brew::brew
+</Directory>
+%%></pre>
+
+<p>Another option is to use sys.source:<p>
+
+<pre class="code"><%%
+# Any file under /var/www/R-files is passed through the function sys.source.
+<Directory /var/www/R-files>
+	SetHandler r-script
+	RHandler sys.source
+</Directory>
+%%></pre>
+
+<p>Hello World for the url at /test/helloworld:</p>
+<pre class="code"><%%
+# Runs the R expressions in helloworld.r for every request
+# that matches /test/helloworld, including /test/helloworld/foobar
+
+<Location /test/helloworld>
+        SetHandler r-handler
+        RFileHandler /path/to/R/scripts/helloworld.r
+</Location>
+%%></pre>
+
+<h3><a name="rapache_Functions"></a>4. <a title="Back to top" href="#top">rApache Functions</a></h3>
+
+<p> The following functions can be used inside R handlers.</p>
+
+<h4><a name="setHeader"></a>4.1 <a title="Back to top" href="#top">setHeader</a></h4>
+
+<p>Add <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html">HTTP Response Headers (RFC2616)</a> to the response.
+All headers must be added before the first output from print() or cat().</p>
+
+<div class="rdoc">
+<p>Example:</p>
+<pre class="code">
+setHeader(header='X-Powered-By',value='rApache')
+</pre>
+
+<p>Arguments:</p>
+<ul>
+<li><strong>header</strong> Character. Name of the header: case-insensitive.</li>
+<li><strong>value</strong> Any valid R object of length 1 that can be converted to type character. Value of the header.</li>
+</ul>
+
+<p>Returns:</p> 
+<ul><li>the value passed in or NULL if name or value are not of type character.</ul>
+</div>
+
+<h4><a name="setContentType"></a>4.2 <a title="Back to top" href="#top">setContentType</a></h4>
+<p>Allows handler to set the <a href="http://www.wikipedia.org/wiki/Internet_media_type">content type</a> of the request.
+Must be called before output with print or cat().</p>
+
+<div class="rdoc">
+<p>Example:</p>
+<pre class="code">
+setContentType(type='image/png')
+</pre>
+
+<p>Arguments:</p>
+<ul>
+<li><strong>type</strong> character vector of length 1. Valid MIME type.</li>
+</ul>
+
+<p>Returns:</p>
+<ul>
+<li>type or NULL on error.</li>
+</ul>
+
+</div>
+
+<h4><a name="setCookie"></a>4.3 <a title="Back to top" href="#top">setCookie</a></h4>
+<p>Add <a href="http://www.wikipedia.org/wiki/HTTP_cookie">HTTP Cookies</a> to the response headers.
+In the simplest case, calling setCookie('foo','bar') sets the cookie 'foo'
+	to the value 'bar'. Calling setCookie('foo') will delete the cookie 'foo'.
+	Any non-standard key value pairs can be appended by using ...</p>
+<div class="rdoc">
+
+<p>Example:</p>
+<pre class="code">
+setCookie(name='sessionID',value=paste(rnorm(1)))
+</pre>
+
+<p>Arguments:</p>
+<ul>
+<li><strong>name</strong> Character. Name of the cookie.</li>
+<li><strong>value</strong> Any valid R object of length 1 that can be converted to type character. Value of the cookie.</li>
+<li><strong>expires</strong> POSIXct object. Determines when the cookie expires.</li>
+<li><strong>path</strong> Character. URL to which the cookie pertains.</li>
+<li><strong>domain</strong> Character. Domain to which the cookie pertains.</li>
+<li><strong>...</strong> Any additional values appended to the cookie.</li>
+</ul>
+
+<p>Returns:</p>
+<ul><li>Either the string representation of the cookie or NULL if name was not provided.</li></ul>
+
+</div>
+
+<h4><a name="urlEncode"></a>4.4 <a title="Back to top" href="#top">urlEncode and urlDecode</a></h4>
+<p><a href="http://www.wikipedia.org/wiki/Percent-encoding">Percent encoding and decoding</a> (url for short) of character vectors.</p>
+
+<div class="rdoc">
+<p>Example:</p>
+<pre class="code">
+urlEncode(str='hello world@example.com')
+urlDecode(str='hello+world%40example.com')
+</pre>
+
+<p>Arguments:</p>
+<ul>
+<li><strong>str</strong> Character vector of strings to encode or decode.</li>
+</ul>
+
+<p>Returns:</p>
+<ul><li>Character vector the same length as str.</li></ul>
+</div>
+
+<h4><a name="RApacheInfo"></a>4.5 <a title="Back to top" href="#top">RApacheInfo</a></h4>
+<p>Print out a report <a href="RApacheInfo.html">(sample)</a> about rApache.
+Should be the only call in your R handler. Equivalent to using "SetHandler r-info".</p>
+
+<div class="rdoc">
+<p>Example:</p>
+<pre class="code">
+RApacheInfo()
+</pre>
+
+<p>Arguments:</p>
+<ul><li>None</li></ul>
+
+<p>Returns:</p>
+<ul><li>NULL.</li></ul>
+</div>
+
+<h4><a name="sendBin"></a>4.6 <a title="Back to top" href="#top">sendBin</a></h4>
+<p>Sends binary data to the browser. This function is equivalent to R's writeBin() function, but the connection argument is ignored.
+See the documentation to <strong>writeBin()</strong> in your R distribution for more information.</p>
+
+<div class="rdoc">
+<pre class="code">
+sendBin(object=readBin(t,'raw',n=file.info(t)$size))
+</pre>
+
+<p>Arguments:</p>
+<ul>
+  <li><strong>object</strong> An R object to be written to the connection.</li>
+  <li><strong>con</strong> Ignored, and can be omitted from the call.</li>
+  <li><strong>size</strong> integer.  The number of bytes per element in the byte
+    stream.  The default, <i>NA_integer_</i>, uses the natural size.
+    Size changing is not supported for raw and complex vectors.</li>
+  <li><strong>endian</strong> The endian-ness (<i>"big"</i> or <i>"little"</i> of the
+    target system for the file.  Using <i>"swap"</i> will force swapping
+    endian-ness.</li>
+</ul>
+
+<p>Returns:</p>
+<ul><li>NULL</ul></li>
+</div>
+
+<h4><a name="RApacheOutputErrors"></a>4.7 <a title="Back to top" href="#top">RApacheOutputErrors</a></h4>
+<p>Determines where rApache sends error output: to the browser or to the apache error log. Overrides the module-wide apache config directive ROutputErrors. It also governs which HTTP response code to send to the requestor, either 200 when status=TRUE or 500 status=FALSE.</p>
+<div class="rdoc">
+<pre class="code"><%%
+# Turn warnings and errors into HTML comments
+RApacheOutputErrors(status=TRUE,prefix='&lt!--\n',suffix='--&gt\n')
+%%></pre>
+
+<p>Arguments:</p>
+<ul>
+  <li><strong>status</strong> logical. TRUE sends errors to the browser: FALSE sends to the apache log file.</li>
+  <li><strong>prefix</strong> string. Effective only when status=TRUE. Prepended to each error message sent to the browser</li>
+  <li><strong>suffix</strong> string. Effective only when status=TRUE. Appended to each error message sent to the browser</li>
+</ul>
+<p>Returns:</p>
+<ul><li>NULL.</li></ul>
+</div>
+
+<h3><a name="rapache_Variables"></a>5. <a title="Back to top" href="#top">rApache Variables</a></h3>
+
+<p>
+In previous releases of rApache, information from the web server was passed to R handlers 
+in a single variable. This system design element was copied from other apache modules, but it has
+proven to be too cumbersome to support in software maintenance. Rather, because R has support for lexical scoping and in a far broader sense the ability to manipulate the language, a simpler approach was implemented.
+</p>
+
+<p>rApache variables, named similar to PHP variables, are
+read-only list variables whose values are in most cases
+character vectors. They are injected into the environment
+of the R handler, and they are found by your R code via <a
+href="http://cran.r-project.org/doc/manuals/R-intro.html#Scope">lexical
+scoping rules.</a><p>
+
+<h4><a name="GET"></a>5.1 <a title="Back to top" href="#top">GET</a></h4>
+
+<p>The GET variable contains those values obtained from an HTTP GET
+method, i.e. the key-value pairs found after the "?" of an URL, or data
+passed from an HTTP form when the method attribute is "GET".  For example,
+the following form:
+
+<pre class="code"><%%
+<form method="GET" action="http://example.com/brew/get.html">
+	<input type="text" name="p1" value="0.95">
+	<input type="text" name="p2" value="0.7">
+<input type="submit" name="Submit">
+</form>
+%%></pre>
+
+produces the following GET list variable:
+
+<pre class="code">
+> str(GET)
+List of 3
+ $ p1    : chr "0.95"
+ $ p2    : chr "0.7"
+ $ Submit: chr "Submit Query"
+</pre>
+
+<h4><a name="POST"></a>5.2 <a title="Back to top" href="#top">POST</a></h4>
+
+<p>The POST variable contains those values obtained from an HTTP POST method, i.e. 
+data passed from an HTTP form when the method attribute is "POST". Switching the method to "POST" in
+the example form from the previous section will produce the same values, yet in the POST variable:
+
+<pre class="code">
+> str(POST)
+List of 3
+ $ p1    : chr "0.95"
+ $ p2    : chr "0.7"
+ $ Submit: chr "Submit Query"
+</pre>
+
+<h4><a name="COOKIES"></a>5.3 <a title="Back to top" href="#top">COOKIES</a></h4>
+
+<p>The COOKIES variable contains those values obtained from the HTTP response header named "Cookie". It is
+a list variable whose values are character vectors. See the <a href="#setCookie">setCookie</a> function and 
+<a href="http://www.wikipedia.org/wiki/HTTP_cookie">this link</a> for more info.
+
+<h4><a name="FILES"></a>5.4 <a title="Back to top" href="#top">FILES</a></h4>
+
+<p> The FILES variable contains information about uploaded files via HTTP forms when the enctype attribute is set to "multipart/form-data". The following form:
+
+<pre class="code"><%%
+<form enctype="multipart/form-data" method="POST" action="URL">
+	<input type="file" name="FirstFile">
+	<input type="file" name="SecondFile">
+<input type="submit" name="Upload">
+%%></pre>
+
+produces this FILES variable:
+
+<pre class="code">
+> str(FILES)
+List of 2
+ $ FirstFile :List of 2
+  ..$ name    : chr "useR2007poster.pdf"
+  ..$ tmp_name: chr "/tmp/apreqc9GlXE"
+ $ SecondFile:List of 2
+  ..$ name    : chr "rapache-1.0.0-useR2007.tar.gz"
+  ..$ tmp_name: chr "/tmp/apreqoQ2hhX"
+</pre>
+
+<p> It is a list of lists, with the nested list giving you the "name"
+of the file and the "tmp_name", the location of the temporary file. For
+instance, to reference the uploaded file from the input tag named
+"FirstFile" you would use FILES$FirstFile$tmp_name. Here's a code snippet to copy the file to the
+'/usr/local/uploaded_files' directory:</p>
+
+<pre class="code">
+destination <- file.path('/usr/local/uploaded_files',FILES$FirstFile$name)
+file.copy(FILES$FirstFile$tmp_name,destination,overwrite=TRUE)
+</pre>
+
+<p>NOTE: the temporary files are deleted after the R handler completes
+handling the request. Thus, it is imperative that you copy/move this
+file to your desired location before the R handler returns.<p>
+
+<h4><a name="SERVER"></a>5.5 <a title="Back to top" href="#top">SERVER</a></h4>
+
+<p>As you can see from the below output, the SERVER variable contains a wealth of information about
+the incoming web request:</p>
+
+<pre class="code">
+> str(SERVER)
+List of 30
+ $ headers_in        :List of 9
+  ..$ Host           : chr "localhost:8181"
+  ..$ User-Agent     : chr "Mozilla/5.0 (X11; U; Linux i686; en-US; ..."
+  ..$ Accept         : chr "text/xml,application/xml,application/x..."
+  ..$ Accept-Language: chr "en-us,en;q=0.5"
+  ..$ Accept-Encoding: chr "gzip,deflate"
+  ..$ Accept-Charset : chr "ISO-8859-1,utf-8;q=0.7,*;q=0.7"
+  ..$ Keep-Alive     : chr "300"
+  ..$ Connection     : chr "keep-alive"
+  ..$ Cache-Control  : chr "max-age=0"
+ $ proto_num         : int 1001
+ $ protocol          : chr "HTTP/1.1"
+ $ unparsed_uri      : chr "/brew/server.html/beetles/?foo=bar"
+ $ uri               : chr "/brew/server.html/beetles/"
+ $ filename          : chr "/home/hornerj/rapache/branches/rapache-1-0-br..."
+ $ canonical_filename: chr "/home/hornerj/rapache/branches/rapache-1-0-br..."
+ $ path_info         : chr "/beetles/"
+ $ args              : chr "foo=bar"
+ $ content_type      : chr "text/html"
+ $ handler           : chr "r-script"
+ $ content_encoding  : NULL
+ $ range             : NULL
+ $ hostname          : chr "localhost"
+ $ user              : NULL
+ $ header_only       : logi FALSE
+ $ no_cache          : logi FALSE
+ $ no_local_copy     : logi FALSE
+ $ assbackwards      : logi FALSE
+ $ status            : int 200
+ $ method_number     : int 0
+ $ eos_sent          : logi FALSE
+ $ the_request       : chr "GET /brew/server.html/beetles/?foo=bar HTTP/1.1"
+ $ method            : chr "GET"
+ $ status_line       : NULL
+ $ bytes_sent        : num 0
+ $ clength           : num 0
+ $ remaining         : num 0
+ $ read_length       : num 0
+ $ request_time      :'POSIXct', format: chr "2007-08-15 11:11:49"
+ $ mtime             :'POSIXct', format: chr "1969-12-31 18:00:00"
+</pre>
+
+<p>Here's a description of each list element:</p>
+
+	<div id="rdoc">
+	<p><strong>headers_in</strong>  list containing all the HTTP headers sent by the
+	client. </p>
+
+    <p><strong>proto_num</strong>  Integer. Protocol version number of protocol;
+    1.1 = 1001</p>
+
+    <p><strong>protocol</strong>  Character. Protocol string, as given to us,
+    or HTTP/0.9.</p>
+
+    <p><strong>unparsed_uri</strong>  Character. The URI without any parsing
+    performed.</p>
+
+    <p><strong>uri</strong>  Character. The path portion of the URI. </p>
+
+    <p><strong>filename</strong> Character. The name of the file with full path information. </p>
+
+    <p><strong>canonical_filename</strong> Character. The true filename. Case and aliases/symbolic links have been resolved.</p>
+
+    <p><strong>path_info</strong>  Character. The suffix portion  of 
+    the url after it has been matched to an asset that the web server knows about. An asset is either a file or an url defined by an Apache Location directive.</p>
+
+    <p><strong>args</strong>  Character. The HTTP GET data extracted from this
+    request. </p>
+
+    <p><strong>content_type</strong> Character. The content-type for the
+    current request.</p>
+
+    <p><strong>handler</strong>  Character. The
+    handler string that we use to call a handler function.</p>
+
+    <p><strong>content_encoding</strong> Character. How to encode the data. </p>
+
+    <p><strong>range</strong> Character. The HTTP Response header named "Range:". </p>
+
+    <p><strong>hostname</strong>  Character. The server hostname. </p>
+
+    <p><strong>user</strong>  Character. If an HTTP authentication check was made,
+    this gets set to the user name.</p>
+
+    <p><strong>header_only</strong> Logical. HEAD request, as opposed to GET. </p>
+
+    <p><strong>no_cache</strong> Logical. This response can not be cached. </p>
+
+    <p><strong>no_local_copy</strong>  Logical. There is no local copy of this
+    response. </p> 
+
+	<p><strong>assbackwards</strong> Logical. HTTP/0.9, 'simple'
+    request (e.g. GET /foo\n w/no headers). Developers have found
+    this a useful way to internally redirect without headers.</p>
+
+    <p><strong>status</strong> Integer. Status line. </p>
+
+    <p><strong>method_number</strong>  Integer value of GET, POST, etc.</p>
+
+    <p><strong>eos_sent</strong> Logical. A flag to determine if the eos bucket
+    has been sent yet. </p>
+
+    <p><strong>the_request</strong> Character. First line of the request. </p>
+
+    <p><strong>method</strong>  Character. Request method (eg. GET, HEAD,
+    POST, etc.)</p>
+
+    <p><strong>status_line</strong> Character. Status line, if set by script. </p>
+
+    <p><strong>bytes_sent</strong> Numeric. Number of bytes sent. </p>
+
+    <p><strong>clength</strong> Numeric. The 'real' content length. </p>
+
+    <p><strong>remaining</strong> Numeric. Remaining bytes left to read from
+    the request body. </p>
+
+    <p><strong>read_length</strong>  Numeric. Number of bytes that have been
+    read  from the request body. </p>
+
+    <p><strong>request_time</strong>  POSIXct DateTime object. Time when the
+    request started.</p>
+
+    <p><strong>mtime</strong>  POSIXct DateTime object. Last modified time of
+    the requested resource .</p>
+	</div>
+
+<h4><a name="HTTP_RESPONSE_CODES"></a>5.6 <a title="Back to top" href="#top">Handler Return Values and HTTP Response Codes</a></h4>
+
+<p>The following table describes variables that exist as integer vectors of length 1 in the R handler environment and are proper return values for R handlers. They consist of Apache module return values and HTTP Status Codes(see <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10">Status Code Definitions from RFC2616</a> for more info). The most reasonable response value and the one that most handlers will return is the value DONE.</p>
+
+<table><tr><th>name</th><th>value</th><th>description</th></tr>
+<tr><td>DECLINDED</td><td>                          -1</td><td>Module declines to handle</td></tr>
+<tr><td>DONE</td><td>                               -2</td><td>Module has served response completely.</td></tr>
+<tr><td>OK</td><td>                                 -0</td><td>Module has handled this Apache response stage.</td></tr>
+<tr><td>HTTP_CONTINUE</td><td>                     100</td><td></tr>
+<tr><td>HTTP_SWITCHING_PROTOCOLS</td><td>          101</td><td></tr>
+<tr><td>HTTP_PROCESSING</td><td>                   102</td><td></tr>
+<tr><td>HTTP_OK</td><td>                           200</td><td></tr>
+<tr><td>HTTP_CREATED</td><td>                      201</td><td></tr>
+<tr><td>HTTP_ACCEPTED</td><td>                     202</td><td></tr>
+<tr><td>HTTP_NON_AUTHORITATIVE</td><td>            203</td><td></tr>
+<tr><td>HTTP_NO_CONTENT</td><td>                   204</td><td></tr>
+<tr><td>HTTP_RESET_CONTENT</td><td>                205</td><td></tr>
+<tr><td>HTTP_PARTIAL_CONTENT</td><td>              206</td><td></tr>
+<tr><td>HTTP_MULTI_STATUS</td><td>                 207</td><td></tr>
+<tr><td>HTTP_MULTIPLE_CHOICES</td><td>             300</td><td></tr>
+<tr><td>HTTP_MOVED_PERMANENTLY</td><td>            301</td><td></tr>
+<tr><td>HTTP_MOVED_TEMPORARILY</td><td>            302</td><td></tr>
+<tr><td>HTTP_SEE_OTHER</td><td>                    303</td><td></tr>
+<tr><td>HTTP_NOT_MODIFIED</td><td>                 304</td><td></tr>
+<tr><td>HTTP_USE_PROXY</td><td>                    305</td><td></tr>
+<tr><td>HTTP_TEMPORARY_REDIRECT</td><td>           307</td><td></tr>
+<tr><td>HTTP_BAD_REQUEST</td><td>                  400</td><td></tr>
+<tr><td>HTTP_UNAUTHORIZED</td><td>                 401</td><td></tr>
+<tr><td>HTTP_PAYMENT_REQUIRED</td><td>             402</td><td></tr>
+<tr><td>HTTP_FORBIDDEN</td><td>                    403</td><td></tr>
+<tr><td>HTTP_NOT_FOUND</td><td>                    404</td><td></tr>
+<tr><td>HTTP_METHOD_NOT_ALLOWED</td><td>           405</td><td></tr>
+<tr><td>HTTP_NOT_ACCEPTABLE</td><td>               406</td><td></tr>
+<tr><td>HTTP_PROXY_AUTHENTICATION_REQUIRED</td><td>407</td><td></tr>
+<tr><td>HTTP_REQUEST_TIME_OUT</td><td>             408</td><td></tr>
+<tr><td>HTTP_CONFLICT</td><td>                     409</td><td></tr>
+<tr><td>HTTP_GONE</td><td>                         410</td><td></tr>
+<tr><td>HTTP_LENGTH_REQUIRED</td><td>              411</td><td></tr>
+<tr><td>HTTP_PRECONDITION_FAILED</td><td>          412</td><td></tr>
+<tr><td>HTTP_REQUEST_ENTITY_TOO_LARGE</td><td>     413</td><td></tr>
+<tr><td>HTTP_REQUEST_URI_TOO_LARGE</td><td>        414</td><td></tr>
+<tr><td>HTTP_UNSUPPORTED_MEDIA_TYPE</td><td>       415</td><td></tr>
+<tr><td>HTTP_RANGE_NOT_SATISFIABLE</td><td>        416</td><td></tr>
+<tr><td>HTTP_EXPECTATION_FAILED</td><td>           417</td><td></tr>
+<tr><td>HTTP_UNPROCESSABLE_ENTITY</td><td>         422</td><td></tr>
+<tr><td>HTTP_LOCKED</td><td>                       423</td><td></tr>
+<tr><td>HTTP_FAILED_DEPENDENCY</td><td>            424</td><td></tr>
+<tr><td>HTTP_UPGRADE_REQUIRED</td><td>             426</td><td></tr>
+<tr><td>HTTP_INTERNAL_SERVER_ERROR</td><td>        500</td><td></tr>
+<tr><td>HTTP_NOT_IMPLEMENTED</td><td>              501</td><td></tr>
+<tr><td>HTTP_BAD_GATEWAY</td><td>                  502</td><td></tr>
+<tr><td>HTTP_SERVICE_UNAVAILABLE</td><td>          503</td><td></tr>
+<tr><td>HTTP_GATEWAY_TIME_OUT</td><td>             504</td><td></tr>
+<tr><td>HTTP_VERSION_NOT_SUPPORTED</td><td>        505</td><td></tr>
+<tr><td>HTTP_VARIANT_ALSO_VARIES</td><td>          506</td><td></tr>
+<tr><td>HTTP_INSUFFICIENT_STORAGE</td><td>         507</td><td></tr>
+<tr><td>HTTP_NOT_EXTENDED</td><td>                 510</td><td></tr>
+</table>
+
+<br>
+<p>Another suitable value to return from a handler is an object with S3 class of 'try-error'.</p>
+
+<h3><a name="rapache_Cookbook"></a>6. <a title="Back to top" href="#top">rApache Cookbook</a></h3>
+<p> For a complete look at an rApache appliction, download the <a href="http://biostat.mc.vanderbilt.edu/svn/rapache/web/files/useR2007brew.tgz">useR2007 application</a> which uses <a href="http://biostat.mc.vanderbilt.edu/Hmisc">Hmisc</a> and <a href="http://www.rforge.net/brew/">brew</a> for power and sample size calculations.</p>
+
+<p>The following code exercises all rApache functionality by just echoing what was sent from the browser. Copy and paste the following code to a file and then set up apache with the following configuration. You should then be able to point your browser at http://example.com/rapachetest (replacing example.com with your own hostname).</p>
+
+<pre class="code"><%%
+# 
+# Place this in your Apache config file.
+#
+<Location /rapachetest>
+	SetHandler r-handler
+	RFileHandler /var/www/R/test.R
+</Location>
+%%></pre>
+
+	<!-- sample app -->
+<pre class="code"><%%
+#
+# Copy and save this code to /var/www/R/test.R
+#
+hrefify <- function(title) gsub('[\\.()]','_',title,perl=TRUE)
+scrub <- function(str){ 
+	if (is.null(str)) return('NULL')
+	if (length(str) == 0) return('length 0 string')
+	cat("\n<!-- before as.character: (",str,")-->\n",sep='')
+	str <- as.character(str)
+	cat("\n<!-- after as.character: (",str,")-->\n",sep='')
+	str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); 
+	str <- gsub('<','&lt;',str); str <- gsub('>','&gt;',str); 
+	if (length(str) == 0 || is.null(str) || str == '')
+		str <- '&nbsp;' 
+	str
+}
+cl<-'e'
+zebary <- function(i){ 
+	cl <<- ifelse(cl=='e','o','e')
+	cat('<tr class="',cl,'"><td>',scrub(i),'</td></tr>\n',sep='')
+}
+zeblist <- function(i,l){ 
+	cl <<- ifelse(cl=='e','o','e')
+	 cat('<tr class="',cl,'"><td class="l">',names(l)[i],'</td><td>')
+	if(is.list(l[[i]]))
+		zebra(names(l)[i],l[[i]])
+	else {
+		if (length(l[[i]]) > 1)
+			zebary(l[[i]])
+		else
+			cat(scrub(l[[i]]))
+	}
+		
+	cat('</td></tr>\n',sep='')
+}
+zebra <- function(title,l){ 
+	cat('<h2><a name="',hrefify(title),'"> </a>',title,'</h2>\n<table><tbody>',sep='')
+	ifelse(is.list(l),lapply(1:length(l),zeblist,l), lapply(l,zebary))
+	cat('</tbody></table>\n<br/><hr/>') 
+}
+
+# Output starts here
+setContentType("text/html")
+
+if(is.null(GET)){
+	called <- 1
+} else {
+	called <- as.integer(GET$called) + 1
+}
+
+setCookie('called',called,expires=Sys.time()+100)
+
+cat('<HTML><head><style type="text/css">\n') 
+cat('table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }')
+cat('td { border-bottom:1px solid #d9d9d9; border-left:1px solid #d9d9d9; border-spacing: 0px; padding: 3px 8px; }')
+cat('td.l { font-weight: bold; width: 10%; }\n')
+cat('tr.e { background-color: #eeeeee; border-spacing: 0px; }\n')
+cat('tr.o { background-color: #ffffff; border-spacing: 0px; }\n')
+cat('</style></head><BODY><H1>Canonical Test for rApache</H1>\n')
+cat('<form enctype=multipart/form-data method=POST action="?called=',called,'">\n',sep='')
+cat('Enter a string: <input type=text name=name value=""><br>\n',sep='')
+cat('Enter another string: <input type=text name=name value=""><br>\n',sep='')
+cat('Upload a file: <input type=file name=fileUpload><br>\n')
+cat('Upload another file: <input type=file name=anotherFile><br>\n')
+cat('<input type=submit name=Submit>')
+
+cat("<hr>\n")
+zebra('CGI GET Data',GET)
+zebra('CGI POST Data',POST)
+zebra('Cookies',COOKIES)
+if (!is.null(FILES)){
+	cat('<h2>Files Uploaded in POST Data</h2>\n')
+	for (n in names(FILES)){
+		zebra(paste("Form Variable",n),FILES[[n]])
+	}
+}
+zebra("SERVER Variables",SERVER)
+cat("</BODY></HTML>\n")
+
+DONE
+%%></pre>
+	<!-- testing for user input -->
+	<!-- uploading files -->
+<h3><a name="License"></a>7. License</h3>
+<p>
+  The rApache source code is licensed under the <a href="http://www.apache.org/licenses/LICENSE-2.0.html">Apache License Version
+  2.0</a>.
+</p>
+<h3><a name="Citing"></a>8. Citing rApache</h3>
+
+<p>To cite rApache, use the following:</p>
+
+<div class="citation"> Jeffrey Horner (2011). rApache: Web application development with R and Apache. http://biostat.mc.vanderbilt.edu/rapache/</div>
+
+<p> A BibTeX entry for LaTeX users is</p>
+<pre class="code"><%%
+@Manual{,
+	title = {rApache: Web application development with R and Apache.},
+	author = {Jeffrey Horner},
+	year = {2011},
+	url = {http://www.rapache.net/},
+}
+%%></pre>
+
+<h3><a name="Thanks"></a>9. Thanks</h3>
+<p>Thanks to the following people for their contributions, giving advice, noticing when things were broken and such. If I've forgotten to mention you, please email me.</p>
+<pre>
+	Gregoire Thomas
+	Jan de Leeuw
+	Keven E. Thorpe
+	Jeremy Stephens
+	Aleksander Wawer
+	David Konerding
+	Robert Kofler
+	Jeroen Ooms
+	Michael Driscoll
+</pre>
+<% brew('footer.rhtml') %> 

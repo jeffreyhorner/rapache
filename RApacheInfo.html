@@ -1,0 +1,1616 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- saved from url=(0033)http://localhost:8181/RApacheInfo -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style type="text/css">body { font-family: "lucida grande",verdana,sans-serif; margin-left: 210px; margin-right: 18px; }table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }td { border-bottom:1px solid #d9d9d9; border-left:1px solid #d9d9d9; border-spacing: 0px; padding: 3px 8px; }td.l { font-weight: bold; width: 10%; }tr.e { background-color: #eeeeee; border-spacing: 0px; }tr.o { background-color: #ffffff; border-spacing: 0px; }div a { text-decoration: none; color: white; }a:hover { color: #8897be; background: white; }tr:hover { background: #8897be; }img.map { position: fixed; border: 0px; left: 50px; right: auto; top: 10px; }div.map { background: #8897be; font-weight: bold; color: white; position: fixed; bottom: 30px; height: auto; left: 15px; right: auto; top: 110px; width: 150px; padding: 0 13px; text-align: right; font-size: 12pt; }div.map p { font-size: 10pt; font-family: serif; font-style: italic; }div.h { font-size: 20pt; font-weight: bold; }h4 { font-size: 10pt; font-weight: bold; color: grey;}hr {background-color: #cccccc; border: 0px; height: 1px; color: #000000;}</style><title>RApacheInfo()</title><meta name="ROBOTS" content="NOINDEX,NOFOLLOW,NOARCHIVE"></head><body><a name="Top"> </a><a href="http://www.r-project.org/"><img class="map" alt="R Language Home Page" src="./RApacheInfo_files/Rlogo.jpg"></a><div class="h">RApache version 1.1.14<h4>$Id: mod_R.c 471 2011-01-12 16:04:36Z hornerj $</h4></div><div class="map"><p>jump to:</p><a href="http://localhost:8181/RApacheInfo#Top">Top</a><br><hr><a href="http://localhost:8181/RApacheInfo#R_version">R.version</a><br><a href="http://localhost:8181/RApacheInfo#search__">search()</a><br><a href="http://localhost:8181/RApacheInfo#_libPaths__">.libPaths()</a><br><a href="http://localhost:8181/RApacheInfo#options__">options()</a><br><a href="http://localhost:8181/RApacheInfo#Sys_getenv__">Sys.getenv()</a><br><a href="http://localhost:8181/RApacheInfo#Sys_info__">Sys.info()</a><br><a href="http://localhost:8181/RApacheInfo#_Machine">.Machine</a><br><a href="http://localhost:8181/RApacheInfo#_Platform">.Platform</a><br><a href="http://localhost:8181/RApacheInfo#Cstack_info__">Cstack_info()</a><br><hr><a href="http://localhost:8181/RApacheInfo#Attached_Packages">Attached Packages</a><br><hr><a href="http://localhost:8181/RApacheInfo#Installed_Packages">Installed Packages</a><br><hr><a href="http://localhost:8181/RApacheInfo#License">License</a><br><hr><a href="http://localhost:8181/RApacheInfo#People">People</a></div><h2><a name="R_version"> </a>R.version</h2><table><tbody><tr class=" o "><td class="l"> platform </td><td>i486-pc-linux-gnu</td></tr>
+<tr class=" e "><td class="l"> arch </td><td>i486</td></tr>
+<tr class=" o "><td class="l"> os </td><td>linux-gnu</td></tr>
+<tr class=" e "><td class="l"> system </td><td>i486, linux-gnu</td></tr>
+<tr class=" o "><td class="l"> status </td><td>&nbsp;</td></tr>
+<tr class=" e "><td class="l"> major </td><td>2</td></tr>
+<tr class=" o "><td class="l"> minor </td><td>13.1</td></tr>
+<tr class=" e "><td class="l"> year </td><td>2011</td></tr>
+<tr class=" o "><td class="l"> month </td><td>07</td></tr>
+<tr class=" e "><td class="l"> day </td><td>08</td></tr>
+<tr class=" o "><td class="l"> svn rev </td><td>56322</td></tr>
+<tr class=" e "><td class="l"> language </td><td>R</td></tr>
+<tr class=" o "><td class="l"> version.string </td><td>R version 2.13.1 (2011-07-08)</td></tr>
+</tbody></table>
+<br><hr><h2><a name="search__"> </a>search()</h2><table><tbody><tr class=" e "><td>.GlobalEnv</td></tr>
+<tr class=" o "><td>package:brew</td></tr>
+<tr class=" e "><td>package:stats</td></tr>
+<tr class=" o "><td>package:graphics</td></tr>
+<tr class=" e "><td>package:grDevices</td></tr>
+<tr class=" o "><td>package:utils</td></tr>
+<tr class=" e "><td>package:datasets</td></tr>
+<tr class=" o "><td>package:methods</td></tr>
+<tr class=" e "><td>Autoloads</td></tr>
+<tr class=" o "><td>rapache</td></tr>
+<tr class=" e "><td>package:base</td></tr>
+</tbody></table>
+<br><hr><h2><a name="_libPaths__"> </a>.libPaths()</h2><table><tbody><tr class=" o "><td>/usr/local/lib/R/site-library</td></tr>
+<tr class=" e "><td>/usr/lib/R/site-library</td></tr>
+<tr class=" o "><td>/usr/lib/R/library</td></tr>
+</tbody></table>
+<br><hr><h2><a name="options__"> </a>options()</h2><table><tbody><tr class=" e "><td class="l"> add.smooth </td><td>TRUE</td></tr>
+<tr class=" o "><td class="l"> bitmapType </td><td>cairo</td></tr>
+<tr class=" e "><td class="l"> browser </td><td>xdg-open</td></tr>
+<tr class=" o "><td class="l"> browserNLdisabled </td><td>FALSE</td></tr>
+<tr class=" e "><td class="l"> check.bounds </td><td>FALSE</td></tr>
+<tr class=" o "><td class="l"> continue </td><td>+ </td></tr>
+<tr class=" e "><td class="l"> contrasts </td><td><table><tbody><tr class=" o "><td class="l"> unordered </td><td>contr.treatment</td></tr>
+<tr class=" e "><td class="l"> ordered </td><td>contr.poly</td></tr>
+</tbody></table>
+</td></tr>
+<tr class=" o "><td class="l"> defaultPackages </td><td><table><tbody><tr class=" e "><td>datasets</td></tr>
+<tr class=" o "><td>utils</td></tr>
+<tr class=" e "><td>grDevices</td></tr>
+<tr class=" o "><td>graphics</td></tr>
+<tr class=" e "><td>stats</td></tr>
+<tr class=" o "><td>methods</td></tr>
+</tbody></table>
+</td></tr>
+<tr class=" e "><td class="l"> demo.ask </td><td>default</td></tr>
+<tr class=" o "><td class="l"> device </td><td>function (file = ifelse(onefile, "Rplots.pdf", "Rplot%03d.pdf"),      width, height, onefile, family, title, fonts, version, paper,      encoding, bg, fg, pointsize, pagecentre, colormodel, useDingbats,      useKerning, fillOddEven, maxRasters)  </td></tr>
+<tr class=" e "><td class="l"> device.ask.default </td><td>FALSE</td></tr>
+<tr class=" o "><td class="l"> digits </td><td>7</td></tr>
+<tr class=" e "><td class="l"> dvipscmd </td><td>dvips</td></tr>
+<tr class=" o "><td class="l"> echo </td><td>FALSE</td></tr>
+<tr class=" e "><td class="l"> editor </td><td>vi</td></tr>
+<tr class=" o "><td class="l"> encoding </td><td>native.enc</td></tr>
+<tr class=" e "><td class="l"> example.ask </td><td>default</td></tr>
+<tr class=" o "><td class="l"> expressions </td><td>5000</td></tr>
+<tr class=" e "><td class="l"> help.try.all.packages </td><td>FALSE</td></tr>
+<tr class=" o "><td class="l"> HTTPUserAgent </td><td>R (2.13.1 i486-pc-linux-gnu i486 linux-gnu)</td></tr>
+<tr class=" e "><td class="l"> internet.info </td><td>2</td></tr>
+<tr class=" o "><td class="l"> keep.source </td><td>TRUE</td></tr>
+<tr class=" e "><td class="l"> keep.source.pkgs </td><td>FALSE</td></tr>
+<tr class=" o "><td class="l"> locatorBell </td><td>TRUE</td></tr>
+<tr class=" e "><td class="l"> mailer </td><td>mailto</td></tr>
+<tr class=" o "><td class="l"> max.print </td><td>99999</td></tr>
+<tr class=" e "><td class="l"> menu.graphics </td><td>TRUE</td></tr>
+<tr class=" o "><td class="l"> na.action </td><td>na.omit</td></tr>
+<tr class=" e "><td class="l"> OutDec </td><td>.</td></tr>
+<tr class=" o "><td class="l"> pager </td><td>/usr/lib/R/bin/pager</td></tr>
+<tr class=" e "><td class="l"> papersize </td><td>letter</td></tr>
+<tr class=" o "><td class="l"> pdfviewer </td><td>/usr/bin/xdg-open</td></tr>
+<tr class=" e "><td class="l"> pkgType </td><td>source</td></tr>
+<tr class=" o "><td class="l"> printcmd </td><td>/usr/bin/lpr</td></tr>
+<tr class=" e "><td class="l"> prompt </td><td>&gt; </td></tr>
+<tr class=" o "><td class="l"> repos </td><td>_at_CRAN_at_</td></tr>
+<tr class=" e "><td class="l"> rl_word_breaks </td><td> 	
+"\'`&gt;&lt;=%;,|&amp;{()}</td></tr>
+<tr class=" o "><td class="l"> scipen </td><td>0</td></tr>
+<tr class=" e "><td class="l"> show.coef.Pvalues </td><td>TRUE</td></tr>
+<tr class=" o "><td class="l"> show.error.messages </td><td>TRUE</td></tr>
+<tr class=" e "><td class="l"> show.signif.stars </td><td>TRUE</td></tr>
+<tr class=" o "><td class="l"> str </td><td><table><tbody><tr class=" e "><td class="l"> strict.width </td><td>no</td></tr>
+<tr class=" o "><td class="l"> digits.d </td><td>3</td></tr>
+<tr class=" e "><td class="l"> vec.len </td><td>4</td></tr>
+</tbody></table>
+</td></tr>
+<tr class=" o "><td class="l"> stringsAsFactors </td><td>TRUE</td></tr>
+<tr class=" e "><td class="l"> texi2dvi </td><td>/usr/bin/texi2dvi</td></tr>
+<tr class=" o "><td class="l"> timeout </td><td>60</td></tr>
+<tr class=" e "><td class="l"> ts.eps </td><td>1e-05</td></tr>
+<tr class=" o "><td class="l"> ts.S.compat </td><td>FALSE</td></tr>
+<tr class=" e "><td class="l"> unzip </td><td>/usr/bin/unzip</td></tr>
+<tr class=" o "><td class="l"> useFancyQuotes </td><td>TRUE</td></tr>
+<tr class=" e "><td class="l"> verbose </td><td>FALSE</td></tr>
+<tr class=" o "><td class="l"> warn </td><td>0</td></tr>
+<tr class=" e "><td class="l"> warning.length </td><td>1000</td></tr>
+<tr class=" o "><td class="l"> width </td><td>80</td></tr>
+</tbody></table>
+<br><hr><h2><a name="Sys_getenv__"> </a>Sys.getenv()</h2><table><tbody><tr class=" e "><td class="l"> _ </td><td>/usr/sbin/apache2</td></tr>
+<tr class=" o "><td class="l"> COLORTERM </td><td>gnome-terminal</td></tr>
+<tr class=" e "><td class="l"> DBUS_SESSION_BUS_ADDRESS </td><td>unix:abstract=/tmp/dbus-OZLBal2AJQ,guid=465833dec5454f372c7b4b1f4e0259c5</td></tr>
+<tr class=" o "><td class="l"> DEFAULTS_PATH </td><td>/usr/share/gconf/gnome.default.path</td></tr>
+<tr class=" e "><td class="l"> DESKTOP_SESSION </td><td>gnome</td></tr>
+<tr class=" o "><td class="l"> DISPLAY </td><td>:1.0</td></tr>
+<tr class=" e "><td class="l"> EDITOR </td><td>vi</td></tr>
+<tr class=" o "><td class="l"> GDM_KEYBOARD_LAYOUT </td><td>us</td></tr>
+<tr class=" e "><td class="l"> GDM_LANG </td><td>en_US.utf8</td></tr>
+<tr class=" o "><td class="l"> GDMSESSION </td><td>gnome</td></tr>
+<tr class=" e "><td class="l"> GNOME_DESKTOP_SESSION_ID </td><td>this-is-deprecated</td></tr>
+<tr class=" o "><td class="l"> GNOME_KEYRING_CONTROL </td><td>/tmp/keyring-1r7fzm</td></tr>
+<tr class=" e "><td class="l"> GNOME_KEYRING_PID </td><td>2276</td></tr>
+<tr class=" o "><td class="l"> HOME </td><td>/home/hornerj</td></tr>
+<tr class=" e "><td class="l"> INPUTRC </td><td>/home/hornerj/.inputrc</td></tr>
+<tr class=" o "><td class="l"> LANG </td><td>en_US.utf8</td></tr>
+<tr class=" e "><td class="l"> LD_LIBRARY_PATH </td><td>/usr/lib/R/lib:/home/hornerj/rapache/libapreq2/library/.libs</td></tr>
+<tr class=" o "><td class="l"> LN_S </td><td>ln -s</td></tr>
+<tr class=" e "><td class="l"> LOGNAME </td><td>hornerj</td></tr>
+<tr class=" o "><td class="l"> LS_COLORS </td><td>rs=0:di=01;34:ln=01;36:hl=44;37:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arj=01;31:*.taz=01;31:*.lzh=01;31:*.lzma=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.dz=01;31:*.gz=01;31:*.bz2=01;31:*.bz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.rar=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.axv=01;35:*.anx=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.axa=00;36:*.oga=00;36:*.spx=00;36:*.xspf=00;36:</td></tr>
+<tr class=" e "><td class="l"> MAKE </td><td>make</td></tr>
+<tr class=" o "><td class="l"> MAKEFLAGS </td><td>&nbsp;</td></tr>
+<tr class=" e "><td class="l"> MAKELEVEL </td><td>1</td></tr>
+<tr class=" o "><td class="l"> MANDATORY_PATH </td><td>/usr/share/gconf/gnome.mandatory.path</td></tr>
+<tr class=" e "><td class="l"> MFLAGS </td><td>&nbsp;</td></tr>
+<tr class=" o "><td class="l"> ORBIT_SOCKETDIR </td><td>/tmp/orbit-hornerj</td></tr>
+<tr class=" e "><td class="l"> PAGER </td><td>/usr/bin/pager</td></tr>
+<tr class=" o "><td class="l"> PATH </td><td>/opt/hypertable/0.9.2.3/bin:/home/hornerj/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games</td></tr>
+<tr class=" e "><td class="l"> PWD </td><td>/home/hornerj/rapache</td></tr>
+<tr class=" o "><td class="l"> R_BROWSER </td><td>xdg-open</td></tr>
+<tr class=" e "><td class="l"> R_BZIPCMD </td><td>/bin/bzip2</td></tr>
+<tr class=" o "><td class="l"> R_GZIPCMD </td><td>/bin/gzip</td></tr>
+<tr class=" e "><td class="l"> R_HISTFILE </td><td>/home/hornerj/.Rhistory</td></tr>
+<tr class=" o "><td class="l"> R_HOME </td><td>/usr/lib/R</td></tr>
+<tr class=" e "><td class="l"> R_LIBS_SITE </td><td>/usr/local/lib/R/site-library:/usr/lib/R/site-library:/usr/lib/R/library</td></tr>
+<tr class=" o "><td class="l"> R_LIBS_USER </td><td>~/R/i486-pc-linux-gnu-library/2.13</td></tr>
+<tr class=" e "><td class="l"> R_PAPERSIZE </td><td>letter</td></tr>
+<tr class=" o "><td class="l"> R_PAPERSIZE_USER </td><td>letter</td></tr>
+<tr class=" e "><td class="l"> R_PDFVIEWER </td><td>/usr/bin/xdg-open</td></tr>
+<tr class=" o "><td class="l"> R_PLATFORM </td><td>i486-pc-linux-gnu</td></tr>
+<tr class=" e "><td class="l"> R_PRINTCMD </td><td>/usr/bin/lpr</td></tr>
+<tr class=" o "><td class="l"> R_RD4DVI </td><td>ae</td></tr>
+<tr class=" e "><td class="l"> R_RD4PDF </td><td>times,hyper</td></tr>
+<tr class=" o "><td class="l"> R_SESSION_TMPDIR </td><td>/tmp</td></tr>
+<tr class=" e "><td class="l"> R_TEXI2DVICMD </td><td>/usr/bin/texi2dvi</td></tr>
+<tr class=" o "><td class="l"> R_UNZIPCMD </td><td>/usr/bin/unzip</td></tr>
+<tr class=" e "><td class="l"> R_ZIPCMD </td><td>/usr/bin/zip</td></tr>
+<tr class=" o "><td class="l"> SED </td><td>/bin/sed</td></tr>
+<tr class=" e "><td class="l"> SESSION_MANAGER </td><td>local/biostat128:_at_/tmp/.ICE-unix/2294,unix/biostat128:/tmp/.ICE-unix/2294</td></tr>
+<tr class=" o "><td class="l"> SHELL </td><td>/bin/bash</td></tr>
+<tr class=" e "><td class="l"> SHLVL </td><td>2</td></tr>
+<tr class=" o "><td class="l"> SPEECHD_PORT </td><td>7091</td></tr>
+<tr class=" e "><td class="l"> SSH_AGENT_PID </td><td>2332</td></tr>
+<tr class=" o "><td class="l"> SSH_AUTH_SOCK </td><td>/tmp/keyring-1r7fzm/ssh</td></tr>
+<tr class=" e "><td class="l"> TAR </td><td>/bin/tar</td></tr>
+<tr class=" o "><td class="l"> TERM </td><td>xterm</td></tr>
+<tr class=" e "><td class="l"> USER </td><td>hornerj</td></tr>
+<tr class=" o "><td class="l"> USERNAME </td><td>hornerj</td></tr>
+<tr class=" e "><td class="l"> WINDOWID </td><td>61579583</td></tr>
+<tr class=" o "><td class="l"> XAUTHORITY </td><td>/var/run/gdm/auth-for-hornerj-9H1TRb/database</td></tr>
+<tr class=" e "><td class="l"> XDG_CONFIG_DIRS </td><td>/etc/xdg/xdg-gnome:/etc/xdg</td></tr>
+<tr class=" o "><td class="l"> XDG_DATA_DIRS </td><td>/usr/share/gnome:/usr/local/share/:/usr/share/</td></tr>
+<tr class=" e "><td class="l"> XDG_SESSION_COOKIE </td><td>615eee2b28a4da49d9a10f00466063c8-1308776901.293851-2059049085</td></tr>
+</tbody></table>
+<br><hr><h2><a name="Sys_info__"> </a>Sys.info()</h2><table><tbody><tr class=" o "><td class="l"> sysname </td><td>Linux</td></tr>
+<tr class=" e "><td class="l"> release </td><td>2.6.32-32-generic</td></tr>
+<tr class=" o "><td class="l"> version </td><td>#62-Ubuntu SMP Wed Apr 20 21:54:21 UTC 2011</td></tr>
+<tr class=" e "><td class="l"> nodename </td><td>biostat128</td></tr>
+<tr class=" o "><td class="l"> machine </td><td>i686</td></tr>
+<tr class=" e "><td class="l"> login </td><td>hornerj</td></tr>
+<tr class=" o "><td class="l"> user </td><td>hornerj</td></tr>
+</tbody></table>
+<br><hr><h2><a name="_Machine"> </a>.Machine</h2><table><tbody><tr class=" e "><td class="l"> double.eps </td><td>2.22044604925031e-16</td></tr>
+<tr class=" o "><td class="l"> double.neg.eps </td><td>1.11022302462516e-16</td></tr>
+<tr class=" e "><td class="l"> double.xmin </td><td>2.2250738585072e-308</td></tr>
+<tr class=" o "><td class="l"> double.xmax </td><td>1.79769313486232e+308</td></tr>
+<tr class=" e "><td class="l"> double.base </td><td>2</td></tr>
+<tr class=" o "><td class="l"> double.digits </td><td>53</td></tr>
+<tr class=" e "><td class="l"> double.rounding </td><td>5</td></tr>
+<tr class=" o "><td class="l"> double.guard </td><td>0</td></tr>
+<tr class=" e "><td class="l"> double.ulp.digits </td><td>-52</td></tr>
+<tr class=" o "><td class="l"> double.neg.ulp.digits </td><td>-53</td></tr>
+<tr class=" e "><td class="l"> double.exponent </td><td>11</td></tr>
+<tr class=" o "><td class="l"> double.min.exp </td><td>-1022</td></tr>
+<tr class=" e "><td class="l"> double.max.exp </td><td>1024</td></tr>
+<tr class=" o "><td class="l"> integer.max </td><td>2147483647</td></tr>
+<tr class=" e "><td class="l"> sizeof.long </td><td>4</td></tr>
+<tr class=" o "><td class="l"> sizeof.longlong </td><td>8</td></tr>
+<tr class=" e "><td class="l"> sizeof.longdouble </td><td>12</td></tr>
+<tr class=" o "><td class="l"> sizeof.pointer </td><td>4</td></tr>
+</tbody></table>
+<br><hr><h2><a name="_Platform"> </a>.Platform</h2><table><tbody><tr class=" e "><td class="l"> OS.type </td><td>unix</td></tr>
+<tr class=" o "><td class="l"> file.sep </td><td>/</td></tr>
+<tr class=" e "><td class="l"> dynlib.ext </td><td>.so</td></tr>
+<tr class=" o "><td class="l"> GUI </td><td>unknown</td></tr>
+<tr class=" e "><td class="l"> endian </td><td>little</td></tr>
+<tr class=" o "><td class="l"> pkgType </td><td>source</td></tr>
+<tr class=" e "><td class="l"> path.sep </td><td>:</td></tr>
+<tr class=" o "><td class="l"> r_arch </td><td>&nbsp;</td></tr>
+</tbody></table>
+<br><hr><h2><a name="Cstack_info__"> </a>Cstack_info()</h2><table><tbody><tr class=" e "><td class="l"> size </td><td>NA</td></tr>
+<tr class=" o "><td class="l"> current </td><td>NA</td></tr>
+<tr class=" e "><td class="l"> direction </td><td>1</td></tr>
+<tr class=" o "><td class="l"> eval_depth </td><td>10</td></tr>
+</tbody></table>
+<br><hr><h1><a name="Attached_Packages"></a>Attached Packages</h1><h2><a name="brew"> </a>brew</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>brew</td></tr>
+<tr class=" o "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Templating Framework for Report Generation</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>1.0-3</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2007-08-21</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Jeffrey Horner</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Jeffrey Horner &lt;jeff.horner_at_vanderbilt.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>brew implements a templating framework for mixing text and R code for report generation.
+brew template syntax is similar to PHP, Ruby's erb module, Java Server Pages, and Python's psp module.</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>Mon Oct 20 10:54:33 2008; hornerj</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.10.0; ; 2010-02-06 19:40:57 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="stats"> </a>stats</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>stats</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>The R Stats Package</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>R statistical functions</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; i486-pc-linux-gnu; 2011-07-09 11:35:57 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="graphics"> </a>graphics</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>graphics</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>The R Graphics Package</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>R functions for base graphics</td></tr>
+<tr class=" o "><td class="l"> Imports </td><td>grDevices</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; ; 2011-07-09 11:35:56 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="grDevices"> </a>grDevices</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>grDevices</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>The R Graphics Devices and Support for Colours and Fonts</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Graphics devices and support for base and grid graphics</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.1; i486-pc-linux-gnu; 2011-07-09 11:35:54 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="utils"> </a>utils</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>utils</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>The R Utils Package</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>R utility functions</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; ; 2011-07-09 11:35:54 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="datasets"> </a>datasets</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>datasets</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>The R Datasets Package</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Base R datasets</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.1; ; 2011-07-09 11:35:58 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="methods"> </a>methods</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>methods</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>utils</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Formal Methods and Classes</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R Development Core Team</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Formally defined methods and classes for R objects, plus
+other programming tools, as described in the reference</td></tr>
+<tr class=" o "><td class="l"> References </td><td>John M. Chambers (2008) ``Software for Data Analysis:
+Programming with R''; Springer NY.</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; i486-pc-linux-gnu; 2011-07-09 11:36:03 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="base"> </a>base</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>The R Base Package</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Base R functions</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.1; ; 2011-07-09 11:36:06 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h1><a name="Installed_Packages"></a>Installed Packages</h1><h2><a name="bit"> </a>bit</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>bit</td></tr>
+<tr class=" e "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>A class for vectors of 1-bit booleans</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>1.1-2</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2009-07-07</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Jens Oehlschl\xE4gel &lt;Jens.Oehlschlaegel_at_truecluster.com&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Jens Oehlschl\xE4gel &lt;Jens.Oehlschlaegel_at_truecluster.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.9.2)</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>bitmapped vectors of booleans (no NAs), coercion from and
+to logicals, integers and integer subscripts; fast boolean
+operators and fast summary statistics. With 'bit' vectors you
+can store true binary booleans {FALSE,TRUE} at the expense of 1
+bit only, on a 32 bit architecture this means factor 32 less
+RAM and factor 32 more speed on boolean operations. With this
+speed gain it even pays-off to convert to bit in order to avoid
+a single boolean operation on logicals or a single set
+operation on (longer) integer subscripts, the pay-off is
+dramatic when such components are used more than once. Reading
+from and writing to bit is approximately as fast as accessing
+standard logicals - mostly due to R's time for memory
+allocation. The package allows to work with pre-allocated
+memory for return values by calling .Call() directly: when
+evaluating the speed of C-access with pre-allocated vector
+memory, coping from bit to logical requires only 70% of the
+time for copying from logical to logical; and copying from
+logical to bit comes at a performance penalty of 150%. the
+package now contains further classes for representing logical
+selections: 'bitwhich' for very skewed selections and 'ri' for
+selecting ranges of values for chunked processing. All three
+index classes can be used for subsetting 'ff' objects (ff-2.1-0
+and higher).</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://ff.r-forge.r-project.org/</td></tr>
+<tr class=" o "><td class="l"> Encoding </td><td>latin1</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Repository/R-Forge/Project </td><td>ff</td></tr>
+<tr class=" e "><td class="l"> Repository/R-Forge/Revision </td><td>16</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2009-10-26 19:26:39</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2009-10-25 21:08:26 UTC; rforge</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; i486-pc-linux-gnu; 2010-01-07 15:29:23 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="bitops"> </a>bitops</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>bitops</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>1.0-4.1</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2009-02-13</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>S original by Steve Dutky &lt;sdutky_at_terpalum.umd.edu&gt;
+initial R port and extensions by Martin Maechler.
+revised and modified by Steve Dutky</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Steve Dutky &lt;sdutky_at_terpalum.umd.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Functions for Bitwise operations</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Functions for Bitwise operations on integer vectors.</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL version 2 or later</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>Fri Feb 13 14:40:06 2009; ripley</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.12.1; i486-pc-linux-gnu; 2011-01-31 16:15:17 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="brew"> </a>brew</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>brew</td></tr>
+<tr class=" o "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Templating Framework for Report Generation</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>1.0-3</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2007-08-21</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Jeffrey Horner</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Jeffrey Horner &lt;jeff.horner_at_vanderbilt.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>brew implements a templating framework for mixing text and R code for report generation.
+brew template syntax is similar to PHP, Ruby's erb module, Java Server Pages, and Python's psp module.</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>Mon Oct 20 10:54:33 2008; hornerj</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.10.0; ; 2010-02-06 19:40:57 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="colorspace"> </a>colorspace</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>colorspace</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>1.0-1</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2009-04-24</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Color Space Manipulation</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Ross Ihaka, Paul Murrell, Kurt Hornik, Achim Zeileis</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Ross Ihaka &lt;ihaka_at_stat.auckland.ac.nz&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Carries out mapping between assorted color spaces
+including RGB, HSV, HLS, CIEXYZ, CIELUV, HCL (polar CIELUV),
+CIELAB and polar CIELAB. Qualitative, sequential, and diverging
+color palettes based on HCL colors are provided.</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.0.0), methods</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>KernSmooth, MASS, kernlab, mvtnorm, vcd</td></tr>
+<tr class=" e "><td class="l"> License </td><td>BSD</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>Fri Apr 24 18:21:34 2009; zeileis</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2009-04-24 16:23:06</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; i486-pc-linux-gnu; 2010-01-07 15:34:42 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="datamap"> </a>datamap</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>datamap</td></tr>
+<tr class=" o "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>A system for mapping foreign objects to R variables and
+environments</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.1-1</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2009-12-03</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Jeffrey Horner &lt;jeffrey.horner_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Jeffrey Horner &lt;jeffrey.horner_at_gmail.com&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>datamap utilizes variable bindings and objects of class
+"UserDefinedDatabase" to provide a simple mapping system to
+foreign objects. Maps can be used as environments or attached
+to the search path, and changes to either are persistent.
+Mapped foreign objects are fetched in real-time and are never
+cached by the mapping system.</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>DBI</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2009-12-03 15:37:49 UTC; hornerj</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2009-12-03 17:38:05</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.10.0; i486-pc-linux-gnu; 2010-02-05 20:09:55 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="DBI"> </a>DBI</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>DBI</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>0.2-5</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>R Database Interface</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R Special Interest Group on Databases (R-SIG-DB)</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>David A. James &lt;daj025_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.3.0), methods</td></tr>
+<tr class=" o "><td class="l"> Imports </td><td>methods</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>A database interface (DBI) definition for communication
+between R and relational database management systems.  All
+classes in this package are virtual and need to be extended by
+the various R/DBMS implementations.</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> License </td><td>LGPL (&gt;= 2)</td></tr>
+<tr class=" o "><td class="l"> Collate </td><td>DBI.R Util.R zzz.R</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2009-12-21 19:58:17 UTC; sfalcon</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2009-12-22 07:54:43</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; ; 2010-01-07 15:29:25 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="digest"> </a>digest</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>digest</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.4.2</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>$Date: 2009-12-03 16:42:47 +0100 (Thu, 03 Dec 2009) $</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Dirk Eddelbuettel &lt;edd_at_debian.org&gt; with contributions by
+Antoine Lucas, Jarek Tuszynski, Henrik Bengtsson and Simon
+Urbanek</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Dirk Eddelbuettel &lt;edd_at_debian.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Create cryptographic hash digests of R objects</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>The digest package provides functions for the creation of
+`hash' digests of arbitrary R objects using the md5, sha-1,
+sha-256 and crc32 algorithms permitting easy comparison of R
+language objects. The md5 algorithm by Ron Rivest is specified
+in RFC 1321, the SHA-1 and SHA-256 algorithms are specified in
+FIPS-180-1 and FIPS-180-2, and the crc32 algorithm is described
+in ftp://ftp.rocksoft.com/cliens/rocksoft/papers/crc_v3.txt.
+For md5, sha-1 and sha-256, this packages uses small standalone
+implementations that were provided by Christophe Devine. For
+crc32, code from the zlib library is used.
+
+Please note that this package is not meant to be deployed for
+cryptographic purposes for which more comprehensive (and widely
+tested) libraries such as OpenSSL should be used.</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.4.1)</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" o "><td class="l"> URL </td><td>http://dirk.eddelbuettel.com/code/digest.html</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Repository/R-Forge/Project </td><td>digest</td></tr>
+<tr class=" e "><td class="l"> Repository/R-Forge/Revision </td><td>28</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2009-12-06 09:22:26</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2009-12-03 21:07:51 UTC; rforge</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; i486-pc-linux-gnu; 2010-01-07 15:29:26 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="ff"> </a>ff</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>ff</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.1-1</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2008-08-03</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>memory-efficient storage of large data on disk and fast access
+functions</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Daniel Adler &lt;dadler_at_uni-goettingen.de&gt;, Christian Gl\xE4ser
+&lt;christian_glaeser_at_gmx.de&gt;, Oleg Nenadic
+&lt;onenadi_at_uni-goettingen.de&gt;, Jens Oehlschl\xE4gel
+&lt;Jens.Oehlschlaegel_at_truecluster.com&gt;, Walter Zucchini
+&lt;wzucchi_at_uni-goettingen.de&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Jens Oehlschl\xE4gel &lt;Jens.Oehlschlaegel_at_truecluster.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.9.2), utils, bit (&gt;= 1.1-1)</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>biglm</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>The ff package provides data structures that are stored on
+disk but behave (almost) as if they were in RAM by
+transparently mapping only a section (pagesize) in main memory
+- the effective virtual memory consumption per ff object. ff
+supports R's standard atomic data types 'double', 'logical',
+'raw' and 'integer' and non-standard atomic types boolean (1
+bit), quad (2 bit unsigned), nibble (4 bit unsigned), byte (1
+byte signed with NAs), ubyte (1 byte unsigned), short (2 byte
+signed with NAs), ushort (2 byte unsigned), single (4 byte
+float with NAs). For example 'quad' allows efficient storage of
+genomic data as an 'A','T','G','C' factor. The unsigned types
+support 'circular' arithmetic. There is also support for
+close-to-atomic types 'factor', 'ordered', 'POSIXct', 'Date'
+and custom close-to-atomic types. ff not only has native
+C-support for vectors, matrices and arrays with flexible
+dimorder (major column-order, major row-order and
+generalizations for arrays). There is also a ffdf class not
+unlike data.frames and import/export filters for csv files. ff
+objects store raw data in binary flat files in native encoding,
+and complement this with metadata stored in R as physical and
+virtual attributes. ff objects have well-defined hybrid copying
+semantics, which gives rise to certain performance improvements
+through virtualization. ff objects can be stored and reopened
+across R sessions. ff files can be shared by multiple ff R
+objects (using different data en/de-coding schemes) in the same
+process or from multiple R processes to exploit parallelism. A
+wide choice of finalizer options allows to work with
+'permanent' files as well as creating/removing 'temporary' ff
+files completely transparent to the user. On certain
+OS/Filesystem combinations, creating the ff files works without
+notable delay thanks to using sparse file allocation. Several
+access optimization techniques such as Hybrid Index
+Preprocessing and Virtualization are implemented to achieve
+good performance even with large datasets, for example virtual
+matrix transpose without touching a single byte on disk.
+Further, to reduce disk I/O, 'logicals' and non-standard data
+types get stored native and compact on binary flat files i.e.
+logicals take up exactly 2 bits to represent TRUE, FALSE and
+NA. Beyond basic access functions, the ff package also provides
+compatibility functions that facilitate writing code for ff and
+ram objects and support for batch processing on ff objects
+(e.g. as.ram, as.ff, ffapply). ff interfaces closely with
+functionality from package 'bit': chunked looping, fast bit
+operations and coercions between different objects that can
+store subscript information ('bit', 'bitwhich', ff 'boolean',
+ri range index, hi hybrid index). This allows to work
+interactively with selections of large datasets and quickly
+modify selection criteria. Further high-performance
+enhancements can be made available upon request.</td></tr>
+<tr class=" o "><td class="l"> License </td><td>file LICENSE</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> URL </td><td>http://ff.r-forge.r-project.org/</td></tr>
+<tr class=" e "><td class="l"> Encoding </td><td>latin1</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Repository/R-Forge/Project </td><td>ff</td></tr>
+<tr class=" o "><td class="l"> Repository/R-Forge/Revision </td><td>23</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2009-11-05 12:34:44</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2009-11-04 21:10:44 UTC; rforge</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.10.0; i486-pc-linux-gnu; 2010-01-07 15:29:34 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="ggplot"> </a>ggplot</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>ggplot</td></tr>
+<tr class=" e "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>An implementation of the Grammar of Graphics in R</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>0.4.2</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2007-05-05</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Hadley Wickham &lt;h.wickham_at_gmail.com&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Hadley Wickham &lt;h.wickham_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>An implementation of the grammar of graphics in R. It combines the advantages of both base and lattice graphics: conditioning and shared axes are handled automatically, and you can still build up a plot step by step from multiple data sources. It also implements a more sophisticated multidimensional conditioning system and a consistent interface to map data to aesthetic attributes. See \url{http://had.co.nz/ggplot/} for more information, documentation and examples.</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>butler, mapproj, quantreg, MASS</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.3), grid, reshape (&gt;= 0.7.4), RColorBrewer</td></tr>
+<tr class=" o "><td class="l"> LazyData </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>Mon Jul  9 16:31:11 2007; hadley</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.7.0; ; 2008-06-04 15:13:04; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="ggplot2"> </a>ggplot2</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>ggplot2</td></tr>
+<tr class=" e "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>An implementation of the Grammar of Graphics</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>0.8.9</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Hadley Wickham &lt;h.wickham_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Hadley Wickham &lt;h.wickham_at_gmail.com&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>An implementation of the grammar of graphics in R. It
+combines the advantages of both base and lattice graphics:
+conditioning and shared axes are handled automatically, and you
+can still build up a plot step by step from multiple data
+sources. It also implements a sophisticated multidimensional
+conditioning system and a consistent interface to map data to
+aesthetic attributes. See the ggplot2 website for more
+information, documentation and examples.</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>reshape (&gt;= 0.8.0), grid, proto</td></tr>
+<tr class=" o "><td class="l"> Imports </td><td>plyr (&gt;= 1.0), splines, MASS, RColorBrewer, digest, colorspace</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>quantreg, Hmisc, mapproj, maps, hexbin, gpclib, maptools</td></tr>
+<tr class=" o "><td class="l"> Extends </td><td>sp</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" o "><td class="l"> URL </td><td>http://had.co.nz/ggplot2/</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>false</td></tr>
+<tr class=" o "><td class="l"> LazyData </td><td>true</td></tr>
+<tr class=" e "><td class="l"> Collate </td><td>aaa-.r aaa-compare.r aaa-constants.r aaa-examples.r aaa-html.r
+aaa-rdoc.r aes.r annotation.r coord-.r coord-cartesian-.r
+coord-cartesian-equal.r coord-cartesian-flipped.r coord-map.r
+coord-polar.r coord-transform.r date-time-breaks.r date-time.r
+facet-.r facet-grid-.r facet-labels.r facet-viewports.r
+facet-wrap.r formats.r fortify-lm.r fortify-map.r
+fortify-spatial.r fortify.r geom-.r geom-abline.r geom-bar-.r
+geom-bar-histogram.r geom-bin2d.r geom-blank.r geom-boxplot.r
+geom-crossbar.r geom-defaults.r geom-error.r geom-errorh.r
+geom-freqpoly.r geom-hex.r geom-hline.r geom-linerange.r
+geom-path-.r geom-path-contour.r geom-path-density2d.r
+geom-path-line.r geom-path-step.r geom-point-.r
+geom-point-jitter.r geom-pointrange.r geom-polygon.r
+geom-quantile.r geom-rect.r geom-ribbon-.r
+geom-ribbon-density.r geom-rug.r geom-segment.r geom-smooth.r
+geom-text.r geom-tile.r geom-vline.r grob-absolute.r
+grob-background.r grob-grid.r grob-null.r guides-axis.r
+guides-grid.r guides-legend.r labels.r layer.r matrix.r
+plot-build.r plot-construction.r plot-last.r plot-render.r
+plot-surrounds.r plot.r position-.r position-collide.r
+position-dodge.r position-fill.r position-identity.r
+position-jitter.r position-stack.r quick-plot.r save.r scale-.r
+scale-continuous-.r scale-continuous-alpha.r
+scale-continuous-colour.r scale-convenience.r scale-date.r
+scale-datetime.r scale-defaults.r scale-discrete-.r
+scale-discrete-colour.r scale-discrete-grey.r
+scale-discrete-position.r scale-identity.r scale-linetype.r
+scale-manual.r scale-shape.r scale-size.r scales-.r stat-.r
+stat-bin.r stat-bin2d.r stat-binhex.r stat-boxplot.r
+stat-contour.r stat-density-2d.r stat-density.r stat-function.r
+stat-identity.r stat-qq.r stat-quantile.r stat-smooth-methods.r
+stat-smooth.r stat-spoke.r stat-sum.r stat-summary.r
+stat-unique.r stat-vline.r summary.r templates.r
+theme-defaults.r theme-elements.r theme.r trans-.r
+trans-scales.r utilities-break.r utilities-colour.r
+utilities-discrete.r utilities-facet.r utilities-grid.r
+utilities-layer.r utilities-matrix.r utilities-position.r
+utilities-resolution.r utilities.r xxx-codegen.r xxx-digest.r
+xxx.r zxx.r coord-munch.r</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2010-12-23 16:33:29 UTC; hadley</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2010-12-23 18:17:13</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.12.1; ; 2011-01-31 16:15:53 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="hexView"> </a>hexView</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>hexView</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>0.3-1</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Viewing Binary Files</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Paul Murrell &lt;paul_at_stat.auckland.ac.nz&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Paul Murrell &lt;paul_at_stat.auckland.ac.nz&gt;</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 1.8.0)</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Functions to view files in raw binary form like in a hex editor.  Additional functions to specify and read arbitrary binary formats.</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL version 2</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>Fri Aug 22 16:00:41 2008; paul</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.10.0; ; 2010-01-07 15:34:45 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="Hmisc"> </a>Hmisc</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>Hmisc</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>3.8-3</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2010-06-22</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Harrell Miscellaneous</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Frank E Harrell Jr &lt;f.harrell_at_vanderbilt.edu&gt;, with
+contributions from many other users.</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Charles Dupont &lt;charles.dupont_at_vanderbilt.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.4.0), methods, survival</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>lattice, cluster, survival</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>lattice, grid, nnet, foreign, chron, acepack, TeachingDemos,
+Design, cluster, mice, subselect</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>The Hmisc library contains many functions useful for data
+analysis, high-level graphics, utility operations, functions
+for computing sample size and power, importing datasets,
+imputing missing values, advanced table making, variable
+clustering, character string manipulation, conversion of S
+objects to LaTeX code, and recoding variables.  Please submit
+bug reports to 'http://biostat.mc.vanderbilt.edu/trac/Hmisc'.</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL (&gt;= 2)</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>Yes</td></tr>
+<tr class=" o "><td class="l"> URL </td><td>http://biostat.mc.vanderbilt.edu/wiki/Main/Hmisc,
+http://biostat.mc.vanderbilt.edu/trac/Hmisc</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2010-09-07 16:14:27 UTC; dupontct</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2010-09-08 06:44:29</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-07-12 21:26:52 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="iterators"> </a>iterators</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>iterators</td></tr>
+<tr class=" o "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Iterator construct for R</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>1.0.3</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>REvolution Computing</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>REvolution Computing &lt;packages_at_REvolution-computing.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Support for iterators, which allow a programmer to
+traverse through all the elements of a vector, list, or other
+collection of data.</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.5.0), utils</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>foreach</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Apache License (== 2.0)</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2009-10-05 20:31:21 UTC; weston</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2009-10-06 06:56:52</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.12.1; ; 2011-01-31 16:15:18 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="itertools"> </a>itertools</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>itertools</td></tr>
+<tr class=" o "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Iterator Tools</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.1-1</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Steve Weston, Hadley Wickham</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Steve Weston &lt;stephen.b.weston_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Various tools for creating iterators, many patterned after
+functions in the Python itertools module, and others patterned
+after functions in the 'snow' package.</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.5.0), iterators(&gt;= 1.0.0)</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>foreach</td></tr>
+<tr class=" o "><td class="l"> Enhances </td><td>foreach, iterators</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Repository/R-Forge/Project </td><td>itertools</td></tr>
+<tr class=" o "><td class="l"> Repository/R-Forge/Revision </td><td>38</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2010-01-14 15:37:23</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2010-01-13 21:12:15 UTC; rforge</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.12.1; ; 2011-01-31 16:15:22 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="plyr"> </a>plyr</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>plyr</td></tr>
+<tr class=" e "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Tools for splitting, applying and combining data</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>1.4</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Hadley Wickham &lt;h.wickham_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Hadley Wickham &lt;h.wickham_at_gmail.com&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>plyr is a set of tools that solves a common set of
+problems: you need to break a big problem down into manageable
+pieces, operate on each pieces and then put all the pieces back
+together.  For example, you might want to fit a model to each
+spatial location or time point in your study, summarise data by
+panels or collapse high-dimensional arrays to simpler summary
+statistics. The development of plyr has been generously
+supported by BD (Becton Dickinson).</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://had.co.nz/plyr</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.11.0)</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>abind, testthat (&gt;= 0.2), tcltk, foreach</td></tr>
+<tr class=" o "><td class="l"> Imports </td><td>itertools, iterators</td></tr>
+<tr class=" e "><td class="l"> License </td><td>MIT</td></tr>
+<tr class=" o "><td class="l"> LazyData </td><td>true</td></tr>
+<tr class=" e "><td class="l"> Collate </td><td>'dimensions.r' 'helper-arrange.r' 'helper-col-wise.r'
+'helper-count.r' 'helper-data-frame.r' 'helper-defaults.r'
+'helper-each.r' 'helper-mutate.r' 'helper-quick-df.r'
+'helper-round-any.r' 'helper-splat.r' 'helper-summarise.r'
+'helper-try.r' 'helper-vaggregate.r' 'id.r' 'immutable.r'
+'indexed-array.r' 'indexed-data-frame.r' 'indexed.r' 'join.r'
+'loop-apply.r' 'ply-array.r' 'ply-data-frame.r'
+'ply-iterator.r' 'ply-list.r' 'ply-mapply.r' 'ply-null.r'
+'ply-replicate.r' 'progress.r' 'quote.r' 'rbind-matrix.r'
+'rbind.r' 'simplify-array.r' 'simplify-data-frame.r'
+'simplify-vector.r' 'split-array.r' 'split-data-frame.r'
+'split-indices.r' 'split.r' 'utils.r'</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2011-01-04 01:26:50 UTC; hadley</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2011-01-04 07:28:49</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.12.1; i486-pc-linux-gnu; 2011-01-31 16:15:45 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="profr"> </a>profr</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>profr</td></tr>
+<tr class=" e "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>An alternative display for profiling information</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>0.1.1</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2008-05-02</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Hadley Wickham &lt;h.wickham_at_gmail.com&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Hadley Wickham &lt;h.wickham_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>profr provides an alternative data structure and visual rendering for the profiling information generated by Rprof.</td></tr>
+<tr class=" o "><td class="l"> URL </td><td>http://had.co.nz/profr</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.6.2), digest</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>ggplot2</td></tr>
+<tr class=" e "><td class="l"> License </td><td>MIT</td></tr>
+<tr class=" o "><td class="l"> LazyData </td><td>true</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>Fri May  2 22:47:14 2008; hornik</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; ; 2010-01-07 15:35:00 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="proto"> </a>proto</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>proto</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.3-8</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2007-01-15</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Prototype object-based programming</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Louis Kates, Thomas Petzoldt</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Gabor Grothendieck &lt;ggrothendieck_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>An object oriented system using object-based, also
+called prototype-based, rather than class-based object
+oriented ideas.</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.3.1)</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>graph, Rgraphviz</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL2</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://code.google.com/p/r-proto/</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>Sat Sep 15 12:04:27 2007; Louis</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.10.0; ; 2010-01-07 15:35:01 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="RColorBrewer"> </a>RColorBrewer</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>RColorBrewer</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>1.0-2</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2007-10-21</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>ColorBrewer palettes</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Erich Neuwirth &lt;erich.neuwirth_at_univie.ac.at&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Erich Neuwirth &lt;erich.neuwirth_at_univie.ac.at&gt;</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.0.0)</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>The packages provides palettes for drawing nice maps
+shaded according to a variable.</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Apache License 2.0</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>Mon Oct 22 20:34:27 2007; hornik</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; ; 2010-01-07 15:35:01 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="RCurl"> </a>RCurl</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>RCurl</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>1.5-0</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>General network (HTTP/FTP/...) client interface for R</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Duncan Temple Lang</td></tr>
+<tr class=" e "><td class="l"> SystemRequirements </td><td>curl (version 7.14.0 or higher) http://curl.haxx.se</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Duncan Temple Lang &lt;duncan_at_wald.ucdavis.edu&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>The package allows one to compose general HTTP requests
+and provides convenient functions to fetch URIs, get &amp; post
+forms, etc. and process the results returned by the Web server.
+This provides a great deal of control over the HTTP/FTP/...
+connection and the form of the request while providing a
+higher-level interface than is available just using R socket
+connections.  Additionally, the underlying implementation is
+robust and extensive, supporting FTP/FTPS/TFTP (uploads and
+downloads), SSL/HTTPS, telnet, dict, ldap, and also supports
+cookies, redirects, authentication, etc.</td></tr>
+<tr class=" o "><td class="l"> License </td><td>BSD</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.7.0), methods, bitops</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>Rcompression</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://www.omegahat.org/RCurl</td></tr>
+<tr class=" o "><td class="l"> Limitations </td><td>One doesn't yet have full control over the contents of a
+POST form such as specifying files, content type. Error
+handling uses a single global variable at present.</td></tr>
+<tr class=" e "><td class="l"> Note </td><td>This will be used generally to communicate with HTTP servers and
+specifically in the SOAP package, HTML forms and for accessing
+data on Web sites that require more state information than
+simply URL access (e.g. cookies).</td></tr>
+<tr class=" o "><td class="l"> Check </td><td>To run R CMD check, one really needs network access. It is an
+HTTP client! This can be problematic as a Web site may be down
+when you run but the real tests are important.</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2010-11-21 13:54:25 UTC; duncan</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2010-11-22 08:21:53</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.12.1; i486-pc-linux-gnu; 2011-01-31 16:15:33 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="reshape"> </a>reshape</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>reshape</td></tr>
+<tr class=" o "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Flexibly reshape data.</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.8.3</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2008-11-04</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Hadley Wickham &lt;h.wickham_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Hadley Wickham &lt;h.wickham_at_gmail.com&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Reshape lets you flexibly restructure and aggregate data
+using just two functions: melt and cast.</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://had.co.nz/reshape</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.6.1), plyr</td></tr>
+<tr class=" e "><td class="l"> License </td><td>MIT</td></tr>
+<tr class=" o "><td class="l"> LazyData </td><td>true</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2009-04-28 03:28:31 UTC; hadley</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2009-04-28 07:56:42</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; ; 2010-01-07 15:35:16 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="RJSONIO"> </a>RJSONIO</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>RJSONIO</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.2-4</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Serialize R objects to JSON, JavaScript Object Notation</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>This is a package that allows conversion to and from
+data in Javascript object notation (JSON) format.
+This allows R objects to be inserted into Javascript/ECMAScript/ActionScript code
+and allows R programmers to read and convert JSON content to R objects.
+This is an alternative to rjson package. That version is too slow for large data and not extensible,
+but a very useful prototype.
+This package uses methods, vectorized operations and C code and callbacks to R functions
+for deserializing JSON objects to R.  In the future, we will implement the deserialization
+in C. There are some routines that can be used now for particular array types.</td></tr>
+<tr class=" e "><td class="l"> Note </td><td>See http://www.json.org/JSON_checker/test.zip for tests.</td></tr>
+<tr class=" o "><td class="l"> License </td><td>BSD</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>methods</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Duncan Temple Lang</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Duncan Temple Lang &lt;duncan_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2009-11-28 00:33:16 UTC; duncan</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.10.0; i486-pc-linux-gnu; 2010-02-05 20:10:36 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="Rook"> </a>Rook</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>Rook</td></tr>
+<tr class=" e "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Rook - a web server interface for R</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>1.0-2</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2011-04-14</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Jeffrey Horner &lt;jeffrey.horner_at_gmail.com&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Jeffrey Horner &lt;jeffrey.horner_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>This package contains the Rook specification and
+convenience software for building and running Rook
+applications. To get started, be sure and read the 'Rook' help
+file first.</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.13.0), utils, tools, methods, brew</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2011-04-24 22:43:15 UTC; hornerj</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2011-04-25 06:10:33</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-06-27 15:13:50 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="RSQLite"> </a>RSQLite</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>RSQLite</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.8-0</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>SQLite interface for R</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>David A. James</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Seth Falcon &lt;seth_at_userprimary.net&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Database Interface R driver for SQLite. This package
+embeds the SQLite database engine in R and provides an
+interface compliant with the DBI package. The source for the
+SQLite engine (version 3.6.21) is included.</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.6.0), methods, DBI (&gt;= 0.2-3)</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>methods, DBI (&gt;= 0.2-3)</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>RUnit (&gt;= 0.4.22)</td></tr>
+<tr class=" e "><td class="l"> License </td><td>LGPL (&gt;= 2)</td></tr>
+<tr class=" o "><td class="l"> Collate </td><td>zzz.R S4R.R dbObjectId.R SQLite.R SQLiteSupport.R</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2009-12-21 19:58:22 UTC; sfalcon</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2009-12-22 07:54:51</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; i486-pc-linux-gnu; 2010-01-07 15:30:11 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="slam"> </a>slam</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>slam</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.1-18</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2010-10-18</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Sparse Lightweight Arrays and Matrices</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Data structures and algorithms for sparse arrays and
+matrices, based on index arrays and simple triplet
+representations, respectively.</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Kurt Hornik, David Meyer, Christian Buchta</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>David Meyer &lt;David.Meyer_at_R-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.8.0)</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2010-10-18 08:32:42 UTC; hornik</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2010-10-18 08:51:49</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.12.1; i486-pc-linux-gnu; 2011-01-31 16:15:20 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="StatDataML"> </a>StatDataML</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>StatDataML</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>1.0-19</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2009-11-16</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>implementation of the StatDataML proposal</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>David Meyer &lt;David.Meyer_at_R-Project.org&gt;, Torsten Hothorn
+&lt;torsten_at_hothorn.de&gt;, Friedrich Leisch
+&lt;Friedrich.Leisch_at_R-Project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>read and write StatDataML files</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>David Meyer &lt;David.Meyer_at_R-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.0.0), XML, utils</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2009-11-16 00:18:17 UTC; meyer</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2009-12-02 22:08:34</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; ; 2010-01-07 15:29:29 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="tm"> </a>tm</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>tm</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Text Mining Package</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>0.5-4.1</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2010-09-27</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Ingo Feinerer</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Ingo Feinerer &lt;feinerer_at_logic.at&gt;</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.11.0), methods</td></tr>
+<tr class=" o "><td class="l"> Imports </td><td>slam (&gt;= 0.1-10)</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>filehash, proxy, Rgraphviz, Rmpi, RWeka, snow, Snowball, XML</td></tr>
+<tr class=" o "><td class="l"> SystemRequirements </td><td>antiword for reading MS Word files, pdfinfo and
+pdftotext for reading PDF</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>A framework for text mining applications within R.</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL (&gt;= 2)</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://tm.r-forge.r-project.org/</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2010-09-27 13:01:44 UTC; hornik</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2010-09-27 13:52:57</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.12.1; i486-pc-linux-gnu; 2011-01-31 16:15:40 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="twitteR"> </a>twitteR</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>twitteR</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>R based Twitter client</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Provides an interface to the Twitter web API</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>0.9.2</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Jeff Gentry &lt;geoffjentry_at_gmail.com&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Jeff Gentry &lt;geoffjentry_at_gmail.com&gt;</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>RCurl, RJSONIO, methods</td></tr>
+<tr class=" e "><td class="l"> License </td><td>LGPL</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2010-12-08 02:51:29 UTC; gentrj</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2010-12-08 09:28:59</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.12.1; ; 2011-01-31 16:15:49 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="TwoStageInf"> </a>TwoStageInf</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>TwoStageInf</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>1.0</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Proper Inference from Simon's Two-Stage Designs</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Tatsuki Koyama &lt;tatsuki.koyama_at_vanderbilt.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Will Gray &lt;w.gray_at_vanderbilt.edu&gt;</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.0.0)</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>&nbsp;</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL version 3 or newer.</td></tr>
+<tr class=" o "><td class="l"> URL </td><td>http://biostat.mc.vanderbilt.edu/TwoStageInference</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>Tue Nov 27 15:02:09 2007; graywh</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.6.2; ; 2008-04-02 10:00:42; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="XML"> </a>XML</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>XML</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.6-0</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2009/08/03</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Duncan Temple Lang (duncan_at_wald.ucdavis.edu)</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Duncan Temple Lang &lt;duncan_at_wald.ucdavis.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Tools for parsing and generating XML within R and S-Plus.</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 1.2.0), methods, utils</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>bitops</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>methods</td></tr>
+<tr class=" o "><td class="l"> SystemRequirements </td><td>libxml2 (&gt;= 2.6.3)</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>This package provides many approaches for both reading and
+creating XML (and HTML) documents (including DTDs), both local
+and accessible via HTTP or FTP.  It also offers access to an
+XPath "interpreter".</td></tr>
+<tr class=" e "><td class="l"> Note </td><td>The versions numbers 1.0 and 2.0 do not have any special
+significance, but are merely the result of incrementing the
+minor count by 1 for each release. Specifically, there is no
+change in the interface.</td></tr>
+<tr class=" o "><td class="l"> URL </td><td>http://www.omegahat.org/RSXML</td></tr>
+<tr class=" e "><td class="l"> License </td><td>BSD</td></tr>
+<tr class=" o "><td class="l"> Collate </td><td>AAA.R DTD.R DTDClasses.R DTDRef.R SAXMethods.S XMLClasses.R
+applyDOM.R assignChild.R catalog.R createNode.R dynSupports.R
+error.R flatTree.R hashTree.R htmlParse.R nodeAccessors.R
+parseDTD.R schema.S summary.R tangle.R toString.S tree.R
+version.R xmlErrorEnums.R xmlEventHandler.R xmlEventParse.R
+xmlHandler.R xmlInternalSource.R xmlOutputDOM.R xmlNodes.R
+xmlOutputBuffer.R xmlTree.R xmlTreeParse.R zzz.R supports.R
+parser.R libxmlFeatures.R xmlString.R saveXML.R namespaces.R
+readHTMLTable.R reflection.R xmlToDataFrame.R bitList.R</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2009-08-04 17:09:35</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.10.0; i486-pc-linux-gnu; 2010-01-07 15:35:05 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="xtable"> </a>xtable</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>xtable</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>1.5-6</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2009/10/30</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Export tables to LaTeX or HTML</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>David B. Dahl &lt;dahl_at_stat.tamu.edu&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>David B. Dahl &lt;dahl_at_stat.tamu.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Coerce data to LaTeX and HTML tables</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.6.0)</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL (&gt;= 2)</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2009-11-06 22:52:33 UTC; dahl</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2009-11-08 17:53:42</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; ; 2010-01-07 15:29:30 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="digest"> </a>digest</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>digest</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.4.2</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>$Date: 2009-12-03 16:42:47 +0100 (Thu, 03 Dec 2009) $</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Dirk Eddelbuettel &lt;edd_at_debian.org&gt; with contributions by
+Antoine Lucas, Jarek Tuszynski, Henrik Bengtsson and Simon
+Urbanek</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Dirk Eddelbuettel &lt;edd_at_debian.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Create cryptographic hash digests of R objects</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>The digest package provides functions for the creation of
+`hash' digests of arbitrary R objects using the md5, sha-1,
+sha-256 and crc32 algorithms permitting easy comparison of R
+language objects. The md5 algorithm by Ron Rivest is specified
+in RFC 1321, the SHA-1 and SHA-256 algorithms are specified in
+FIPS-180-1 and FIPS-180-2, and the crc32 algorithm is described
+in ftp://ftp.rocksoft.com/cliens/rocksoft/papers/crc_v3.txt.
+For md5, sha-1 and sha-256, this packages uses small standalone
+implementations that were provided by Christophe Devine. For
+crc32, code from the zlib library is used.
+
+Please note that this package is not meant to be deployed for
+cryptographic purposes for which more comprehensive (and widely
+tested) libraries such as OpenSSL should be used.</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.4.1)</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" o "><td class="l"> URL </td><td>http://dirk.eddelbuettel.com/code/digest.html</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Repository/R-Forge/Project </td><td>digest</td></tr>
+<tr class=" e "><td class="l"> Repository/R-Forge/Revision </td><td>28</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2009-12-06 09:22:26</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2009-12-03 21:07:51 UTC; rforge</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; i486-pc-linux-gnu; 2010-01-07 15:29:26 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="PopCon"> </a>PopCon</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>PopCon</td></tr>
+<tr class=" o "><td class="l"> Type </td><td>Package</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>A popularity contest for R and its packages</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.1</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2008-02-07</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Jeffrey Horner &lt;jeff.horner_at_vanderbilt.edu&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Jeffrey Horner &lt;jeff.horner_at_vanderbilt.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>A popularity contest for R and its packages</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL 2.0</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.6.1; i486-pc-linux-gnu; 2008-02-14 15:39:01; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="RMySQL"> </a>RMySQL</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>RMySQL</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.7-4</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2009-04-07</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>R interface to the MySQL database</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>David A. James and Saikat DebRoy</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Jeffrey Horner &lt;jeff.horner_at_vanderbilt.edu&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Database interface and MySQL driver for R. This version
+complies with the database interface definition as implemented
+in the package DBI 0.2-2.</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>true</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.8.0), methods, DBI (&gt;= 0.2-2), utils</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL-2</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://biostat.mc.vanderbilt.edu/RMySQL</td></tr>
+<tr class=" o "><td class="l"> Collate </td><td>S4R.R zzz.R MySQLSupport.R dbObjectId.R MySQL.R</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>Tue Apr 7 15:19:44 2009; hornerj</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2009-04-14 17:26:56</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.10.0; i486-pc-linux-gnu; 2010-01-09 18:40:57 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="base"> </a>base</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>The R Base Package</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Base R functions</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.1; ; 2011-07-09 11:36:06 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="boot"> </a>boot</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>boot</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>1.3-2</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2011-06-06</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>S original &lt;http://statwww.epfl.ch/davison/BMA/library.html&gt; by
+Angelo Canty &lt;cantya_at_mcmaster.ca&gt;. R port by Brian Ripley
+&lt;ripley_at_stats.ox.ac.uk&gt;.</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Brian Ripley &lt;ripley_at_stats.ox.ac.uk&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>functions and datasets for bootstrapping from the book
+"Bootstrap Methods and Their Applications" by A. C. Davison and
+D. V. Hinkley (1997, CUP).</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Bootstrap Functions (originally by Angelo Canty for S)</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.10.0), graphics, stats</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>survival</td></tr>
+<tr class=" o "><td class="l"> Enhances </td><td>multicore, snow</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> LazyData </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Unlimited</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2011-06-07 08:52:34 UTC; ripley</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2011-06-09 14:34:30</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.0; ; 2011-06-11 13:14:40 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="class"> </a>class</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>class</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>7.3-2</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2010-03-28</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.5.0), stats, utils</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>MASS</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Brian Ripley &lt;ripley_at_stats.ox.ac.uk&gt;.</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Brian Ripley &lt;ripley_at_stats.ox.ac.uk&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Various functions for classification.</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Functions for Classification</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL-2 | GPL-3</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://www.stats.ox.ac.uk/pub/MASS4/</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2010-03-28 16:15:49 UTC; ripley</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2010-04-02 17:18:06</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.12.0; i486-pc-linux-gnu; 2010-11-22 01:49:30 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="cluster"> </a>cluster</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>cluster</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>1.14.0</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2011-06-07</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Martin Maechler, based on S original by Peter Rousseeuw
+&lt;rousse_at_uia.ua.ac.be&gt;, Anja.Struyf_at_uia.ua.ac.be and
+Mia.Hubert_at_uia.ua.ac.be, and initial R port by
+Kurt.Hornik_at_R-project.org</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Martin Maechler &lt;maechler_at_stat.math.ethz.ch&gt;</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Cluster Analysis Extended Rousseeuw et al.</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Cluster Analysis, extended original from Peter Rousseeuw,
+Anja Struyf and Mia Hubert.</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.9.0), stats, graphics, utils</td></tr>
+<tr class=" o "><td class="l"> Enhances </td><td>MASS</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> LazyData </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL (&gt;= 2)</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2011-06-07 12:39:54 UTC; maechler</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2011-06-08 07:03:35</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-06-09 12:59:56 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="codetools"> </a>codetools</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>codetools</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>0.2-8</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Luke Tierney &lt;luke_at_stat.uiowa.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Code analysis tools for R</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Code Analysis Tools for R</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.1)</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Luke Tierney &lt;luke_at_stat.uiowa.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2011-02-14 20:49:48 UTC; luke</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2011-02-15 09:52:32</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.12.1; ; 2011-02-16 23:59:32 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="compiler"> </a>compiler</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>compiler</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>The R Compiler Package</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Luke Tierney &lt;luke-tierney_at_uiowa.edu&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Byte code compiler for R</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.1; ; 2011-07-09 11:36:05 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="datasets"> </a>datasets</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>datasets</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>The R Datasets Package</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Base R datasets</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; ; 2011-07-09 11:35:58 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="foreign"> </a>foreign</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>foreign</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>0.8-44</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2011-04-10</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Read Data Stored by Minitab, S, SAS, SPSS, Stata, Systat, dBase,
+...</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.13.0), stats</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>methods, utils</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R-core &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R-core members, Saikat DebRoy &lt;saikat_at_stat.wisc.edu&gt;, Roger
+Bivand &lt;Roger.Bivand_at_nhh.no&gt; and others: see COPYRIGHTS file in
+the sources.</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Functions for reading and writing data stored by
+statistical packages such as Minitab, S, SAS, SPSS, Stata,
+Systat, ..., and for reading and writing dBase files.</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL (&gt;= 2)</td></tr>
+<tr class=" e "><td class="l"> BugReports </td><td>http://bugs.r-project.org</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2011-04-12 07:49:53 UTC; ripley</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2011-04-13 14:51:20</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-04-14 11:59:33 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="graphics"> </a>graphics</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>graphics</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>The R Graphics Package</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>R functions for base graphics</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>grDevices</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.1; ; 2011-07-09 11:35:56 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="grDevices"> </a>grDevices</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>grDevices</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>The R Graphics Devices and Support for Colours and Fonts</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Graphics devices and support for base and grid graphics</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; i486-pc-linux-gnu; 2011-07-09 11:35:54 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="grid"> </a>grid</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>grid</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>The Grid Graphics Package</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Paul Murrell &lt;paul_at_stat.auckland.ac.nz&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>A rewrite of the graphics layout capabilities, plus some
+support for interaction</td></tr>
+<tr class=" o "><td class="l"> Imports </td><td>grDevices</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>lattice</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.1; i486-pc-linux-gnu; 2011-07-09 11:36:03 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="KernSmooth"> </a>KernSmooth</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>KernSmooth</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.23-6</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2011-05-31</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Functions for kernel smoothing for Wand &amp; Jones (1995)</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Matt Wand &lt;Matt.Wand_at_uts.edu.au&gt; R port by Brian Ripley
+&lt;ripley_at_stats.ox.ac.uk&gt;.</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Brian Ripley &lt;ripley_at_stats.ox.ac.uk&gt;</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.5.0), stats</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>MASS</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>functions for kernel smoothing (and density estimation)
+corresponding to the book: Wand, M.P. and Jones, M.C. (1995)
+"Kernel Smoothing".</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Unlimited</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2011-06-08 06:08:00 UTC; ripley</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2011-06-09 14:34:17</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-06-11 13:15:11 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="lattice"> </a>lattice</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>lattice</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>0.19-30</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2011/06/30</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Lattice Graphics</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Deepayan Sarkar &lt;deepayan.sarkar_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Deepayan Sarkar &lt;deepayan.sarkar_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Lattice is a powerful and elegant high-level data
+visualization system, with an emphasis on multivariate data,
+that is sufficient for typical graphics needs, and is also
+flexible enough to handle most nonstandard requirements.  See
+?Lattice for an introduction.</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>R (&gt;= 2.11.0)</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>grid, KernSmooth, MASS</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>grid, grDevices, graphics, stats, utils, methods</td></tr>
+<tr class=" o "><td class="l"> Enhances </td><td>chron</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> LazyData </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL (&gt;= 2)</td></tr>
+<tr class=" o "><td class="l"> URL </td><td>http://r-forge.r-project.org/projects/lattice/</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2011-06-30 10:16:30 UTC; deepayan</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2011-06-30 17:01:14</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-07-08 19:16:52 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="MASS"> </a>MASS</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>MASS</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>7.3-13</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2011-04-09</td></tr>
+<tr class=" e "><td class="l"> Revision </td><td>$Rev: 2963 $</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.13.0), grDevices, graphics, stats, utils</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>lattice, nlme, nnet, survival</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>S original by Venables &amp; Ripley. R port by Brian Ripley,
+following partial ports by Kurt Hornik and Albrecht Gebhardt
+around 1998.</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Brian Ripley &lt;ripley_at_stats.ox.ac.uk&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Functions and datasets to support Venables and Ripley,
+'Modern Applied Statistics with S' (4th edition, 2002).</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Support Functions and Datasets for Venables and Ripley's MASS</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL-2 | GPL-3</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://www.stats.ox.ac.uk/pub/MASS4/</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> LazyData </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2011-04-13 06:15:22 UTC; ripley</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2011-04-13 14:51:02</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-05-30 20:51:08 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="Matrix"> </a>Matrix</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>Matrix</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>0.999375-50</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2011-04-08</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Sparse and Dense Matrix Classes and Methods</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Douglas Bates &lt;bates_at_stat.wisc.edu&gt; and Martin Maechler
+&lt;maechler_at_stat.math.ethz.ch&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Doug and Martin &lt;Matrix-authors_at_R-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Classes and methods for dense and sparse matrices and
+operations on them using Lapack and SuiteSparse.</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.10.0), stats, methods, utils, lattice</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>graphics, grid</td></tr>
+<tr class=" o "><td class="l"> Enhances </td><td>MatrixModels, graph, SparseM, sfsmisc</td></tr>
+<tr class=" e "><td class="l"> Encoding </td><td>UTF-8</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> LazyData </td><td>no</td></tr>
+<tr class=" o "><td class="l"> LazyDataNote </td><td>no longer available, since we use data/*.R *and* our
+classes</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL (&gt;= 2)</td></tr>
+<tr class=" o "><td class="l"> LicenseDetails </td><td>The Matrix package includes libraries AMD, CHOLMOD,
+COLAMD, CSparse and SPQR from the SuiteSparse collection of Tim
+Davis.  All sections of that code are covered by the GPL or
+LGPL licenses.  See the directory doc/UFsparse for details.</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://Matrix.R-forge.R-project.org/</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2011-04-08 15:48:55 UTC; maechler</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2011-04-09 07:48:02</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-04-10 01:23:19 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="methods"> </a>methods</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>methods</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>utils</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Formal Methods and Classes</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R Development Core Team</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Formally defined methods and classes for R objects, plus
+other programming tools, as described in the reference</td></tr>
+<tr class=" o "><td class="l"> References </td><td>John M. Chambers (2008) ``Software for Data Analysis:
+Programming with R''; Springer NY.</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; i486-pc-linux-gnu; 2011-07-09 11:36:03 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="mgcv"> </a>mgcv</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>mgcv</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>1.7-6</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>Simon Wood &lt;simon.wood_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Simon Wood &lt;simon.wood_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>GAMs with GCV/AIC/REML smoothness estimation and GAMMs by PQL</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Routines for GAMs and other generalized ridge regression
+with multiple smoothing parameter selection by GCV, REML or
+UBRE/AIC. Also GAMMs by REML or PQL. Includes a gam() function.</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.3.0)</td></tr>
+<tr class=" e "><td class="l"> Imports </td><td>graphics, stats, nlme, Matrix</td></tr>
+<tr class=" o "><td class="l"> Suggests </td><td>nlme (&gt;= 3.1-64), splines, Matrix</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL (&gt;= 2)</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2011-04-14 11:16:32 UTC; simon</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2011-04-14 17:01:29</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-04-15 13:03:47 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="nlme"> </a>nlme</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>nlme</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>3.1-101</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2011-04-06</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Linear and Nonlinear Mixed Effects Models</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Jose Pinheiro (S version), Douglas Bates (up to 2007), Saikat
+DebRoy (up to 2002), Deepayan Sarkar (up to 2005), the R Core
+team.</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>R-core &lt;R-core_at_R-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Fit and compare Gaussian linear and nonlinear
+mixed-effects models.</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>graphics, stats, R (&gt;= 2.13)</td></tr>
+<tr class=" o "><td class="l"> Imports </td><td>lattice</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>Hmisc</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> LazyData </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL (&gt;= 2)</td></tr>
+<tr class=" e "><td class="l"> BugReports </td><td>http://bugs.r-project.org</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2011-05-06 06:58:40 UTC; ripley</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2011-05-06 15:50:04</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-05-07 11:09:06 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="nnet"> </a>nnet</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>nnet</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>7.3-1</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2009-05-09</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.5.0), stats, utils</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>MASS</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Brian Ripley &lt;ripley_at_stats.ox.ac.uk&gt;.</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Brian Ripley &lt;ripley_at_stats.ox.ac.uk&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Software for feed-forward neural networks with a single
+hidden layer, and for multinomial log-linear models.</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Feed-forward Neural Networks and Multinomial Log-Linear Models</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL-2 | GPL-3</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://www.stats.ox.ac.uk/pub/MASS4/</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2009-07-31 14:02:09 UTC; ripley</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.12.0; i486-pc-linux-gnu; 2010-11-22 02:20:47 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="rpart"> </a>rpart</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>rpart</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>3.1-50</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2011-04-09</td></tr>
+<tr class=" e "><td class="l"> DateNote </td><td>March 2002 version of rpart</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Terry M Therneau and Beth Atkinson &lt;atkinson_at_mayo.edu&gt;. R port
+by Brian Ripley.</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Brian Ripley &lt;ripley_at_stats.ox.ac.uk&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Recursive partitioning and regression trees</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Recursive Partitioning</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.13.0), graphics, stats, grDevices</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>survival</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL-2 | GPL-3</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" o "><td class="l"> LazyData </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>
+http://mayoresearch.mayo.edu/mayo/research/biostat/splusfunctions.cfm</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2011-04-10 16:16:03 UTC; ripley</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2011-04-13 14:51:28</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-04-14 12:07:24 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="spatial"> </a>spatial</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>spatial</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>7.3-2</td></tr>
+<tr class=" e "><td class="l"> Date </td><td>2010-03-28</td></tr>
+<tr class=" o "><td class="l"> Depends </td><td>R (&gt;= 2.5.0), graphics, stats, utils</td></tr>
+<tr class=" e "><td class="l"> Suggests </td><td>MASS</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Brian Ripley &lt;ripley_at_stats.ox.ac.uk&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>Brian Ripley &lt;ripley_at_stats.ox.ac.uk&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Functions for kriging and point pattern analysis.</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Functions for Kriging and Point Pattern Analysis</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> License </td><td>GPL-2 | GPL-3</td></tr>
+<tr class=" o "><td class="l"> URL </td><td>http://www.stats.ox.ac.uk/pub/MASS4/</td></tr>
+<tr class=" e "><td class="l"> Packaged </td><td>2010-03-28 16:15:50 UTC; ripley</td></tr>
+<tr class=" o "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" e "><td class="l"> Date/Publication </td><td>2010-04-02 17:18:11</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.12.0; i486-pc-linux-gnu; 2010-12-07 03:14:52 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="splines"> </a>splines</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>splines</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Imports </td><td>graphics, stats</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Regression Spline Functions and Classes</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Douglas M. Bates &lt;bates_at_stat.wisc.edu&gt; and William N. Venables
+&lt;Bill.Venables_at_csiro.au&gt;</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Regression spline functions and classes</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; i486-pc-linux-gnu; 2011-07-09 11:36:04 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="stats"> </a>stats</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>stats</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>The R Stats Package</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>R statistical functions</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.1; i486-pc-linux-gnu; 2011-07-09 11:35:57 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="stats4"> </a>stats4</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>stats4</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Statistical Functions using S4 Classes</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Statistical Functions using S4 classes</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>methods, graphics, stats</td></tr>
+<tr class=" o "><td class="l"> LazyLoad </td><td>yes</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; ; 2011-07-09 11:36:05 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="survival"> </a>survival</h2><table><tbody><tr class=" e "><td class="l"> Title </td><td>Survival analysis, including penalised likelihood.</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>Terry Therneau &lt;therneau.terry_at_mayo.edu&gt;</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>recommended</td></tr>
+<tr class=" o "><td class="l"> Package </td><td>survival</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>2.36-9</td></tr>
+<tr class=" o "><td class="l"> Date </td><td>2011-02-01</td></tr>
+<tr class=" e "><td class="l"> Depends </td><td>stats, utils, graphics, splines, R (&gt;= 2.13.0)</td></tr>
+<tr class=" o "><td class="l"> LazyData </td><td>Yes</td></tr>
+<tr class=" e "><td class="l"> LazyLoad </td><td>Yes</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>Terry Therneau, original Splus-&gt;R port by Thomas Lumley</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>survival analysis: descriptive statistics, two-sample
+tests, parametric accelerated failure models, Cox model.
+Delayed entry (truncation) allowed for all models; interval
+censoring for parametric models. Case-cohort designs.</td></tr>
+<tr class=" o "><td class="l"> License </td><td>GPL (&gt;= 2)</td></tr>
+<tr class=" e "><td class="l"> URL </td><td>http://r-forge.r-project.org</td></tr>
+<tr class=" o "><td class="l"> Packaged </td><td>2011-04-28 17:36:52 UTC; therneau</td></tr>
+<tr class=" e "><td class="l"> Repository </td><td>CRAN</td></tr>
+<tr class=" o "><td class="l"> Date/Publication </td><td>2011-04-28 19:03:12</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.0; i486-pc-linux-gnu; 2011-05-02 15:44:25 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="tcltk"> </a>tcltk</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>tcltk</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>Tcl/Tk Interface</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>R Development Core Team</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>Interface and language bindings to Tcl/Tk GUI elements</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; i486-pc-linux-gnu; 2011-07-09 11:36:05 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="tools"> </a>tools</h2><table><tbody><tr class=" e "><td class="l"> Package </td><td>tools</td></tr>
+<tr class=" o "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" e "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" o "><td class="l"> Title </td><td>Tools for Package Development</td></tr>
+<tr class=" e "><td class="l"> Author </td><td>R Development Core Team</td></tr>
+<tr class=" o "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" e "><td class="l"> Description </td><td>Tools for package development, administration and
+documentation</td></tr>
+<tr class=" o "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" e "><td class="l"> Built </td><td>R 2.13.1; i486-pc-linux-gnu; 2011-07-09 11:35:53 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="utils"> </a>utils</h2><table><tbody><tr class=" o "><td class="l"> Package </td><td>utils</td></tr>
+<tr class=" e "><td class="l"> Version </td><td>2.13.1</td></tr>
+<tr class=" o "><td class="l"> Priority </td><td>base</td></tr>
+<tr class=" e "><td class="l"> Title </td><td>The R Utils Package</td></tr>
+<tr class=" o "><td class="l"> Author </td><td>R Development Core Team and contributors worldwide</td></tr>
+<tr class=" e "><td class="l"> Maintainer </td><td>R Core Team &lt;R-core_at_r-project.org&gt;</td></tr>
+<tr class=" o "><td class="l"> Description </td><td>R utility functions</td></tr>
+<tr class=" e "><td class="l"> License </td><td>Part of R 2.13.1</td></tr>
+<tr class=" o "><td class="l"> Built </td><td>R 2.13.1; ; 2011-07-09 11:35:54 UTC; unix</td></tr>
+</tbody></table>
+<br><hr>
+<h2><a name="License"></a>License</h2><pre>Copyright 2005  The Apache Software Foundation
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+  <a href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0"</a>
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+</pre><hr>
+<h2><a name="People"></a>People</h2>
+<p>Thanks to the following people for their contributions, giving advice, noticing when things were broken and such. If I've forgotten to mention you, please email me.</p>
+<pre>	Gregoire Thomas
+	Jan de Leeuw
+	Keven E. Thorpe
+	Jeremy Stephens
+	Aleksander Wawer
+	David Konerding
+	Robert Kofler
+	Jeroen Ooms
+</pre></body></html>

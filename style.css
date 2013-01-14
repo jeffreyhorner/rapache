@@ -1,0 +1,186 @@
+/* Main Content */
+body { 
+	/* background-color: #ffffdd; */
+	font-family:Verdana,'Lucida Grande',Arial,sans-serif;
+	font-size: 12pt;
+	text-align: left;
+}
+pre {
+	margin: 0;
+	padding: 0;
+}
+	
+div.citation {
+	margin: 5px 5px 5px 5px;
+	padding: 5px 5px 5px 5px;
+	border: 1px solid black;
+	font-family: monospace;
+}
+div#main { 
+	margin: 10px 110px 10px 10px;
+	border-right: 1px solid black;
+	padding: 0px 50px 0px 50px;
+}
+div#manual { 
+	margin: 10px 110px 10px 10px;
+	border-right: 1px solid black;
+	padding: 0px 50px 0px 50px;
+}
+h1 { 
+	margin: 1px 1px 1px 1px;
+	font-size: 100pt;
+	font-weight: bolder;
+	letter-spacing: -.1em;
+}
+h1 b { color: blue; }
+h2 {
+	font-size: 80pt;
+}
+h3 {
+	letter-spacing: -.02em;
+	font-size: 16pt;
+	margin-bottom: 10px;
+}
+h4,h5 {
+	letter-spacing: -.02em;
+	font-size: 13pt;
+	margin-bottom: 10px;
+}
+a { text-decoration: none; }
+a:link, a:visited { color: blue; }
+a:hover {
+	color: #df9000;
+	border-bottom: 2px solid black;
+}
+p {
+	margin-top: 0px;
+	/* letter-spacing: .3em; */
+	/*letter-spacing: -.02em; */
+	/* letter-spacing: .1em; */
+	line-height:1.5em;
+}
+
+table {
+	margin: 0px; padding: 0px;
+	border-spacing: 0px;
+}
+th { text-align: left; }
+td {
+	font-size: 7pt;
+	font-weight: normal;
+	line-height: 1em;
+	border-right: 1px solid black;
+	padding-left: 5px;
+}
+/* Table of Contents */
+div#toc {
+	font-size: 12pt;
+	line-height: 1.4em;
+}
+div#toc ul {
+	list-style-type: none;
+	margin-left: 0px;
+	padding-left: 20px;
+}
+a img {
+	border: none;
+}
+
+span#version {
+	font-size: 7pt;
+	color: grey;
+	letter-spacing: .3em;
+}
+
+
+/* Menu */
+div#menu {
+	position: fixed; top: 200px; right: 25px;
+}
+div#menu ul {
+	list-style-type: none;
+	margin: 0px;
+	padding: 0px;
+}
+
+/* Code syntax highlighting */
+#codeblock {
+	margin: 30px;
+	padding: 5px;
+	font-family: monospace; 
+	font-weight: normal; 
+	font-size: 9pt; 
+	letter-spacing: -.01em;
+	line-height: 1.1em;
+	color: black; 
+	border: 1px solid grey;
+}
+.hlite_c .imp {font-weight: bold; color: black;}
+.hlite_c .kw1 {color: red;}
+.hlite_c .kw2 {color: red; }
+.hlite_c .kw3 {color: red;}
+.hlite_c .kw4 {color: red;}
+.hlite_c .hlite_co1 {color: black; }
+.hlite_c .hlite_co2 {color: black;}
+.hlite_c .hlite_coMULTI {color: black; }
+.hlite_c .es0 {color: grey; }
+.hlite_c .br0 {color: red;}
+.hlite_c .st0 {color: grey;}
+.hlite_c .nu0 {color: black;}
+.hlite_c .me1 {color: black;}
+.hlite_c .me2 {color: black;}
+
+.hlite_apache .imp {font-weight: bold; color: red;}
+.hlite_apache .kw1 {color: #00007f;}
+.hlite_apache .kw2 {color: #0000ff;}
+.hlite_apache .co1 {color: grey; font-style: italic;}
+.hlite_apache .es0 {color: #000099; font-weight: bold;}
+.hlite_apache .br0 {color: #66cc66;}
+.hlite_apache .st0 {color: #7f007f;}
+.hlite_apache .nu0 {color: #ff0000;}
+
+.hlite_html4strict .imp {font-weight: bold; color: red;}
+.hlite_html4strict .kw1 {color: #b1b100;}
+.hlite_html4strict .kw2 {color: #000000; font-weight: bold;}
+.hlite_html4strict .kw3 {color: #000066;}
+.hlite_html4strict .coMULTI {color: #808080; font-style: italic;}
+.hlite_html4strict .es0 {color: #000099; font-weight: bold;}
+.hlite_html4strict .br0 {color: #66cc66;}
+.hlite_html4strict .st0 {color: grey;}
+.hlite_html4strict .nu0 {color: #cc66cc;}
+.hlite_html4strict .sc0 {color: #00bbdd;}
+.hlite_html4strict .sc1 {color: #ddbb00;}
+.hlite_html4strict .sc2 {color: #009900;}
+
+.hlite_text .imp {font-weight: bold; color: red;}
+
+/* Rdoc style */
+div#rdoc {
+	margin-left: 10px;
+}
+div#rdoc dt {
+	font-size: 9pt;
+}
+div#rdoc dd {
+	font-size: 8pt;
+}
+div#rdoc ul {
+	list-style-type: none;
+}
+
+div#rdoc p {
+	margin-left: 15px;
+	text-indent: -15px;
+	font-size: 8pt;
+	letter-spacing: 0;
+	line-height: 1.2em;
+}
+
+/* Surrounding decoration */
+div#leftcol { position: fixed; background-color: blue; top: 10px; left: 10px; height: 98%; width: 100px; z-index: 0}
+div#leftcol a { text-decoration: none; border: none;}
+div#leftcol a img { text-decoration: none; border: none;}
+div.tri { position: fixed; border-style: solid; width: 0px; height: 0px; line-height: 0px; border-width: 50px 50px 50px 50px; z-index: 0;}
+div.angle1 { position: fixed; top: 10px; right: 10px; border-color: blue blue transparent transparent;}
+div.angle2 { position: fixed; bottom: 10px; right: 10px; border-color: blue blue transparent transparent; }
+div.angle3 { position: fixed; bottom: 120px; right: 10px; border-color: transparent blue blue transparent; z-index: 0;}

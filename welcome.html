@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+	<link rel="stylesheet" href="style.css" type="text/css" />
+	<title>the rapache project</title>
+</head>
+<body>
+<div class="tri angle1"></div>
+<div class="tri angle2"></div>
+<div class="tri angle3"></div>
+<div id="menu">
+<ul>
+	<li><a title="home" href="index.html">home</a></li>
+	<li><a title="manual" href="manual.html">manual</a></li>
+	<li><a title="downloads" href="downloads.html">downloads</a></li>
+	<li><a title="links" href="links.html">links</a></li>
+</ul>
+</div>
+<div id="main">
+ 
+<!--   M A I N   C O N T E N T   -->
+<h1>welcome!</h1>
+
+From here, you can explore the following links to get ideas of how to write your own rapache applications.
+
+<h3>Using brew</h3>
+<p>
+<a href="http://www.rforge.net/brew">brew</a> is an R package for combining (brewing) the output of evaluated R
+code with text. When used with rapache, <b>it provides a server-side scripting
+environment very similar to PHP</b>. You can use an apache2 config similar to this one:
+</p>
+
+
+<div id="codeblock"> <pre class="hlite_apache"><span class="co1"># Any file under /var/www/brew is passed through the function brew located in</span>
+<span class="co1"># the package brew</span>
+&lt;Directory /var/www/brew&gt;
+	<span class="kw1">SetHandler</span> r-<span class="kw1">script</span>
+	RHandler brew::brew
+&lt;/Directory&gt;
+&nbsp;</pre> </div>
+
+<h4><a target="_rapache" href="/brew/simple.rhtml">A Simple Example</a></h4>
+
+<div id="codeblock">
+<pre class="hlite_c">&lt;%
+	setContentType<span class="br0">&#40;</span><span class="st0">&quot;text/html&quot;</span><span class="br0">&#41;</span>
+	myname &lt;- ifelse<span class="br0">&#40;</span>is.<span class="kw2">null</span><span class="br0">&#40;</span>GET$name<span class="br0">&#41;</span>,<span class="st0">'World'</span>,GET$name<span class="br0">&#41;</span>
+%&gt;
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;A Simple Example&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;Hello &lt;%=myname%&gt;!&lt;/h1&gt;&lt;/h1&gt;
+&lt;% <span class="kw1">if</span> <span class="br0">&#40;</span>myname==<span class="st0">'World'</span><span class="br0">&#41;</span><span class="br0">&#123;</span> %&gt;
+		&lt;form method=<span class="st0">&quot;GET&quot;</span>&gt;What is your name?
+		&lt;input name=<span class="st0">&quot;name&quot;</span> type=<span class="st0">&quot;text&quot;</span>&gt;
+		&lt;input type=<span class="st0">&quot;submit&quot;</span> value=<span class="st0">&quot;Say it!&quot;</span>&gt;
+		&lt;/form&gt;
+&lt;% <span class="br0">&#125;</span> <span class="kw1">else</span> <span class="br0">&#123;</span> %&gt;
+Today is: &lt;%=format<span class="br0">&#40;</span>Sys.<span class="me1">time</span><span class="br0">&#40;</span><span class="br0">&#41;</span><span class="br0">&#41;</span>%&gt;&lt;br&gt;
+&lt;a href=<span class="st0">&quot;/brew/simple.rhtml&quot;</span>&gt;Click me!&lt;/a&gt;
+&lt;% <span class="br0">&#125;</span> %&gt;
+&lt;/body&gt;&lt;/html&gt;
+&nbsp;</pre>
+
+</div>
+
+<h4><a target="_rapache" href="/brew/useR2007.rhtml">Power and Sample Size with Hmisc</a></h4>
+<p>
+This is an involved brew example which demonstrates its use with <b>AJAX</b> and <b>Web Services</b>. There's too much code to list here but you can download the entire souce from the main rapache <a href="http://biostat.mc.vanderbilt.edu/rapache/links.html">links</a> page.</p>
+
+<h3>Using R code in a File</h3>
+
+<h4><a target="_rapache" href="/testR">The Canonical Test</a></h4>
+
+<p>Displays most all of rapache's features. Here's the apache config:</p>
+
+<div id="codeblock"> <pre class="hlite_apache">&lt;Location /testR&gt;
+        <span class="kw1">SetHandler</span> r-handler
+        RFileHandler /var/www/test.R
+&lt;/Location&gt;
+&nbsp;</pre> </div>
+
+<p>and the code...</p>
+
+<div id="codeblock">
+<pre class="hlite_c"><span class="co2"># Canonical Test</span>
+hrefify &lt;- <span class="kw2">function</span><span class="br0">&#40;</span>title<span class="br0">&#41;</span> gsub<span class="br0">&#40;</span><span class="st0">'[<span class="es0">\\</span>.()]'</span>,<span class="st0">'_'</span>,title,perl=<span class="kw2">TRUE</span><span class="br0">&#41;</span>
+scrub &lt;- <span class="kw2">function</span><span class="br0">&#40;</span>str<span class="br0">&#41;</span><span class="br0">&#123;</span> 
+	<span class="kw1">if</span> <span class="br0">&#40;</span>is.<span class="kw2">null</span><span class="br0">&#40;</span>str<span class="br0">&#41;</span><span class="br0">&#41;</span> <span class="kw1">return</span><span class="br0">&#40;</span><span class="st0">'NULL'</span><span class="br0">&#41;</span>
+	<span class="kw1">if</span> <span class="br0">&#40;</span>length<span class="br0">&#40;</span>str<span class="br0">&#41;</span> == <span class="nu0">0</span><span class="br0">&#41;</span> <span class="kw1">return</span><span class="br0">&#40;</span><span class="st0">'length 0 string'</span><span class="br0">&#41;</span>
+	cat<span class="br0">&#40;</span><span class="st0">&quot;<span class="es0">\n</span>&lt;!-- before as.character: (&quot;</span>,str,<span class="st0">&quot;)--&gt;<span class="es0">\n</span>&quot;</span>,sep=<span class="st0">''</span><span class="br0">&#41;</span>
+	str &lt;- as.<span class="me1">character</span><span class="br0">&#40;</span>str<span class="br0">&#41;</span>
+	cat<span class="br0">&#40;</span><span class="st0">&quot;<span class="es0">\n</span>&lt;!-- after as.character: (&quot;</span>,str,<span class="st0">&quot;)--&gt;<span class="es0">\n</span>&quot;</span>,sep=<span class="st0">''</span><span class="br0">&#41;</span>
+	str &lt;- gsub<span class="br0">&#40;</span><span class="st0">'&amp;'</span>,<span class="st0">'&amp;amp;'</span>,str<span class="br0">&#41;</span>; str &lt;- gsub<span class="br0">&#40;</span><span class="st0">'@'</span>,<span class="st0">'_at_'</span>,str<span class="br0">&#41;</span>; 
+	str &lt;- gsub<span class="br0">&#40;</span><span class="st0">'&lt;'</span>,<span class="st0">'&amp;lt;'</span>,str<span class="br0">&#41;</span>; str &lt;- gsub<span class="br0">&#40;</span><span class="st0">'&gt;'</span>,<span class="st0">'&amp;gt;'</span>,str<span class="br0">&#41;</span>; 
+	<span class="kw1">if</span> <span class="br0">&#40;</span>length<span class="br0">&#40;</span>str<span class="br0">&#41;</span> == <span class="nu0">0</span> || is.<span class="kw2">null</span><span class="br0">&#40;</span>str<span class="br0">&#41;</span> || str == <span class="st0">''</span><span class="br0">&#41;</span>
+		str &lt;- <span class="st0">'&amp;nbsp;'</span> 
+	str
+<span class="br0">&#125;</span>
+cl&lt;-<span class="st0">'e'</span>
+zebary &lt;- <span class="kw2">function</span><span class="br0">&#40;</span>i<span class="br0">&#41;</span><span class="br0">&#123;</span> 
+	cl &lt;&lt;- ifelse<span class="br0">&#40;</span>cl==<span class="st0">'e'</span>,<span class="st0">'o'</span>,<span class="st0">'e'</span><span class="br0">&#41;</span>
+	cat<span class="br0">&#40;</span><span class="st0">'&lt;tr class=&quot;'</span>,cl,<span class="st0">'&quot;&gt;&lt;td&gt;'</span>,scrub<span class="br0">&#40;</span>i<span class="br0">&#41;</span>,<span class="st0">'&lt;/td&gt;&lt;/tr&gt;<span class="es0">\n</span>'</span>,sep=<span class="st0">''</span><span class="br0">&#41;</span>
+<span class="br0">&#125;</span>
+zeblist &lt;- <span class="kw2">function</span><span class="br0">&#40;</span>i,l<span class="br0">&#41;</span><span class="br0">&#123;</span> 
+	cl &lt;&lt;- ifelse<span class="br0">&#40;</span>cl==<span class="st0">'e'</span>,<span class="st0">'o'</span>,<span class="st0">'e'</span><span class="br0">&#41;</span>
+	 cat<span class="br0">&#40;</span><span class="st0">'&lt;tr class=&quot;'</span>,cl,<span class="st0">'&quot;&gt;&lt;td class=&quot;l&quot;&gt;'</span>,names<span class="br0">&#40;</span>l<span class="br0">&#41;</span><span class="br0">&#91;</span>i<span class="br0">&#93;</span>,<span class="st0">'&lt;/td&gt;&lt;td&gt;'</span><span class="br0">&#41;</span>
+	<span class="kw1">if</span><span class="br0">&#40;</span>is.<span class="me1">list</span><span class="br0">&#40;</span>l<span class="br0">&#91;</span><span class="br0">&#91;</span>i<span class="br0">&#93;</span><span class="br0">&#93;</span><span class="br0">&#41;</span><span class="br0">&#41;</span>
+		zebra<span class="br0">&#40;</span>names<span class="br0">&#40;</span>l<span class="br0">&#41;</span><span class="br0">&#91;</span>i<span class="br0">&#93;</span>,l<span class="br0">&#91;</span><span class="br0">&#91;</span>i<span class="br0">&#93;</span><span class="br0">&#93;</span><span class="br0">&#41;</span>
+	<span class="kw1">else</span> <span class="br0">&#123;</span>
+		<span class="kw1">if</span> <span class="br0">&#40;</span>length<span class="br0">&#40;</span>l<span class="br0">&#91;</span><span class="br0">&#91;</span>i<span class="br0">&#93;</span><span class="br0">&#93;</span><span class="br0">&#41;</span> &gt; <span class="nu0">1</span><span class="br0">&#41;</span>
+			zebary<span class="br0">&#40;</span>l<span class="br0">&#91;</span><span class="br0">&#91;</span>i<span class="br0">&#93;</span><span class="br0">&#93;</span><span class="br0">&#41;</span>
+		<span class="kw1">else</span>
+			cat<span class="br0">&#40;</span>scrub<span class="br0">&#40;</span>l<span class="br0">&#91;</span><span class="br0">&#91;</span>i<span class="br0">&#93;</span><span class="br0">&#93;</span><span class="br0">&#41;</span><span class="br0">&#41;</span>
+	<span class="br0">&#125;</span>
+		
+	cat<span class="br0">&#40;</span><span class="st0">'&lt;/td&gt;&lt;/tr&gt;<span class="es0">\n</span>'</span>,sep=<span class="st0">''</span><span class="br0">&#41;</span>
+<span class="br0">&#125;</span>
+zebra &lt;- <span class="kw2">function</span><span class="br0">&#40;</span>title,l<span class="br0">&#41;</span><span class="br0">&#123;</span> 
+	cat<span class="br0">&#40;</span><span class="st0">'&lt;h2&gt;&lt;a name=&quot;'</span>,hrefify<span class="br0">&#40;</span>title<span class="br0">&#41;</span>,<span class="st0">'&quot;&gt; &lt;/a&gt;'</span>,title,<span class="st0">'&lt;/h2&gt;<span class="es0">\n</span>&lt;table&gt;&lt;tbody&gt;'</span>,sep=<span class="st0">''</span><span class="br0">&#41;</span>
+	ifelse<span class="br0">&#40;</span>is.<span class="me1">list</span><span class="br0">&#40;</span>l<span class="br0">&#41;</span>,lapply<span class="br0">&#40;</span><span class="nu0">1</span>:length<span class="br0">&#40;</span>l<span class="br0">&#41;</span>,zeblist,l<span class="br0">&#41;</span>, lapply<span class="br0">&#40;</span>l,zebary<span class="br0">&#41;</span><span class="br0">&#41;</span>
+	cat<span class="br0">&#40;</span><span class="st0">'&lt;/tbody&gt;&lt;/table&gt;<span class="es0">\n</span>&lt;br/&gt;&lt;hr/&gt;'</span><span class="br0">&#41;</span> 
+<span class="br0">&#125;</span>
+&nbsp;
+<span class="co2"># Output starts here</span>
+setContentType<span class="br0">&#40;</span><span class="st0">&quot;text/html&quot;</span><span class="br0">&#41;</span>
+&nbsp;
+<span class="kw1">if</span><span class="br0">&#40;</span>is.<span class="kw2">null</span><span class="br0">&#40;</span>GET<span class="br0">&#41;</span><span class="br0">&#41;</span><span class="br0">&#123;</span>
+	called &lt;- <span class="nu0">1</span>
+<span class="br0">&#125;</span> <span class="kw1">else</span> <span class="br0">&#123;</span>
+	called &lt;- as.<span class="me1">integer</span><span class="br0">&#40;</span>GET$called<span class="br0">&#41;</span> + <span class="nu0">1</span>
+<span class="br0">&#125;</span>
+&nbsp;
+setCookie<span class="br0">&#40;</span><span class="st0">'called'</span>,called,expires=Sys.<span class="me1">time</span><span class="br0">&#40;</span><span class="br0">&#41;</span><span class="nu0">+100</span><span class="br0">&#41;</span>
+&nbsp;
+cat<span class="br0">&#40;</span><span class="st0">'&lt;HTML&gt;&lt;head&gt;&lt;style type=&quot;text/css&quot;&gt;<span class="es0">\n</span>'</span><span class="br0">&#41;</span> 
+cat<span class="br0">&#40;</span><span class="st0">'table { border: 1px solid #8897be; border-spacing: 0px; font-size: 10pt; }'</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'td { border-bottom:1px solid #d9d9d9; border-left:1px solid #d9d9d9; border-spacing: 0px; padding: 3px 8px; }'</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'td.l { font-weight: bold; width: 10%; }<span class="es0">\n</span>'</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'tr.e { background-color: #eeeeee; border-spacing: 0px; }<span class="es0">\n</span>'</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'tr.o { background-color: #ffffff; border-spacing: 0px; }<span class="es0">\n</span>'</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'&lt;/style&gt;&lt;/head&gt;&lt;BODY&gt;&lt;H1&gt;Canonical Test for RApache&lt;/H1&gt;<span class="es0">\n</span>'</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'&lt;form enctype=multipart/form-data method=POST action=&quot;/testR?called='</span>,called,<span class="st0">'&quot;&gt;<span class="es0">\n</span>'</span>,sep=<span class="st0">''</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'Enter a string: &lt;input type=text name=name value=&quot;&quot;&gt;&lt;br&gt;<span class="es0">\n</span>'</span>,sep=<span class="st0">''</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'Enter another string: &lt;input type=text name=name value=&quot;&quot;&gt;&lt;br&gt;<span class="es0">\n</span>'</span>,sep=<span class="st0">''</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'Upload a file: &lt;input type=file name=fileUpload&gt;&lt;br&gt;<span class="es0">\n</span>'</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'Upload another file: &lt;input type=file name=anotherFile&gt;&lt;br&gt;<span class="es0">\n</span>'</span><span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">'&lt;input type=submit name=Submit&gt;'</span><span class="br0">&#41;</span>
+&nbsp;
+cat<span class="br0">&#40;</span><span class="st0">&quot;&lt;hr&gt;<span class="es0">\n</span>&quot;</span><span class="br0">&#41;</span>
+<span class="co2">#RApacheOutputErrors(TRUE)</span>
+<span class="co2">#RApacheOutputErrors(TRUE,prefix='&lt;!--\n',suffix='--&gt;\n')</span>
+<span class="co2">#RApacheOutputErrors(FALSE)</span>
+zebra<span class="br0">&#40;</span><span class="st0">'CGI GET Data'</span>,GET<span class="br0">&#41;</span>
+zebra<span class="br0">&#40;</span><span class="st0">'CGI POST Data'</span>,POST<span class="br0">&#41;</span>
+zebra<span class="br0">&#40;</span><span class="st0">'Cookies'</span>,COOKIES<span class="br0">&#41;</span>
+<span class="kw1">if</span> <span class="br0">&#40;</span>!is.<span class="kw2">null</span><span class="br0">&#40;</span>FILES<span class="br0">&#41;</span><span class="br0">&#41;</span><span class="br0">&#123;</span>
+	cat<span class="br0">&#40;</span><span class="st0">'&lt;h2&gt;Files Uploaded in POST Data&lt;/h2&gt;<span class="es0">\n</span>'</span><span class="br0">&#41;</span>
+	<span class="kw1">for</span> <span class="br0">&#40;</span>n in names<span class="br0">&#40;</span>FILES<span class="br0">&#41;</span><span class="br0">&#41;</span><span class="br0">&#123;</span>
+		zebra<span class="br0">&#40;</span>paste<span class="br0">&#40;</span><span class="st0">&quot;Form Variable&quot;</span>,n<span class="br0">&#41;</span>,FILES<span class="br0">&#91;</span><span class="br0">&#91;</span>n<span class="br0">&#93;</span><span class="br0">&#93;</span><span class="br0">&#41;</span>
+	<span class="br0">&#125;</span>
+<span class="br0">&#125;</span>
+zebra<span class="br0">&#40;</span><span class="st0">&quot;SERVER Variables&quot;</span>,SERVER<span class="br0">&#41;</span>
+cat<span class="br0">&#40;</span><span class="st0">&quot;&lt;/BODY&gt;&lt;/HTML&gt;<span class="es0">\n</span>&quot;</span><span class="br0">&#41;</span>
+&nbsp;
+OK
+&nbsp;</pre>
+
+</div>
+
+<h4><a target="_rapache" href="/testSendBin">Sending Binary Data</a></h4>
+<p>Use it to set up a <b>Dynamic Plot Service</b>.</p>
+apache config:
+<div id="codeblock"> <pre class="hlite_apache">&lt;Location /testSendBin&gt;
+        <span class="kw1">SetHandler</span> r-handler
+        RFileHandler @DOCROOT@/sendBin.r
+&lt;/Location&gt;
+&nbsp;</pre> </div>
+code...:
+<div id="codeblock">
+<pre class="hlite_c">setContentType<span class="br0">&#40;</span><span class="st0">&quot;image/png&quot;</span><span class="br0">&#41;</span>
+t &lt;- tempfile<span class="br0">&#40;</span><span class="br0">&#41;</span>
+png<span class="br0">&#40;</span>t,type=<span class="st0">&quot;cairo&quot;</span><span class="br0">&#41;</span>
+plot<span class="br0">&#40;</span>rnorm<span class="br0">&#40;</span><span class="nu0">10</span><span class="br0">&#41;</span><span class="br0">&#41;</span>
+dev.<span class="me1">off</span><span class="br0">&#40;</span><span class="br0">&#41;</span>
+sendBin<span class="br0">&#40;</span>readBin<span class="br0">&#40;</span>t,<span class="st0">'raw'</span>,n=file.<span class="me1">info</span><span class="br0">&#40;</span>t<span class="br0">&#41;</span>$size<span class="br0">&#41;</span><span class="br0">&#41;</span>
+unlink<span class="br0">&#40;</span>t<span class="br0">&#41;</span>
+DONE
+&nbsp;</pre>
+
+</div>
+
+<hr>
+ &copy; 2009 Jeffrey Horner
+</div></body></html>
+ 
