@@ -662,7 +662,9 @@ static int AP_hook_request_handler (request_rec *r)
       }
       h->envir = h->parsedFile->envir;
    } else {
-      h->envir = R_GlobalEnv;
+      if (h->envir) R_ReleaseObject(h->envir);
+      h->envir = NewEnv(R_GlobalEnv);
+      R_PreserveObject(h->envir);
    }
 
    /* Eval handler expression if set */
