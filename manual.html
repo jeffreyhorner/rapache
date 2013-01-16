@@ -362,11 +362,11 @@ efficiency. </p>
 # Specify foo as the function to run. Probably created 
 # by REvalOnStartup or RSourceOnStartup
 
-RHandler "foo()"
+REval "foo()"
 
 # Run the function bar located in the package foo
 
-RHandler "foo::bar()"
+REval "foo::bar()"
 </pre>
 
 <p>and similarly for RFileHandler:</p>
@@ -374,7 +374,7 @@ RHandler "foo::bar()"
 <pre class="code">
 # Call the function foo within the file bar.R
 
-RFileHandler "/var/www/R/bar.R:foo()"
+RFileEval "/var/www/R/bar.R:foo()"
 </pre>
 
 <p>Note that a single colon is used to separate the filename from the expression to be evaluated.  Note also that <strong>r-script</strong> is ignored in this case and <strong>r-handler</strong> is presumed.</p>
