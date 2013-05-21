@@ -313,7 +313,7 @@ static void InitRApachePool();
 static int OnStartupCallback(void *rec, const char *key, const char *value);
 static SEXP MyfindFun(SEXP fun, SEXP envir);
 static int RApacheInfo();
-static SEXP AprTableToList(apr_table_t *);
+static SEXP AprTableToList(apr_table_t *, apr_table_do_callback_fn_t *);
 static void PrintTraceback(void);
 static int ReadRequestBody(unsigned char *buf, int size);
 static char *dirname(const char *path, apr_pool_t *p);
@@ -1655,7 +1655,7 @@ static int RApacheInfo()
 struct TableCtx {
    SEXP list;
    SEXP names;
-   int i;
+   int size;
 };
 
 static int TableCallback(void *datum,const char *n, const char *v){
@@ -1669,16 +1669,69 @@ static int TableCallback(void *datum,const char *n, const char *v){
       STRING_PTR(value)[0] = mkChar(v);
    }
 
-   STRING_PTR(ctx->names)[ctx->i]=mkChar(n);
-   SET_ELEMENT(ctx->list,ctx->i,value);
-   ctx->i += 1;
+   STRING_PTR(ctx->names)[ctx->size]=mkChar(n);
+   SET_ELEMENT(ctx->list,ctx->size,value);
+   ctx->size += 1;
 
    return 1;
 }
 
-static SEXP AprTableToList(apr_table_t *t){
-   int len; 
+static int ParamsCallback(void *datum,const char *n, const char *v){
+   struct TableCtx *ctx = (struct TableCtx *)datum;
+   SEXP key, value, oldValue;
+   int nlen, vlen, nameIndex, valueIndex, valueSet;
+   const char *s;
+
+   /* Handle array parameters */
+   valueSet = 0;
+   nlen = strlen(n);
+   if (nlen > 2 && n[nlen-2] == '[' && n[nlen-1] == ']') {
+     /* Look to see if this key already exists */
+     for (nameIndex = 0; nameIndex < ctx->size; nameIndex++) {
+       s = CHAR(STRING_ELT(ctx->names, nameIndex));
+       if (strlen(s) == (nlen-2) && strncmp(s, n, nlen-2) == 0) {
+         /* Key exists, so append this value on */
+         oldValue = VECTOR_ELT(ctx->list, nameIndex);
+         vlen = length(oldValue);
+         PROTECT(value = NEW_STRING(vlen + 1));
+         for (valueIndex = 0; valueIndex < vlen; valueIndex++) {
+           SET_STRING_ELT(value, valueIndex, STRING_ELT(oldValue, valueIndex));
+         }
+         SET_STRING_ELT(value, valueIndex, mkChar(v));
+         UNPROTECT(1);
+         SET_VECTOR_ELT(ctx->list, nameIndex, value);
+
+         valueSet = 1;
+         break;
+       }
+     }
+
+     if (!valueSet) {
+       key = mkCharLen(n, nlen-2);
+     }
+   } else {
+     key = mkChar(n);
+   }
+
+   if (!valueSet) {
+      STRING_PTR(ctx->names)[ctx->size]=key;
+      if (!v || !strcmp(v,"")){
+         value = R_NilValue;
+      } else {
+         value = NEW_CHARACTER(1);
+         STRING_PTR(value)[0] = mkChar(v);
+      }
+      SET_ELEMENT(ctx->list,ctx->size,value);
+      ctx->size += 1;
+   }
+
+   return 1;
+}
+
+static SEXP AprTableToList(apr_table_t *t, apr_table_do_callback_fn_t *callback){
+   int len, i; 
    struct TableCtx ctx;
+   SEXP list, names;
 
    if (!t) return R_NilValue;
    len = apr_table_elts(t)->nelts;
@@ -1686,8 +1739,22 @@ static SEXP AprTableToList(apr_table_t *t){
 
    PROTECT(ctx.list = NEW_LIST(len));
    PROTECT(ctx.names = NEW_STRING(len));
-   ctx.i = 0;
-   apr_table_do(TableCallback,(void *)&ctx,t,NULL);
+   ctx.size = 0;
+   apr_table_do(callback,(void *)&ctx,t,NULL);
+
+   /* if actual size differs (because of array parameters), shorten the list */
+   if (ctx.size < len) {
+      PROTECT(list = NEW_LIST(ctx.size));
+      PROTECT(names = NEW_STRING(ctx.size));
+      for (i = 0; i < ctx.size; i++) {
+         SET_VECTOR_ELT(list, i, VECTOR_ELT(ctx.list, i));
+         SET_STRING_ELT(names, i, STRING_ELT(ctx.names, i));
+      }
+      SET_NAMES(list, names);
+      UNPROTECT(4);
+      return list;
+   }
+
    SET_NAMES(ctx.list,ctx.names);
    UNPROTECT(2);
    return ctx.list;
@@ -1868,14 +1935,14 @@ SEXP RApache_parseGet() {
    if (!MR_Request.r) return R_NilValue;
 
    /* If we've already made the table, just hand it out again */
-   if (MR_Request.argsTable) return AprTableToList(MR_Request.argsTable);
+   if (MR_Request.argsTable) return AprTableToList(MR_Request.argsTable, ParamsCallback);
    /* Don't parse if there aren't an GET variables to parse */
    if(!MR_Request.r->args) return R_NilValue;
    /* First call: parse and return */
    MR_Request.argsTable = apr_table_make(MR_Request.r->pool,APREQ_DEFAULT_NELTS);
    apreq_parse_query_string(MR_Request.r->pool,MR_Request.argsTable,MR_Request.r->args);
    /* TODO: error checking of argsTable here */
-   return AprTableToList(MR_Request.argsTable);
+   return AprTableToList(MR_Request.argsTable, ParamsCallback);
 }
 
 typedef struct {
@@ -1945,7 +2012,7 @@ static SEXP parsePost(int returnPost) {
       return R_NilValue;
    } else if (MR_Request.postParsed){
       /* We've already parsed the input, just hand out the result */
-      return (returnPost)?AprTableToList(MR_Request.postTable):MR_Request.filesVar;
+      return (returnPost)?AprTableToList(MR_Request.postTable, ParamsCallback):MR_Request.filesVar;
    }
 
    /* Don't parse if not a POST or PUT */
@@ -2007,7 +2074,7 @@ static SEXP parsePost(int returnPost) {
       MR_Request.filesVar = R_NilValue;
    }
 
-   return (returnPost)?AprTableToList(MR_Request.postTable):MR_Request.filesVar;
+   return (returnPost)?AprTableToList(MR_Request.postTable, ParamsCallback):MR_Request.filesVar;
 }
 
 SEXP RApache_parsePost(){ return parsePost(1); }
@@ -2020,7 +2087,7 @@ SEXP RApache_parseCookies(){
    if (!MR_Request.r) return R_NilValue;
 
    if (MR_Request.cookiesTable) 
-      return AprTableToList(MR_Request.cookiesTable);
+      return AprTableToList(MR_Request.cookiesTable, TableCallback);
 
    cookies = apr_table_get(MR_Request.r->headers_in, "Cookie");
 
@@ -2029,10 +2096,10 @@ SEXP RApache_parseCookies(){
    MR_Request.cookiesTable = apr_table_make(MR_Request.r->pool,APREQ_DEFAULT_NELTS);
    apreq_parse_cookie_header(MR_Request.r->pool,MR_Request.cookiesTable,cookies);
 
-   return AprTableToList(MR_Request.cookiesTable);
+   return AprTableToList(MR_Request.cookiesTable, TableCallback);
 }
 
-#define TABMBR(n,v) STRING_PTR(names)[i]=mkChar(n); SET_ELEMENT(MR_Request.serverVar,i++,AprTableToList(v))
+#define TABMBR(n,v) STRING_PTR(names)[i]=mkChar(n); SET_ELEMENT(MR_Request.serverVar,i++,AprTableToList(v, TableCallback))
 #define INTMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_INTEGER(1); INTEGER_DATA(val)[0] = v; SET_ELEMENT(MR_Request.serverVar,i++,val)
 #define STRMBR(n,v) STRING_PTR(names)[i]=mkChar(n); if (v){ val = NEW_STRING(1); STRING_PTR(val)[0] = mkChar(v);} else { val = R_NilValue;}; SET_ELEMENT(MR_Request.serverVar,i++,val)
 #define LGLMBR(n,v) STRING_PTR(names)[i]=mkChar(n); SET_ELEMENT(MR_Request.serverVar,i++,NewLogical(v));
