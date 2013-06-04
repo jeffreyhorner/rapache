@@ -761,7 +761,6 @@ static int ReadConsole(const char *prompt, unsigned char *buf, int size, int add
 static int ReadRequestBody(unsigned char *buf, int size){
    apr_size_t len, bpos=0;
    apr_status_t rv;
-   apr_bucket *bucket;
    const char *data;
 
    if (!MR_Request.r){
@@ -779,35 +778,27 @@ static int ReadRequestBody(unsigned char *buf, int size){
    if (MR_BBin == NULL){
       MR_BBin = apr_brigade_create(MR_Request.r->pool, MR_Request.r->connection->bucket_alloc);
    }
-   rv = ap_get_brigade(MR_Request.r->input_filters, MR_BBin, AP_MODE_READBYTES,
-         APR_BLOCK_READ, size);
-
-   if (rv != APR_SUCCESS) {
-      ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"ReadConsole() returned an error!");
-      return 0;
-   }
-   for (bucket = APR_BRIGADE_FIRST(MR_BBin); bucket != APR_BRIGADE_SENTINEL(MR_BBin); bucket = APR_BUCKET_NEXT(bucket)) {
-      if (APR_BUCKET_IS_EOS(bucket)) {
-         if (bpos == 0) { /* end of stream and no data , so return NULL */
-            apr_brigade_cleanup(MR_BBin);
-            return 0;
-         } else { /* We've read some data, so go ahead and return it */
-            break;
-         }
+   while (bpos < size) {
+      len = size - bpos;
+      if (len > HUGE_STRING_LEN) {
+         len = HUGE_STRING_LEN;
+      }
+      rv = ap_get_brigade(MR_Request.r->input_filters,MR_BBin,AP_MODE_READBYTES,APR_BLOCK_READ,len);
+      if (rv != APR_SUCCESS) {
+         break;
       }
 
-      /* We can't do much with this. */
-      if (APR_BUCKET_IS_FLUSH(bucket)) {
-         continue;
+      rv = apr_brigade_flatten(MR_BBin, buf+bpos, &len);
+      if (rv != APR_SUCCESS) {
+         break;
       }
+      apr_brigade_cleanup(MR_BBin);
 
-      /* read */
-      apr_bucket_read(bucket, &data, &len, APR_BLOCK_READ);
-      memcpy(buf+bpos,data,len);
+      if (len == 0) {
+         break;
+      }
       bpos += len;
    }
-   apr_brigade_cleanup(MR_BBin);
-
    return (int)bpos;
 }
 
