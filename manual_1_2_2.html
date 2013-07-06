@@ -585,12 +585,12 @@ sendBin(object=readBin(t,'raw',n=file.info(t)$size))
 <p>Reads data from the HTTP request body, if any. Returns a length zero raw vector when there's no more data to read.
 <div class="rdoc">
 <pre class="code">
-receiveBin(length=8192)
+receiveBin(length=-1L)
 </pre>
 
 <p>Arguments:</p>
 <ul>
-  <li><strong>length</strong> integer.  The number of bytes to read from the request. The default is 8192.</li>
+  <li><strong>length</strong> integer.  The number of bytes to read from the request. The default is -1L, which reads the entire request body.</li>
 </ul>
 
 <p>Returns:</p>
