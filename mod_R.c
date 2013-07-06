@@ -19,7 +19,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.2.3"
+#define MOD_R_VERSION "1.2.4"
 #include "mod_R.h" 
 
 #include <sys/types.h>
