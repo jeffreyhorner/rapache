@@ -211,7 +211,7 @@ sendBin <- function(object, con=stdout(), size=NA_integer_, endian=.Platform$end
 swap <- endian != .Platform$endian\n\
 if (!is.vector(object) || mode(object) == 'list') stop('can only write vector objects')\n\
 .Call('RApache_sendBin',object,size,swap)}\n\
-receiveBin <- function(length=8192) if(length==0) raw(0) else .Call('RApache_receiveBin',length)\n\
+receiveBin <- function(length=-1L) .Call('RApache_receiveBin',length)\n\
 RApacheOutputErrors <- function(status=TRUE,prefix=NULL,suffix=NULL) warning('RApacheOutputErrors has been deprecated!')\n\
 .ResetCGIVars <- function(){\n\
 re <- as.environment('rapache')\n\
@@ -2396,7 +2396,7 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 }
 
 SEXP RApache_receiveBin(SEXP llen){
-   apr_size_t len, size;
+   int len=0, size, blen;
    unsigned char *buf;
    SEXP ans;
 
@@ -2407,17 +2407,43 @@ SEXP RApache_receiveBin(SEXP llen){
     * certainly don't want to use up twice as much memory for the 
     * raw message body.
     */
-   buf = Calloc(size,unsigned char);
+   if (size > 0){
+      buf = Calloc(size,unsigned char);
 
-   if (buf == NULL){
-      ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"memory error");
-      return allocVector(RAWSXP,0);
+      if (buf == NULL){
+         ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"memory error");
+         return allocVector(RAWSXP,0);
+      }
+      len = ReadRequestBody(buf,size);
+
+   } else if (size < 0){ /* read whole request payload */
+      size = 8192;
+      buf = Calloc(size,unsigned char);
+      blen = 0;
+      if (buf == NULL){
+         ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"memory error");
+         return allocVector(RAWSXP,0);
+      }
+      while (1){
+         len = ReadRequestBody(buf+blen,size-blen);
+         blen += len;
+         if (len > 0){
+            size = (int)((double)size * 1.5); /* 50% over-allocation */
+            buf = Realloc(buf,size,unsigned char);
+            if (buf == NULL){
+               ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"memory error");
+               return allocVector(RAWSXP,0);
+            }
+         } else {
+            len = blen;
+            break;
+         }
+      }
    }
-   len = ReadRequestBody(buf,size);
-
-   ans = allocVector(RAWSXP,len);
-   memcpy(RAW(ans),buf,len);
-   Free(buf);
+   PROTECT(ans = allocVector(RAWSXP,len));
+   if (blen > 0) memcpy(RAW(ans),buf,len);
+   if (buf) Free(buf);
+   UNPROTECT(1);
    return ans;
 }
 
