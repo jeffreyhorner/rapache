@@ -117,11 +117,37 @@ Rails, etc.
 
 <h3><a name="Installation"></a>2. <a title="Back to top" href="#top">Installation</a></h3>
 
-<p>rApache follows the typical GNU/Linux source install procedure: run '<b>configure</strong>', then '<b>make</strong>', and '<b>make install</strong>' from the shell.</p>
+<p>The best way to install rApache on Debian or Ubuntu systems is using the <b>deb</b> package <b>libapache2-mod-r-base</strong>. 
+The control file has been designed to work with either Apache2.2 or Apache 2.4. To build the package from source on Debian/Ubuntu:</p>
 
-<p><i>At the moment, rApache is a source-only downloadable package. I've made attempts in the past to
-learn the Debian packaging system but have not quite got it down yet. If anyone is interested in providing binary 
-packages, for any Linux distribution, please <a href="mailto:jeff.horner@vanderbilt.edu">email me</a>.</i></p>
+<pre class="code">
+sudo apt-get install devscripts git
+sudo apt-get install apache2-prefork-dev apache2-mpm-prefork libapreq2-dev r-base-dev
+git clone https://github.com/jeffreyhorner/rapache.git
+cd rapache
+debuild -us -uc
+cd ..
+sudo dpkg -i libapache2-mod-r-base*.deb
+</pre>
+
+<p>Alternatively, pre-built packages are available for Ubuntu 12.04 (Precise) and newer through Launchpad:</p>
+
+<pre class="code">
+sudo add-apt-repository ppa:opencpu/rapache
+sudo apt-get update
+sudo apt-get install libapache2-mod-r-base
+</pre>
+
+<p>To uninstall the package:</p>
+
+<pre class="code">
+sudo apt-get purge libapache2-mod-r-base
+</pre>
+
+
+<h4><a name="Running_configure"></a>2.1 <a title="Back to top" href="#top">Building from source</a></h4>
+
+<p>rApache follows the typical GNU/Linux source install procedure: run '<b>configure</strong>', then '<b>make</strong>', and '<b>make install</strong>' from the shell.</p>
 
 <p>Requirements for installing and using rApache are as follows:</p>
 
@@ -136,7 +162,6 @@ packages, for any Linux distribution, please <a href="mailto:jeff.horner@vanderb
 </ol>
 
 
-<h4><a name="Running_configure"></a>2.1 <a title="Back to top" href="#top">Running configure</a></h4>
 <p>configure does it's best to probe your system to meet the above requirements. Failing that, you should use the following flags:</p>
 <ul>
 	<li><strong>--with-R</strong> the full path to R</li>
