@@ -370,7 +370,7 @@ $(DOCROOT)/httpd.conf: $(DOCROOT)/httpd.conf.in
 
 itest: all
 	@echo
-	@echo Point your browser to http://localhost:8181/index.html
+	@echo Point your browser to http://localhost:8181/
 	@echo
 	$(SHLIBPATH_VAR)=$(LD_LIBRARY_PATH) R_HOME=$(R_HOME) $(HTTPD) -X -f $(DOCROOT)/httpd.conf
 
