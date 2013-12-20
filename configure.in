@@ -21,42 +21,26 @@ AC_DEFUN([APACHE_APXS],[
             apache2-apxs,
             [  --with-apache2-apxs=PATH     Path to apxs],
             ,
-            [with_apache2_apxs="no"]
+            [with_apache2_apxs=`rpm -ql httpd-devel | egrep 's?bin/apxs2?$'`]
     )
 
 
-    if test "$with_apache2_apxs" = "no"; then
-		AC_PATH_PROG([APACHEAPXS],[apxs2],[no])
-		if test "$APACHEAPXS" = "no"; then
+	AC_MSG_CHECKING(for apxs2)
+	AC_CHECK_FILE($with_apache2_apxs)
+	# make sure that httpd was built with prefork
+	APXS=$with_apache2_apxs
+	HTTPD="`$with_apache2_apxs -q bindir`/`$with_apache2_apxs -q progname`"; export HTTPD
+	if ! test -x $HTTPD; then 
+		HTTPD="`$with_apache2_apxs -q sbindir`/`$with_apache2_apxs -q progname`"; export HTTPD
+		if ! test -x $HTTPD; then
 			echo
 			echo
-			echo "Specify the path to apxs, the Apache2 build tool."
+			echo "I cannot find your httpd binary with $with_apache2_apxs."
+			echo "Are you sure that's the correct apxs you should be using?"
 			echo
 			AC_MSG_ERROR( aborting! )
-		else
-			APXS=$APACHEAPXS
-			HTTPD="`$APXS -q bindir`/`$APXS -q progname`"; export HTTPD
-			if ! test -x $HTTPD; then 
-				HTTPD="`$APXS -q sbindir`/`$APXS -q progname`"; export HTTPD
-			fi
-		fi
-    else
-		AC_MSG_CHECKING(for apxs2)
-        # make sure that httpd was built with prefork
-		APXS=$with_apache2_apxs
-		HTTPD="`$with_apache2_apxs -q bindir`/`$with_apache2_apxs -q progname`"; export HTTPD
-		if ! test -x $HTTPD; then 
-			HTTPD="`$with_apache2_apxs -q sbindir`/`$with_apache2_apxs -q progname`"; export HTTPD
-			if ! test -x $HTTPD; then
-				echo
-				echo
-				echo "I cannot find your httpd binary with $with_apache2_apxs."
-				echo "Are you sure that's the correct apxs you should be using?"
-				echo
-				AC_MSG_ERROR( aborting! )
             fi
         fi
-    fi
 ])
 
 # --with-R
