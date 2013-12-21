@@ -2097,7 +2097,7 @@ SEXP RApache_parseCookies(){
 #define OFFMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
 #define TIMMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[1] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
 SEXP RApache_getServer(){
-   int len = 34, i = 0;
+   int len = 37, i = 0;
    SEXP names, val, class;
    if (!MR_Request.r) return R_NilValue;
    if (MR_Request.serverVar) return MR_Request.serverVar;
@@ -2119,6 +2119,8 @@ SEXP RApache_getServer(){
    STRMBR("content_encoding",MR_Request.r->content_encoding);
    STRMBR("range",MR_Request.r->range);
    STRMBR("hostname",MR_Request.r->hostname);
+   STRMBR("address",MR_Request.r->connection->local_ip);
+   INTMBR("port",ap_get_server_port(MR_Request.r));
    STRMBR("user",MR_Request.r->user);
    LGLMBR("header_only",MR_Request.r->header_only);
    LGLMBR("no_cache",MR_Request.r->no_cache);
@@ -2143,12 +2145,12 @@ SEXP RApache_getServer(){
 #endif
    STRMBR("remote_host",MR_Request.r->connection->remote_host);
    STRMBR("cmd_path",MR_Request.handler->directive->cmdpath);
+   LGLMBR("HTTPS",(apr_table_get(MR_Request.r->subprocess_env,"HTTPS")!=NULL)? 1 : 0);
 
    SET_NAMES(MR_Request.serverVar,names);
    UNPROTECT(2);
    return MR_Request.serverVar;
 }
-
 
 static void swapb(void *result, int size)
 {
