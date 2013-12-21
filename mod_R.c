@@ -769,7 +769,7 @@ static int ReadRequestBody(unsigned char *buf, int size){
    }
 
    if (MR_Request.postParsed){
-      RApacheError("Can't read with R since libapreq already started!");
+      /* RApacheError("Can't read with R since libapreq already started!"); */
       return 0;
    }
 
@@ -2019,7 +2019,7 @@ static SEXP parsePost(int returnPost) {
    if (!pfn){
       MR_Request.postTable = NULL;
       MR_Request.filesVar = R_NilValue;
-      RApacheError(apr_psprintf(MR_Request.r->pool,"No apreq2 parser for '%s'\n",content_type));
+      /* RApacheError(apr_psprintf(MR_Request.r->pool,"No apreq2 parser for '%s'\n",content_type)); */
       return R_NilValue;
    }
       
