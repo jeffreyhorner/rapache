@@ -769,7 +769,7 @@ static int ReadRequestBody(unsigned char *buf, int size){
    }
 
    if (MR_Request.postParsed){
-      /* RApacheError("Can't read with R since libapreq already started!"); */
+      RApacheError("Can't read with R since libapreq already started!");
       return 0;
    }
 
@@ -2097,7 +2097,7 @@ SEXP RApache_parseCookies(){
 #define OFFMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
 #define TIMMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[1] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
 SEXP RApache_getServer(){
-   int len = 38, i = 0;
+   int len = 39, i = 0;
    SEXP names, val, class;
    if (!MR_Request.r) return R_NilValue;
    if (MR_Request.serverVar) return MR_Request.serverVar;
@@ -2147,6 +2147,7 @@ SEXP RApache_getServer(){
    STRMBR("cmd_path",MR_Request.handler->directive->cmdpath);
    LGLMBR("HTTPS",(apr_table_get(MR_Request.r->subprocess_env,"HTTPS")!=NULL)? 1 : 0);
    STRMBR("rapache_version",MOD_R_VERSION);
+   LGLMBR("apreq_started", MR_Request.postParsed);
 
    SET_NAMES(MR_Request.serverVar,names);
    UNPROTECT(2);
