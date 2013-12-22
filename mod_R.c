@@ -212,6 +212,7 @@ swap <- endian != .Platform$endian\n\
 if (!is.vector(object) || mode(object) == 'list') stop('can only write vector objects')\n\
 .Call('RApache_sendBin',object,size,swap)}\n\
 receiveBin <- function(length=-1L) .Call('RApache_receiveBin',length)\n\
+apreqStarted <- function() .Call('RApache_apreqStarted')\n\
 RApacheOutputErrors <- function(status=TRUE,prefix=NULL,suffix=NULL) warning('RApacheOutputErrors has been deprecated!')\n\
 .ResetCGIVars <- function(){\n\
 re <- as.environment('rapache')\n\
@@ -769,7 +770,7 @@ static int ReadRequestBody(unsigned char *buf, int size){
    }
 
    if (MR_Request.postParsed){
-      /* RApacheError("Can't read with R since libapreq already started!"); */
+      RApacheError("Can't read with R since libapreq already started!");
       return 0;
    }
 
@@ -2450,6 +2451,14 @@ SEXP RApache_receiveBin(SEXP llen){
    return ans;
 }
 
+SEXP RApache_apreqStarted(){
+   SEXP ans;
+   PROTECT(ans = NEW_LOGICAL(1));
+   LOGICAL(ans)[0] = MR_Request.postParsed? TRUE : FALSE;
+   UNPROTECT(1);
+   return(ans);
+}
+
 static void RegisterCallSymbols() {
    R_CallMethodDef callMethods[]  = {
       {"RApache_setHeader", (DL_FUNC) &RApache_setHeader, 2},
@@ -2465,6 +2474,7 @@ static void RegisterCallSymbols() {
       {"RApache_getServer",(DL_FUNC) &RApache_getServer,0},
       {"RApache_sendBin",(DL_FUNC) &RApache_sendBin,3},
       {"RApache_receiveBin",(DL_FUNC) &RApache_receiveBin,1},
+      {"RApache_apreqStarted",(DL_FUNC) &RApache_apreqStarted,0},
       {NULL, NULL, 0}
    };
    R_registerRoutines(R_getEmbeddingDllInfo(),NULL,callMethods,NULL,NULL);
