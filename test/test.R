@@ -4,7 +4,7 @@ scrub <- function(str){
 	if (is.null(str)) return('NULL')
 	if (length(str) == 0) return('length 0 string')
 	#cat("\n<!-- before as.character: (",str,")-->\n",sep='')
-	str <- try(as.character(str))
+	str <- try(as.character(str),silent=TRUE)
 	if (inherits(str,'try-error')) return('try-error')
 	#cat("\n<!-- after as.character: (",str,")-->\n",sep='')
 	str <- gsub('&','&amp;',str); str <- gsub('@','_at_',str); 
@@ -14,7 +14,7 @@ scrub <- function(str){
 	str
 }
 cl<-'e'
-zebary <- function(i){ 
+zebary <- function(i){
 	cl <<- ifelse(cl=='e','o','e')
 	cat('<tr class="',cl,'"><td>',scrub(i),'</td></tr>\n',sep='')
 }
@@ -78,6 +78,7 @@ if (!is.null(FILES)){
 	}
 }
 zebra("SERVER Variables",SERVER)
+zebra("SERVER INTERNALS",list(readStarted=SERVER$internals('readStarted'),postParsed=SERVER$internals('postParsed')))
 zebra("Search Path",search())
 zebra(".libPaths",.libPaths())
 zebra("DLLs",capture.output(str(getLoadedDLLs())))

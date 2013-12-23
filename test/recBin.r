@@ -26,3 +26,9 @@ while(length(x <- receiveBin(30)) > 0){
     }
     cat('\n')
 }
+cat("<pre>\n")
+cat("SERVER INTERNALS\n")
+print(list(readStarted=SERVER$internals('readStarted'),postParsed=SERVER$internals('postParsed')))
+cat("SERVER\n")
+print(SERVER)
+cat("</pre>\n")

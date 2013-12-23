@@ -2096,8 +2096,9 @@ SEXP RApache_parseCookies(){
 #define LGLMBR(n,v) STRING_PTR(names)[i]=mkChar(n); SET_ELEMENT(MR_Request.serverVar,i++,NewLogical(v));
 #define OFFMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
 #define TIMMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[1] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define FUNMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = ParseEval(v,MR_RApacheEnv,&evalError); SET_ELEMENT(MR_Request.serverVar,i++,val)
 SEXP RApache_getServer(){
-   int len = 38, i = 0;
+   int len = 39, i = 0, evalError=1;
    SEXP names, val, class;
    if (!MR_Request.r) return R_NilValue;
    if (MR_Request.serverVar) return MR_Request.serverVar;
@@ -2147,6 +2148,7 @@ SEXP RApache_getServer(){
    STRMBR("cmd_path",MR_Request.handler->directive->cmdpath);
    LGLMBR("HTTPS",(apr_table_get(MR_Request.r->subprocess_env,"HTTPS")!=NULL)? 1 : 0);
    STRMBR("rapache_version",MOD_R_VERSION);
+   FUNMBR("internals","function(x) .Call('RApache_internals',x)");
 
    SET_NAMES(MR_Request.serverVar,names);
    UNPROTECT(2);
@@ -2450,6 +2452,18 @@ SEXP RApache_receiveBin(SEXP llen){
    return ans;
 }
 
+SEXP RApache_internals(SEXP sstr){
+  const char *str;
+  if (!IS_CHARACTER(sstr)) return R_NilValue;
+  str = CHAR(STRING_ELT(sstr,0));
+  if (strcmp(str,"postParsed")==0) {
+    return NewLogical(MR_Request.postParsed);
+  }  else if (strcmp(str,"readStarted")==0) {
+    return NewLogical(MR_Request.readStarted);
+  }
+  return R_NilValue;
+}
+
 static void RegisterCallSymbols() {
    R_CallMethodDef callMethods[]  = {
       {"RApache_setHeader", (DL_FUNC) &RApache_setHeader, 2},
@@ -2465,6 +2479,7 @@ static void RegisterCallSymbols() {
       {"RApache_getServer",(DL_FUNC) &RApache_getServer,0},
       {"RApache_sendBin",(DL_FUNC) &RApache_sendBin,3},
       {"RApache_receiveBin",(DL_FUNC) &RApache_receiveBin,1},
+      {"RApache_internals",(DL_FUNC) &RApache_internals,1},
       {NULL, NULL, 0}
    };
    R_registerRoutines(R_getEmbeddingDllInfo(),NULL,callMethods,NULL,NULL);
