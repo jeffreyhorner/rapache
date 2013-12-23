@@ -19,7 +19,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.2.4"
+#define MOD_R_VERSION "1.2.5"
 #include "mod_R.h" 
 
 #include <sys/types.h>
@@ -769,7 +769,8 @@ static int ReadRequestBody(unsigned char *buf, int size){
    }
 
    if (MR_Request.postParsed){
-      /* RApacheError("Can't read with R since libapreq already started!"); */
+      //the user should be able to avoid this now. Warning seems appropriate.
+      RApacheError("Can't read with R since libapreq already started!");
       return 0;
    }
 

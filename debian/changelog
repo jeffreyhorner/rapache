@@ -1,3 +1,9 @@
+libapache2-mod-r-base (1.2.5-saucy0) saucy; urgency=low
+
+  * Various small fixes
+
+ -- Jeroen Ooms <jeroen@opencpu.org>  Mon, 23 Dec 2013 00:00:00 -0600
+
 libapache2-mod-r-base (1.2.4-raring5) raring; urgency=low
 
   * Updates for compatibility with Apache 2.4
