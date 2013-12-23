@@ -2446,7 +2446,7 @@ SEXP RApache_receiveBin(SEXP llen){
       }
    }
    PROTECT(ans = allocVector(RAWSXP,len));
-   if (blen > 0) memcpy(RAW(ans),buf,len);
+   if (len > 0) memcpy(RAW(ans),buf,len);
    if (buf) Free(buf);
    UNPROTECT(1);
    return ans;
