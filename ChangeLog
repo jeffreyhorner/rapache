@@ -1,3 +1,13 @@
+2013-12-15 jeffreyhorner <jeffrey.horner@gmail.com>
+
+	* Release 1.2.5
+
+	* Bugfix for receiveBin 'length' argument
+	
+	* Disable some superfluous warnings to apache error log
+	
+	* Add SERVER$internals function to read apreq status
+
 2013-10-15 jeffreyhorner <jeffrey.horner@gmail.com>
 
 	* Release 1.2.4
