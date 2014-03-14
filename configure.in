@@ -24,10 +24,21 @@ AC_DEFUN([APACHE_APXS],[
 		AC_PATH_PROGS(APXS, apxs2 apxs, no,
 			/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/local/apache/bin:/usr/local/apache2/bin)
 	fi
-	if test "$APXS_PATH" = no; then
+	if test "$APXS" = no; then
 		AC_MSG_ERROR([neither apxs or apxs2 not found])
 	fi
-
+	HTTPD="`$APXS -q bindir`/`$APXS -q progname`"; export HTTPD
+		if ! test -x $HTTPD; then 
+			HTTPD="`$APXS -q sbindir`/`$APXS -q progname`"; export HTTPD
+			if ! test -x $HTTPD; then
+				echo
+				echo
+				echo "I cannot find your httpd binary with $with_apache2_apxs."
+				echo "Are you sure that's the correct apxs you should be using?"
+				echo
+				AC_MSG_ERROR( aborting! )
+		fi
+	fi
 ])
 
 # --with-R
