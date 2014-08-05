@@ -7,10 +7,10 @@ Instructions for building rApache as an rpm package. **This is all experimental*
 First setup a build environment
 
     # rpm build dependencies
-    yum install rpm-build
+    sudo yum install rpm-build
 
     # rApache build dependencies
-    yum install make httpd-devel libapreq2-devel R-devel
+    sudo yum install make httpd-devel libapreq2-devel R-devel
 
     # Build directories
     mkdir -p ~/rpmbuild/SOURCES
@@ -19,16 +19,16 @@ First setup a build environment
 Download sources:
 
     # Get the rapache source code
-    wget https://github.com/jeffreyhorner/rapache/archive/v1.2.5.tar.gz -O rapache-1.2.5.tar.gz
-    cp rapache-1.2.5.tar.gz ~/rpmbuild/SOURCES/
+    wget https://github.com/jeffreyhorner/rapache/archive/v1.2.6.tar.gz -O rapache-1.2.6.tar.gz
+    cp rapache-1.2.6.tar.gz ~/rpmbuild/SOURCES/
 
     # Extract the spec file
-    tar xzvf rapache-1.2.5.tar.gz rpm/rapache.spec
-    cp rapache.spec ~/rpmbuild/SPECS/
+    tar xzvf rapache-1.2.6.tar.gz rapache-1.2.6/rpm/rapache.spec
+    cp rapache-1.2.6/rpm/rapache.spec ~/rpmbuild/SPECS/
 
 Build:
 
-    rpmbuild -ba rapache.spec
+    rpmbuild -ba ~/rpmbuild/SPECS/rapache.spec
 
 If all is OK, packages are created in `~/rpmbuild/RPM` and `~/rpmbuild/SRPM`.
 
