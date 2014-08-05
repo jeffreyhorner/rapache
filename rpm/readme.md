@@ -12,7 +12,7 @@ First setup a build environment
     sudo yum install rpm-build
 
     # rApache build dependencies
-    sudo yum install make httpd-devel libapreq2-devel R-devel
+    sudo yum install make wget httpd-devel libapreq2-devel R-devel
 
     # Build directories
     mkdir -p ~/rpmbuild/SOURCES
