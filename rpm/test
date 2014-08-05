@@ -1,0 +1,2 @@
+cat("Todays lucky numers are:\n\n")
+print(rnorm(100))
