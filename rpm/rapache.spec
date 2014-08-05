@@ -1,6 +1,6 @@
 Name: rapache
-Version: 1.2.5
-Release: 1
+Version: 1.2.6
+Release: rpm0
 Source: %{name}-%{version}.tar.gz
 License: Apache2
 Summary: RApache module for apache2 web server (mod_R)
