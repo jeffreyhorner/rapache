@@ -2,7 +2,9 @@
 
 Instructions for building rApache as an rpm package. **This is all experimental**.
 
-## Fedora
+Make sure to run the lines below **not as root**. Except for the `sudo` lines of course.
+
+## Fedora 20+
 
 First setup a build environment
 
@@ -27,8 +29,11 @@ Download sources:
     cp rapache-1.2.6/rpm/rapache.spec ~/rpmbuild/SPECS/
 
 Build:
-
+    
+    cd ~
     rpmbuild -ba ~/rpmbuild/SPECS/rapache.spec
 
-If all is OK, packages are created in `~/rpmbuild/RPM` and `~/rpmbuild/SRPM`.
-
+If all is OK, packages are created in `~/rpmbuild/RPMS` and `~/rpmbuild/SRPMS`. To install them on your build machine:
+  
+    cd ~/rpmbuild/RPMS/x86_64/
+    sudo rpm -i rapache-1.2.6-rpm0.x86_64.rpm
