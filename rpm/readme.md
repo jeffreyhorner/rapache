@@ -8,11 +8,11 @@ The standard Redhat repositories do not include R, but backports from Fedora are
 
 On RHEL/CentOS 6:
 
-    su -c 'rpm -Uvh https://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm'
+    sudo su -c 'rpm -Uvh https://dl.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm'
 
 On RHEL/CentOS 7:
 
-    su -c 'rpm -Uvh https://dl.fedoraproject.org/pub/epel/beta/7/x86_64/epel-release-7-0.2.noarch.rpm'
+    sudo su -c 'rpm -Uvh https://dl.fedoraproject.org/pub/epel/beta/7/x86_64/epel-release-7-0.2.noarch.rpm'
 
 The `epel-release` rpm version changes from time to time. Find the current version on the website EPEL if you get an error. See also [this FAQ](https://fedoraproject.org/wiki/EPEL/FAQ#How_can_I_install_the_packages_from_the_EPEL_software_repository.3F).
 
