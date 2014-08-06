@@ -39,6 +39,8 @@ cp ./rpm/test %{buildroot}/var/www/html/R/
 %pre
 
 %post
+#for selinux
+chcon -t httpd_modules_t /etc/httpd/modules/mod_R.so || true
 apachectl restart || true
 
 %preun
