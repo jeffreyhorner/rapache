@@ -69,3 +69,12 @@ Also try to open http://localhost/RApacheInfo in your browser.
 If you get permission denied error when (re)starting httpd or accessing your web server, the problem is most likely SELinux. SELinux can be disabled by editing `/etc/selinux/config` and then rebooting.
 
 If you don't want to disable SELinux, you will have to customize the security profiles for your needs. Have a look at `/var/log/messages` and `/var/log/audit/audit.log`. Installing the `setroubleshoot` package results in better logging. See also [this help page](https://docs.fedoraproject.org/en-US/Fedora/19/html/Security_Guide/sect-Managing_Confined_Services-The_Apache_HTTP_Server.html).
+
+## Firewall
+
+On most standard installations of RHEL and CentOS, the default firewall configuration is to block HTTP/HTTPS traffic from external hosts. To open port 80 (HTTP) use something like:
+
+    sudo iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+    sudo service iptables save
+
+Google is your friend.
