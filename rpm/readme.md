@@ -2,8 +2,6 @@
 
 Instructions for building rApache as an rpm package. **This is all experimental**. 
 
-Make sure to run the lines below **not as root**. Except for the `sudo` lines of course.
-
 ## Prepare
 
 The standard Redhat repositories do not include R, but backports from Fedora are available through EPEL. If you are running RHEL or CentOS, you need to enable the EPEL repository. On Fedora you can skip this step.
@@ -21,7 +19,9 @@ Sometimes these file names change. Navigate to the website if you get an error. 
 
 ## Building on Fedora / RHEL / CentOS+
 
-First setup a build environment
+Important: make sure do all of the building **not as root**. Except for the `sudo` lines of course.
+
+First setup a build environment:
 
     # rpm build dependencies
     sudo yum install rpm-build
