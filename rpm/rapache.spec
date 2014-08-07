@@ -41,6 +41,7 @@ cp ./rpm/test %{buildroot}/var/www/html/R/
 %post
 #for selinux
 chcon -t httpd_modules_t /etc/httpd/modules/mod_R.so || true
+setsebool -P httpd_setrlimit 1 || true
 apachectl restart || true
 
 %preun
