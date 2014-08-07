@@ -68,7 +68,7 @@ Also try to open http://localhost/RApacheInfo in your browser.
 
 If you get permission denied error when (re)starting httpd or accessing your web server, the problem is most likely SELinux. SELinux can be disabled by editing `/etc/selinux/config` and then rebooting.
 
-If you don't want to disable SELinux, you will have to customize the security profiles for your needs. Have a look at `/var/log/messages` and `/var/log/audit/audit.log`. Installing the `setroubleshoot` package results in better logging. See also [this help page](https://docs.fedoraproject.org/en-US/Fedora/19/html/Security_Guide/sect-Managing_Confined_Services-The_Apache_HTTP_Server.html).
+If you don't want to disable SELinux, you will have to customize the security profiles for your needs. Have a look at `/var/log/messages` and `/var/log/audit/audit.log`. Installing the `setroubleshoot` and `setroubleshoot-server` packages results in better logging. The [selinux_httpd man page](http://linux.die.net/man/8/httpd_selinux) lists important booleans that you might want to turn on. See also [this help page](https://docs.fedoraproject.org/en-US/Fedora/19/html/Security_Guide/sect-Managing_Confined_Services-The_Apache_HTTP_Server.html).
 
 ## Firewall
 
