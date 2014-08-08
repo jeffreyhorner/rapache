@@ -40,8 +40,8 @@ cp ./rpm/test %{buildroot}/var/www/html/R/
 
 %post
 # SELinux settings
-echo "Configuring SELinux. This takes a while..."
 chcon -t httpd_modules_t /etc/httpd/modules/mod_R.so || true
+# echo "Configuring SELinux. This takes a while..."
 # Perhaps leave this to the sysadmin:
 # setsebool -P httpd_setrlimit=1 httpd_can_network_connect_db=1 httpd_can_network_connect=1 httpd_can_connect_ftp=1 httpd_can_sendmail=1 || true
 # Restart to load module
