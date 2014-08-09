@@ -32,7 +32,7 @@ cp .libs/mod_R.so %{buildroot}/etc/httpd/modules/
 mkdir -p %{buildroot}/etc/httpd/conf.modules.d
 cp ./rpm/99-rapache.conf %{buildroot}/etc/httpd/conf.modules.d/
 mkdir -p %{buildroot}/etc/httpd/conf.d
-cp ./rpm/rapache.conf %{buildroot}/etc/httpd/conf.d/
+cp ./rpm/00-rapache.conf %{buildroot}/etc/httpd/conf.d/
 mkdir -p  %{buildroot}/var/www/html/R
 cp ./rpm/test %{buildroot}/var/www/html/R/
 
@@ -54,6 +54,6 @@ apachectl restart || true
 
 %files
 /etc/httpd/conf.modules.d/99-rapache.conf
-/etc/httpd/conf.d/rapache.conf
+/etc/httpd/conf.d/00-rapache.conf
 /etc/httpd/modules/mod_R.so
 /var/www/html/R/test
