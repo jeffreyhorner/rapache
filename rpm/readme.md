@@ -54,10 +54,6 @@ If all is OK, packages are created in `~/rpmbuild/RPMS` and `~/rpmbuild/SRPMS`. 
     cd ~/rpmbuild/RPMS/x86_64/
     sudo rpm -i rapache-1.2.6-rpm0.x86_64.rpm
 
-After installation, restart httpd
-
-    sudo apachectl restart
-
 The package includes a test script in `/var/www/html/R/test` which prints some random numers. Try if it works:
 
     curl http://localhost/R/test
