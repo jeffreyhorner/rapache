@@ -36,11 +36,11 @@ Download sources:
 
     # Get the rapache source code
     wget https://github.com/jeffreyhorner/rapache/archive/v1.2.6.tar.gz -O rapache-1.2.6.tar.gz
-    cp rapache-1.2.6.tar.gz ~/rpmbuild/SOURCES/
+    tar xzvf rapache-1.2.6.tar.gz rapache-1.2.6/rpm/rapache.spec --strip-components 2
 
-    # Extract the spec file
-    tar xzvf rapache-1.2.6.tar.gz rapache-1.2.6/rpm/rapache.spec
-    cp rapache-1.2.6/rpm/rapache.spec ~/rpmbuild/SPECS/
+    # Move to build dirs
+    mv -f rapache-1.2.6.tar.gz ~/rpmbuild/SOURCES/
+    mv -f rapache.spec ~/rpmbuild/SPECS/
 
 Build:
 
