@@ -9,7 +9,9 @@ Buildroot: %{_tmppath}/%{name}-buildroot
 URL: http://www.rapache.net
 BuildRequires: apache2-devel
 BuildRequires: R-base-devel
+BuildRequires: libicu-devel
 BuildRequires: make
+Requires: libicu
 Requires: apache2
 Requires: apache2-prefork
 Requires: R-base
