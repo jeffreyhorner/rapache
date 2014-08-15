@@ -13,7 +13,6 @@ BuildRequires: make
 Requires: apache2
 Requires: apache2-prefork
 Requires: R-base
-Autoreq: false
 
 %description
 First presented at DSC2005, rApache is a project supporting web application development using the R statistical language and environment and the Apache web server. The current release runs on UNIX/Linux and Mac OS X operating systems.
@@ -30,6 +29,7 @@ mkdir -p $RPM_BUILD_ROOT%{_libdir}/apache2/
 sed -i.bak s\,modules/mod_R.so,%{_libdir}/apache2/mod_R.so,g ./rpm/00-rapache.conf
 sed -i.bak s\,/var/www/html,/srv/www/htdocs,g ./rpm/00-rapache.conf
 cp .libs/mod_R.so $RPM_BUILD_ROOT%{_libdir}/apache2/
+cp libapreq2/library/.libs/libapreq2.so.3 $RPM_BUILD_ROOT%{_libdir}/
 mkdir -p %{buildroot}/etc/apache2/conf.d
 cp ./rpm/00-rapache.conf %{buildroot}/etc/apache2/conf.d/
 mkdir -p  %{buildroot}/srv/www/htdocs/R
@@ -49,5 +49,6 @@ systemctl restart apache2.service || true
 %files
 /etc/apache2/conf.d/00-rapache.conf
 %{_libdir}/apache2/mod_R.so
+%{_libdir}/libapreq2.so.3
 %dir /srv/www/htdocs/R
 /srv/www/htdocs/R/test
