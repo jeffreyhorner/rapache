@@ -49,7 +49,7 @@ systemctl restart apache2.service || true
 systemctl restart apache2.service || true
 
 %files
-%defattr(644,apache,apache,755)
+%defattr(644,wwwrun,www,755)
 /etc/apache2/conf.d/00-rapache.conf
 %{_libdir}/apache2/mod_R.so
 %{_libdir}/libapreq2.so.3
