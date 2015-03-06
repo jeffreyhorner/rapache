@@ -14,33 +14,6 @@ AC_PROG_LIBTOOL
 
 AC_CHECK_HEADERS( sys/types.h unistd.h stdlib.h )
 
-# --with-apache2-apxs
-AC_DEFUN([APACHE_APXS],[
-
-	AC_ARG_WITH(apache2-apxs, AC_HELP_STRING([--with-apache2-apxs=FILE],
-		[pathname to the Apache apxs tool [[apxs]]]),
-		[APXS="$with_apxs"])
-	if test -z "${APXS}"; then
-		AC_PATH_PROGS(APXS, apxs2 apxs, no,
-			/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/usr/local/apache/bin:/usr/local/apache2/bin)
-	fi
-	if test "$APXS" = no; then
-		AC_MSG_ERROR([neither apxs or apxs2 not found])
-	fi
-	HTTPD="`$APXS -q bindir`/`$APXS -q progname`"; export HTTPD
-		if ! test -x $HTTPD; then 
-			HTTPD="`$APXS -q sbindir`/`$APXS -q progname`"; export HTTPD
-			if ! test -x $HTTPD; then
-				echo
-				echo
-				echo "I cannot find your httpd binary with $with_apache2_apxs."
-				echo "Are you sure that's the correct apxs you should be using?"
-				echo
-				AC_MSG_ERROR( aborting! )
-		fi
-	fi
-])
-
 # --with-R
 AC_DEFUN([R_PROG],[
 
@@ -173,8 +146,9 @@ AC_DEFUN([WITH_RPATH],[
 	fi
 ])
 
-APACHE_APXS
+AX_WITH_APXS
 AC_SUBST(APXS)
+HTTPD="`$APXS -q sbindir`/`$APXS -q progname`"
 AC_SUBST(HTTPD)
 R_PROG
 AC_SUBST(RPROG)
