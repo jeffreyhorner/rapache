@@ -1,5 +1,5 @@
 Name: rapache
-Version: 1.2.6
+Version: 1.2.7
 Release: rpm0
 Source: %{name}-%{version}.tar.gz
 License: Apache2
@@ -11,6 +11,7 @@ BuildRequires: httpd-devel
 BuildRequires: libapreq2-devel
 BuildRequires: R-devel
 BuildRequires: make
+Requires: /usr/sbin/sestatus
 Requires: httpd
 Requires: libapreq2
 Requires: R-core
@@ -40,7 +41,10 @@ cp ./rpm/test %{buildroot}/var/www/html/R/
 
 %post
 # SELinux settings
-chcon -t httpd_modules_t /etc/httpd/modules/mod_R.so || true
+SELINUX_ENABLED=$(sestatus | grep "SELinux.status.*enabled")
+if [ "$1" = 1 ] && [ "$SELINUX_ENABLED" ]; then
+	chcon -t httpd_modules_t /etc/httpd/modules/mod_R.so || true
+fi
 # echo "Configuring SELinux. This takes a while..."
 # Perhaps leave this to the sysadmin:
 # setsebool -P httpd_setrlimit=1 httpd_can_network_connect_db=1 httpd_can_network_connect=1 httpd_can_connect_ftp=1 httpd_can_sendmail=1 || true
