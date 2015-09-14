@@ -19,7 +19,7 @@
   Details of the latest version can be found at the R/Apache
   project page:
 
-	http://biostat.mc.vanderbilt.edu/rapache/
+	http://rapache.net/
 
   Prerequisites
   -------------
@@ -90,7 +90,7 @@
   Documentation
   -------------
   
-  Forthcoming. See http://biostat.mc.vanderbilt.edu/rapache/manual.html
+  Forthcoming. See http://rapache.net/manual.html
   for ongoing updates.
 
   Licensing
