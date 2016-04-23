@@ -2,12 +2,12 @@ Source: libapache2-mod-r-base
 Section: web
 Priority: optional
 Maintainer: Jeffrey Horner <jeffrey.horner@gmail.com>
-Build-Depends: debhelper (>= 4.2.20), lsb-release, apache2-prefork-dev, apache2-mpm-prefork, libapreq2-dev, r-base-core, r-base-dev
+Build-Depends: debhelper (>= 4.2.20), lsb-release, apache2-dev, libapreq2-dev, r-base-core, r-base-dev
 Standards-Version: 3.7.2
 
 Package: libapache2-mod-r-base
 Architecture: any
-Depends: apache2-mpm-prefork | apache2-mpm-worker, apache2-bin | apache2.2-common, libapreq2-3 | libapreq2, r-base-core, ${shlibs:Depends}
+Depends: apache2 | apache2.2-common, libapreq2-3 | libapreq2, r-base-core, ${shlibs:Depends}
 Description: Apache module for running server-side R programs
  This package provides the R module for the Apache 2 webserver. Note
  that it will work with either Apache's prefork or worker MPM. Prefork

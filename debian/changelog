@@ -1,3 +1,10 @@
+libapache2-mod-r-base (1.2.8-xenial0) xenial0; urgency=low
+
+  * Remove apache2-mpm-prefork dependency (prefork is now included
+    with apache2-dev / apache2-bin)
+
+ -- Jeroen Ooms <jeroen@opencpu.org>  Sat, 23 Apr 2016 00:00:00 -0600
+
 libapache2-mod-r-base (1.2.7-trusty0) trusty; urgency=low
 
   * Add support for rpm
