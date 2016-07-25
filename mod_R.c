@@ -37,6 +37,7 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
  * Apache Server headers
  */ 
 #include "httpd.h"
+#include "http_core.h"
 #include "http_log.h"
 #include "http_config.h"
 #include "http_protocol.h"
