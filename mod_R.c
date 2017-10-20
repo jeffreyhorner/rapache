@@ -2403,7 +2403,7 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 }
 
 SEXP RApache_receiveBin(SEXP llen){
-   int len=0, size, blen;
+   apr_size_t len=0, size, blen;
    unsigned char *buf;
    SEXP ans;
 
