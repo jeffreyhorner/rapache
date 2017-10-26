@@ -2403,7 +2403,7 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
 }
 
 SEXP RApache_receiveBin(SEXP llen){
-   int len=0, size, blen;
+   apr_size_t len=0, size, blen;
    unsigned char *buf;
    SEXP ans;
 
@@ -2414,7 +2414,7 @@ SEXP RApache_receiveBin(SEXP llen){
     * certainly don't want to use up twice as much memory for the 
     * raw message body.
     */
-   if (size > 0){
+   if ((int)size > 0){
       buf = Calloc(size,unsigned char);
 
       if (buf == NULL){
@@ -2423,7 +2423,7 @@ SEXP RApache_receiveBin(SEXP llen){
       }
       len = ReadRequestBody(buf,size);
 
-   } else if (size < 0){ /* read whole request payload */
+   } else if ((int)size < 0){ /* read whole request payload */
       size = 8192;
       buf = Calloc(size,unsigned char);
       blen = 0;
@@ -2435,7 +2435,7 @@ SEXP RApache_receiveBin(SEXP llen){
          len = ReadRequestBody(buf+blen,size-blen);
          blen += len;
          if (len > 0){
-            size = (int)((double)size * 1.5); /* 50% over-allocation */
+            size = (apr_size_t)((double)size * 1.5); /* 50% over-allocation */
             buf = Realloc(buf,size,unsigned char);
             if (buf == NULL){
                ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"memory error");

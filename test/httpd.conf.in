@@ -107,6 +107,11 @@ DocumentRoot "@DOCROOT@"
         RFileHandler @DOCROOT@/recBin.r
 </Location>
 
+<Location /test/receiveBinLarge>
+        SetHandler r-handler
+        RFileHandler @DOCROOT@/recBinLarge.r
+</Location>
+
 <Location /test/relocation>
         SetHandler r-handler
         RFileHandler @DOCROOT@/relocation.R::handler
