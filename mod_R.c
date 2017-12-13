@@ -23,6 +23,7 @@
 #include "mod_R.h" 
 
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 /*
@@ -681,6 +682,10 @@ static int AP_hook_request_handler (request_rec *r)
          return RApacheResponseError(NULL);
       }
    }
+   
+   /* You must consider wait sub processes if used parallel packages,other wise may cause zombie processes */
+   int wstat;
+   while (waitpid(-1, &wstat, WNOHANG) > 0) {};
 
    /*PrintWarnings();*/
 
