@@ -90,7 +90,7 @@ The Rapache Project
   Documentation
   -------------
   
-  Forthcoming. See http://rapache.net/manual.html
+  Forthcoming. See https://jeffreyhorner.github.io/rapache/manual.html
   for ongoing updates.
 
   Licensing
