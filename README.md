@@ -1,5 +1,5 @@
-
-               The Rapache Project
+The Rapache Project
+===================
 
   What is it?
   -----------
@@ -19,7 +19,7 @@
   Details of the latest version can be found at the R/Apache
   project page:
 
-	http://rapache.net/
+	https://jeffreyhorner.github.io/rapache
 
   Prerequisites
   -------------
