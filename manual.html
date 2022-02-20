@@ -56,7 +56,7 @@
     </div>
 
     <div class="twelve columns content offset-by-one">
-<header><h1>documentation for version 1.2.9</h1></header>
+<header><h1>documentation for version 1.2.10</h1></header>
 
 <p><i>
 This manual covers installation, configuration, and various uses
@@ -186,12 +186,12 @@ sudo apt-get purge libapache2-mod-r-base
 	<li><strong>debug</strong> will run apache with gdb in single-process mode. Besure to look for the lines that say, "Copy/paste the following line to gdb". You'll need the 'run -x -f ...' command to start apache within the debugger.</li>
 </ul>
 <h4><a name="Quick_Install_DebianUbuntu"></a>2.3 <a title="Back to top" href="#top">Quick Install for Debian/Ubuntu</a></h4>
-<p>Run the following as root (changing VERSION to the latest release version) or use sudo before each command:<p>
+<p>Run the following as root or use sudo before each command:<p>
 <pre class="code">
 apt-get install r-base-dev apache2-mpm-prefork apache2-prefork-dev
-wget http://www.rapache.net/rapache-VERSION.tar.gz
-tar xzvf rapache-VERSION.tar.gz
-cd rapache-VERSION
+wget https://github.com/jeffreyhorner/rapache/archive/refs/tags/v1.2.10.tar.gz
+tar xzvf v1.2.10.tar.gz
+cd rapache-1.2.10
 ./configure
 make
 make install
@@ -1030,7 +1030,7 @@ handler <- function() {
 
 <p>To cite rApache, use the following:</p>
 
-<div class="citation"> Jeffrey Horner (2013). rApache: Web application development with R and Apache. http://www.rapache.net/</div>
+<div class="citation"> Jeffrey Horner (2013). rApache: Web application development with R and Apache. https://jeffreyhorner.github.io/rapache</div>
 
 <p> A BibTeX entry for LaTeX users is</p>
 <pre class="code">
@@ -1038,7 +1038,7 @@ handler <- function() {
 	title = {rApache: Web application development with R and Apache.},
 	author = {Jeffrey Horner},
 	year = {2013},
-	url = {http://www.rapache.net/},
+	url = {https://jeffreyhorner.github.io/rapache},
 }
 </pre>
 
