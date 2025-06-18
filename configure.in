@@ -136,16 +136,6 @@ AC_DEFUN([SET_DOCROOT],[
         DOCROOT=`pwd`/test
 ])
 
-AC_PATH_PROG(UNAME,uname)
-
-AC_DEFUN([WITH_RPATH],[
-	if test "${UNAME}" != ""; then
-		if test "`${UNAME}`" = "Linux"; then
-			RPATH=-Wl,-rpath,${RHOME}/lib
-		fi
-	fi
-])
-
 AX_WITH_APXS
 AC_SUBST(APXS)
 HTTPD="`$APXS -q sbindir`/`$APXS -q progname`"
@@ -165,8 +155,6 @@ AC_SUBST(APREQ_INCLUDES)
 AC_SUBST(APREQ_LINKLD)
 SET_DOCROOT
 AC_SUBST(DOCROOT)
-WITH_RPATH
-AC_SUBST(RPATH)
 
 SHLIBPATH_VAR=$shlibpath_var
 AC_SUBST(SHLIBPATH_VAR)

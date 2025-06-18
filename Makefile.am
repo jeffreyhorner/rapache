@@ -26,7 +26,6 @@ RLINKLD=@RLINKLD@
 INCLUDES = $(RINCLUDES) $(APREQ_INCLUDES)
 LDFLAGS = $(RLINKLD) $(APREQ_LINKLD)
 LD_LIBRARY_PATH=$(R_LD_LIBRARY_PATH):$(APREQ_LIB_DIR)
-RPATH=@RPATH@
 
 all: mod_R.so $(DOCROOT)/httpd.conf
 
@@ -34,7 +33,7 @@ mod_R.so: .apreq-config mod_R.c mod_R.h
 	@echo
 	@echo Compiling mod_R
 	@echo
-	$(APXS) $(INCLUDES) -c mod_R.c $(RPATH) $(LDFLAGS)
+	$(APXS) $(INCLUDES) -c mod_R.c $(LDFLAGS)
 
 .apreq-config:
 	@echo

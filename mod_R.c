@@ -19,7 +19,7 @@
  * Headers and macros
  *
  *************************************************************************/
-#define MOD_R_VERSION "1.2.9"
+#define MOD_R_VERSION "1.2.11"
 #include "mod_R.h" 
 
 #include <sys/types.h>
@@ -1238,10 +1238,10 @@ static SEXP CallFun1str(const char *fun, const char *arg, SEXP env, int *evalErr
    SEXP val;
    char *text;
 
-   text = Calloc(strlen(fun)+strlen(arg)+5,char);
+   text = R_Calloc(strlen(fun)+strlen(arg)+5,char);
    sprintf(text,"%s('%s')",fun,arg);
    val = ParseEval(text,env,evalError);
-   Free(text);
+   R_Free(text);
 
    return val;
 }
@@ -1305,19 +1305,19 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
 
    if (handlerType == R_SCRIPT){
       if (h->directive->package){
-         text = Calloc(strlen(fmt4)+strlen(h->directive->package)+
+         text = R_Calloc(strlen(fmt4)+strlen(h->directive->package)+
                strlen(h->directive->function)+
                strlen(r->filename),char);
          sprintf(text,fmt4,h->directive->package,h->directive->function,
                r->filename);
       } else{
-         text = Calloc(strlen(fmt3)+strlen(h->directive->function)+
+         text = R_Calloc(strlen(fmt3)+strlen(h->directive->function)+
                strlen(r->filename),char);
          sprintf(text,fmt3,h->directive->function,r->filename);
       }
       if (h->expr) R_ReleaseObject(h->expr);
       h->expr = ParseText(text,&parseError);
-      Free(text);
+      R_Free(text);
       /* Monkey with expression and place the environment in there */
       defineVar(install(".rAfile"),mkString(r->filename),h->envir);
       defineVar(install(".rAenv"),h->envir,h->envir);
@@ -1328,18 +1328,18 @@ static int PrepareHandlerExpr(RApacheHandler *h, const request_rec *r, int handl
    if (!h->expr){
       if (h->directive->function){
          if (h->directive->package){
-            text = Calloc(strlen(fmt2)+strlen(h->directive->package)+strlen(h->directive->function),char);
+            text = R_Calloc(strlen(fmt2)+strlen(h->directive->package)+strlen(h->directive->function),char);
             sprintf(text,fmt2,h->directive->package,h->directive->function);
          } else{
             if (h->directive->file && MyfindFun(install(h->directive->function),h->envir) == R_UnboundValue){
                RApacheError(apr_psprintf(MR_Request.r->pool,"Cannot find function '%s' in file '%s'\n",h->directive->function,h->directive->file));
                return 0;
             }
-            text = Calloc(strlen(fmt1)+strlen(h->directive->function),char);
+            text = R_Calloc(strlen(fmt1)+strlen(h->directive->function),char);
             sprintf(text,fmt1,h->directive->function);
          }
          h->expr = ParseText(text,&parseError);
-         Free(text);
+         R_Free(text);
       } else if (h->directive->evalcode){
          h->expr = ParseText(h->directive->evalcode,&parseError);
       }
@@ -2390,7 +2390,7 @@ SEXP RApache_sendBin(SEXP object, SEXP ssize, SEXP sswap){
          warning("problem writing to connection");
       }
       /* } */
-      Free(buf);
+      R_Free(buf);
    }
 
    /* if(!wasopen) con->close(con);
@@ -2415,7 +2415,7 @@ SEXP RApache_receiveBin(SEXP llen){
     * raw message body.
     */
    if ((int)size > 0){
-      buf = Calloc(size,unsigned char);
+      buf = R_Calloc(size,unsigned char);
 
       if (buf == NULL){
          ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"memory error");
@@ -2425,7 +2425,7 @@ SEXP RApache_receiveBin(SEXP llen){
 
    } else if ((int)size < 0){ /* read whole request payload */
       size = 8192;
-      buf = Calloc(size,unsigned char);
+      buf = R_Calloc(size,unsigned char);
       blen = 0;
       if (buf == NULL){
          ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"memory error");
@@ -2436,7 +2436,7 @@ SEXP RApache_receiveBin(SEXP llen){
          blen += len;
          if (len > 0){
             size = (apr_size_t)((double)size * 1.5); /* 50% over-allocation */
-            buf = Realloc(buf,size,unsigned char);
+            buf = R_Realloc(buf,size,unsigned char);
             if (buf == NULL){
                ap_log_rerror(APLOG_MARK,APLOG_ERR,0,MR_Request.r,"memory error");
                return allocVector(RAWSXP,0);
@@ -2449,7 +2449,7 @@ SEXP RApache_receiveBin(SEXP llen){
    }
    PROTECT(ans = allocVector(RAWSXP,len));
    if (len > 0) memcpy(RAW(ans),buf,len);
-   if (buf) Free(buf);
+   if (buf) R_Free(buf);
    UNPROTECT(1);
    return ans;
 }

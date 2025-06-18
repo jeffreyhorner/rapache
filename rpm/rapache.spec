@@ -5,7 +5,7 @@
 %{!?_httpd_moddir:     %{expand: %%global _httpd_moddir %%{_libdir}/httpd/modules}}
 
 Name:			rapache
-Version:		1.2.9
+Version:		1.2.11
 Release:		1%{?dist}
 Source0:		https://github.com/jeffreyhorner/rapache/archive/v%{version}.tar.gz
 License:		ASL 2.0
@@ -16,8 +16,8 @@ BuildRequires:		libapreq2-devel
 BuildRequires:		R-devel
 BuildRequires:		make, gcc
 Requires(post):		/usr/sbin/sestatus
-Requires(post):		policycoreutils-python
-Requires(postun):	policycoreutils-python
+Requires(post):		policycoreutils-python-utils
+Requires(postun):	policycoreutils-python-utils
 Requires:		httpd
 Requires:		R-core
 

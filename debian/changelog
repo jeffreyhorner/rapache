@@ -1,3 +1,9 @@
+libapache2-mod-r-base (1.2.11-noble) noble0; urgency=low
+
+  * Fix build for R-4.5
+
+ -- Jeroen Ooms <jeroen@opencpu.org>  Wed, 18 Jun 2025 00:00:00 -0600
+
 libapache2-mod-r-base (1.2.9-xenial0) xenial0; urgency=low
 
   * Fixes integer overflow in receiveBin() for 1GB+ POST requests
