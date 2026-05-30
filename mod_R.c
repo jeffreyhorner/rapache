@@ -100,6 +100,39 @@ enum DYLD_BOOL{ DYLD_FALSE, DYLD_TRUE};
 #include <R_ext/Rdynload.h>
 #include <R_ext/Memory.h>
 
+/* ── R 4.5 C API compatibility ──────────────────────────────────────────────
+ * Several non-API entry points were removed in R 4.5.0.  We provide backports
+ * for older R and use the new API on R >= 4.5, following R-exts §6.23.1 and
+ * §6.23.9.
+ */
+#if R_VERSION < R_Version(4, 5, 0)
+/* R_ParentEnv backport (R-exts §6.23.9) */
+# define R_ParentEnv(x) ENCLOS(x)
+/* R_getVarEx backport — mimic: search with inheritance, return ifnotfound */
+static SEXP R_getVarEx_compat(SEXP sym, SEXP rho, Rboolean inherits_flag, SEXP ifnotfound) {
+    SEXP val = inherits_flag ? Rf_findVar(sym, rho) : Rf_findVarInFrame(rho, sym);
+    return (val == R_UnboundValue) ? ifnotfound : val;
+}
+# define R_getVarEx(sym, rho, inh, def) R_getVarEx_compat((sym), (rho), (inh), (def))
+/* SET_ENCLOS is available on R < 4.5 */
+# define RAPACHE_SET_PARENT_ENV(env, parent) SET_ENCLOS((env), (parent))
+#else
+/* R >= 4.5: R_ParentEnv is built-in; R_getVarEx is built-in.
+ * SET_ENCLOS has no direct public replacement for mutating an existing env's
+ * parent.  We call the R-level `parent.env(env) <- parent` via Rf_eval.
+ * This is safe here because RefreshRApacheEnv only runs between requests. */
+static void rapache_set_parent_env(SEXP env, SEXP parent) {
+    SEXP call = PROTECT(Rf_lang3(Rf_install("parent.env<-"), env, parent));
+    int err = 0;
+    R_tryEval(call, R_GlobalEnv, &err);
+    UNPROTECT(1);
+    if (err)
+        Rf_error("rapache: failed to set parent environment");
+}
+# define RAPACHE_SET_PARENT_ENV(env, parent) rapache_set_parent_env((env), (parent))
+#endif
+/* ── end R 4.5 compat ───────────────────────────────────────────────────────── */
+
 /*************************************************************************
  *
  * RApache types
@@ -1357,7 +1390,7 @@ static void RefreshRApacheEnv(){
    SEXP t;
    int evalError=1, envFound=0;
 
-   for (t = ENCLOS(R_GlobalEnv); t != R_BaseEnv; t = ENCLOS(t)){
+   for (t = R_ParentEnv(R_GlobalEnv); t != R_BaseEnv; t = R_ParentEnv(t)){
       if (t == MR_RApacheEnv) {
          envFound=1;
          break;
@@ -1368,11 +1401,11 @@ static void RefreshRApacheEnv(){
    if (!envFound){
 
       /* Search for envir right before BaseEnv */
-      for (t = R_GlobalEnv; ENCLOS(t) != R_BaseEnv; t = ENCLOS(t))/* noop */;
+      for (t = R_GlobalEnv; R_ParentEnv(t) != R_BaseEnv; t = R_ParentEnv(t))/* noop */;
 
-      /* ENCLOS(t) beter be R_BaseEnv */
-      if (ENCLOS(t) == R_BaseEnv){
-         SET_ENCLOS(t,MR_RApacheEnv);
+      /* R_ParentEnv(t) beter be R_BaseEnv */
+      if (R_ParentEnv(t) == R_BaseEnv){
+         RAPACHE_SET_PARENT_ENV(t, MR_RApacheEnv);
       } else {
          fprintf(stderr,"Internal Error! Error reattaching rapache environment!\n\n");
          exit(-1);
@@ -1510,7 +1543,7 @@ static SEXP MyfindFun(SEXP symb, SEXP envir){
 
    PROTECT(symb);
    PROTECT(envir);
-   fun = findVar(symb,envir);
+   fun = R_getVarEx(symb, envir, TRUE, R_UnboundValue);
    UNPROTECT(2);
 
    t = TYPEOF(fun);
@@ -1911,7 +1944,7 @@ SEXP RApache_urlEnDecode(SEXP str,SEXP enc){
 
    PROTECT(new_str = NEW_STRING(vlen));
    for (i = 0; i < vlen; i++)
-      SET_STRING_ELT(new_str, i, mkChar(endecode(CHAR(STRING_ELT(str, i)))));
+      SET_STRING_ELT(new_str, i, endecode(CHAR(STRING_ELT(str, i))));
    UNPROTECT(1);
 
    return new_str;
