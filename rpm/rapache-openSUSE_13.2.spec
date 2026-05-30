@@ -1,5 +1,5 @@
 Name: rapache
-Version: 1.2.11
+Version: 1.2.12
 Release: rpm0
 Source: %{name}-%{version}.tar.gz
 License: Apache2
