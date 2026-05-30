@@ -1659,10 +1659,10 @@ static int TableCallback(void *datum,const char *n, const char *v){
       value = R_NilValue;
    } else {
       value = NEW_CHARACTER(1);
-      STRING_PTR(value)[0] = mkChar(v);
+      SET_STRING_ELT(value, 0, mkChar(v));
    }
 
-   STRING_PTR(ctx->names)[ctx->size]=mkChar(n);
+   SET_STRING_ELT(ctx->names, ctx->size, mkChar(n));
    SET_ELEMENT(ctx->list,ctx->size,value);
    ctx->size += 1;
 
@@ -1707,12 +1707,12 @@ static int ParamsCallback(void *datum,const char *n, const char *v){
    }
 
    if (!valueSet) {
-      STRING_PTR(ctx->names)[ctx->size]=key;
+      SET_STRING_ELT(ctx->names, ctx->size, key);
       if (!v || !strcmp(v,"")){
          value = R_NilValue;
       } else {
          value = NEW_CHARACTER(1);
-         STRING_PTR(value)[0] = mkChar(v);
+         SET_STRING_ELT(value, 0, mkChar(v));
       }
       SET_ELEMENT(ctx->list,ctx->size,value);
       ctx->size += 1;
@@ -1760,7 +1760,7 @@ static SEXP AprTableToList(apr_table_t *t, apr_table_do_callback_fn_t *callback)
  *************************************************************************/
 
 SEXP RApache_setHeader(SEXP header, SEXP value){
-   const char *key = CHAR(STRING_PTR(header)[0]);
+   const char *key = CHAR(STRING_ELT(header, 0));
    const char *val;
 
    if (!MR_Request.r) return NewLogical(FALSE);
@@ -1773,7 +1773,7 @@ SEXP RApache_setHeader(SEXP header, SEXP value){
       if (!isString(value)){
          value = coerceVector(value,STRSXP);
       }
-      val = CHAR(STRING_PTR(value)[0]);
+      val = CHAR(STRING_ELT(value, 0));
       if (!val) return NewLogical(FALSE);
       apr_table_set(MR_Request.r->headers_out,key,val);
    }
@@ -1793,7 +1793,7 @@ SEXP RApache_setContentType(SEXP stype){
    if (!MR_Request.r) return NewLogical(FALSE);
 
    if (stype == R_NilValue) return NewLogical(FALSE);
-   ctype = CHAR(STRING_PTR(stype)[0]);
+   ctype = CHAR(STRING_ELT(stype, 0));
    if (!ctype) return NewLogical(FALSE);
    ap_set_content_type( MR_Request.r, apr_pstrdup(MR_Request.r->pool,ctype));
    return NewLogical(TRUE);
@@ -1808,14 +1808,14 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 
    /* name */
    if (sname == R_NilValue) return NewLogical(FALSE);
-   else name = CHAR(STRING_PTR(sname)[0]);
+   else name = CHAR(STRING_ELT(sname, 0));
 
    /* value */
    if (svalue == R_NilValue || LENGTH(svalue) != 1)
       value = "";
    else {
       svalue = coerceVector(svalue,STRSXP);
-      value = (svalue != NA_STRING)? CHAR(STRING_PTR(svalue)[0]): "";
+      value = (svalue != NA_STRING)? CHAR(STRING_ELT(svalue, 0)): "";
    }
 
    cookie = apr_pstrcat(MR_Request.r->pool,name,"=",value,NULL);
@@ -1836,13 +1836,13 @@ SEXP RApache_setCookie(SEXP sname, SEXP svalue, SEXP sexpires, SEXP spath, SEXP 
 
    /* path */
    if (spath != R_NilValue && isString(spath))
-      cookie = apr_pstrcat(MR_Request.r->pool,cookie,";path=",CHAR(STRING_PTR(spath)[0]),NULL);
+      cookie = apr_pstrcat(MR_Request.r->pool,cookie,";path=",CHAR(STRING_ELT(spath, 0)),NULL);
    /* domain */
    if (sdomain != R_NilValue && isString(sdomain))
-      cookie = apr_pstrcat(MR_Request.r->pool,cookie,";domain=",CHAR(STRING_PTR(sdomain)[0]),NULL);
+      cookie = apr_pstrcat(MR_Request.r->pool,cookie,";domain=",CHAR(STRING_ELT(sdomain, 0)),NULL);
    /* therest */
-   if (therest != R_NilValue && isString(therest) && CHAR(STRING_PTR(therest)[0])[0] != '\0'){
-      cookie = apr_pstrcat(MR_Request.r->pool,cookie,";",CHAR(STRING_PTR(therest)[0]),NULL);
+   if (therest != R_NilValue && isString(therest) && CHAR(STRING_ELT(therest, 0))[0] != '\0'){
+      cookie = apr_pstrcat(MR_Request.r->pool,cookie,";",CHAR(STRING_ELT(therest, 0)),NULL);
    }
 
    if (!apr_table_get(MR_Request.r->headers_out,"Cache-Control"))
@@ -1911,7 +1911,7 @@ SEXP RApache_urlEnDecode(SEXP str,SEXP enc){
 
    PROTECT(new_str = NEW_STRING(vlen));
    for (i = 0; i < vlen; i++)
-      CHARACTER_DATA(new_str)[i] = endecode(CHAR(STRING_PTR(str)[i]));
+      SET_STRING_ELT(new_str, i, mkChar(endecode(CHAR(STRING_ELT(str, i)))));
    UNPROTECT(1);
 
    return new_str;
@@ -1957,7 +1957,7 @@ static int FileUploadsCallback(void *ft,const char *key, const char *val){
    /* No file upload */
    if (f == NULL || (apr_file_info_get(&finfo,APR_FINFO_SIZE,f) != APR_SUCCESS) || finfo.size <= 0 ){
       SET_ELEMENT(pf->files,pf->i,R_NilValue);
-      STRING_PTR(pf->names)[pf->i]=mkChar(key);
+      SET_STRING_ELT(pf->names, pf->i, mkChar(key));
    } else {
       filename = finfo.fname;
 
@@ -1966,19 +1966,19 @@ static int FileUploadsCallback(void *ft,const char *key, const char *val){
       PROTECT(str1 = NEW_STRING(1));
       PROTECT(str2 = NEW_STRING(1));
 
-      STRING_PTR(str1)[0]=mkChar(val);
-      STRING_PTR(str2)[0]=mkChar(filename);
+      SET_STRING_ELT(str1, 0, mkChar(val));
+      SET_STRING_ELT(str2, 0, mkChar(filename));
 
       SET_ELEMENT(file_elem,0,str1);
       SET_ELEMENT(file_elem,1,str2);
 
-      STRING_PTR(name_elem)[0]=mkChar("name");
-      STRING_PTR(name_elem)[1]=mkChar("tmp_name");
+      SET_STRING_ELT(name_elem, 0, mkChar("name"));
+      SET_STRING_ELT(name_elem, 1, mkChar("tmp_name"));
 
       SET_NAMES(file_elem,name_elem);
 
       SET_ELEMENT(pf->files,pf->i,file_elem);
-      STRING_PTR(pf->names)[pf->i]=mkChar(key);
+      SET_STRING_ELT(pf->names, pf->i, mkChar(key));
 
       UNPROTECT(4);
    }
@@ -2092,13 +2092,13 @@ SEXP RApache_parseCookies(){
    return AprTableToList(MR_Request.cookiesTable, TableCallback);
 }
 
-#define TABMBR(n,v) STRING_PTR(names)[i]=mkChar(n); SET_ELEMENT(MR_Request.serverVar,i++,AprTableToList(v, TableCallback))
-#define INTMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_INTEGER(1); INTEGER_DATA(val)[0] = v; SET_ELEMENT(MR_Request.serverVar,i++,val)
-#define STRMBR(n,v) STRING_PTR(names)[i]=mkChar(n); if (v){ val = NEW_STRING(1); STRING_PTR(val)[0] = mkChar(v);} else { val = R_NilValue;}; SET_ELEMENT(MR_Request.serverVar,i++,val)
-#define LGLMBR(n,v) STRING_PTR(names)[i]=mkChar(n); SET_ELEMENT(MR_Request.serverVar,i++,NewLogical(v));
-#define OFFMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
-#define TIMMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); STRING_PTR(class)[0] = mkChar("POSIXt"); STRING_PTR(class)[1] = mkChar("POSIXct"); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
-#define FUNMBR(n,v) STRING_PTR(names)[i]=mkChar(n); val = ParseEval(v,MR_RApacheEnv,&evalError); SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define TABMBR(n,v) SET_STRING_ELT(names,i,mkChar(n)); SET_ELEMENT(MR_Request.serverVar,i++,AprTableToList(v, TableCallback))
+#define INTMBR(n,v) SET_STRING_ELT(names,i,mkChar(n)); val = NEW_INTEGER(1); INTEGER_DATA(val)[0] = v; SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define STRMBR(n,v) SET_STRING_ELT(names,i,mkChar(n)); if (v){ val = NEW_STRING(1); SET_STRING_ELT(val,0,mkChar(v));} else { val = R_NilValue;}; SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define LGLMBR(n,v) SET_STRING_ELT(names,i,mkChar(n)); SET_ELEMENT(MR_Request.serverVar,i++,NewLogical(v));
+#define OFFMBR(n,v) SET_STRING_ELT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)v; SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define TIMMBR(n,v) SET_STRING_ELT(names,i,mkChar(n)); val = NEW_NUMERIC(1); NUMERIC_DATA(val)[0] = (double)apr_time_sec(v); class = NEW_STRING(2); SET_STRING_ELT(class,0,mkChar("POSIXt")); SET_STRING_ELT(class,1,mkChar("POSIXct")); SET_CLASS(val,class); SET_ELEMENT(MR_Request.serverVar,i++,val)
+#define FUNMBR(n,v) SET_STRING_ELT(names,i,mkChar(n)); val = ParseEval(v,MR_RApacheEnv,&evalError); SET_ELEMENT(MR_Request.serverVar,i++,val)
 SEXP RApache_getServer(){
    int len = 39, i = 0, evalError=1;
    SEXP names, val, class;
